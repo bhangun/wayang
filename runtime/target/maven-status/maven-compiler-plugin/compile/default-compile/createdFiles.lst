@@ -117,3 +117,4 @@ tech/kayys/wayang/mcp/client/runtime/exception/MCPTimeoutException.class
 tech/kayys/wayang/mcp/client/runtime/client/MCPClientImpl.class
 tech/kayys/wayang/mcp/client/runtime/MCPClientRecorder.class
 META-INF/quarkus-config-roots.list
+tech/kayys/wayang/mcp/client/runtime/config/MCPConfigProducer.class

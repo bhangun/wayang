@@ -1,9 +1,7 @@
 tech/kayys/wayang/mcp/client/deployment/MCPClientExtension$1.class
-tech/kayys/wayang/mcp/client/deployment/WayangMcpClientProcessor.class
 tech/kayys/wayang/mcp/client/deployment/MCPClientExtension.class
 tech/kayys/wayang/mcp/client/deployment/MCPBuildTimeConfig.class
 tech/kayys/wayang/mcp/client/deployment/MCPClientExtension$2.class
 META-INF/quarkus-javadoc.properties
 META-INF/quarkus-config-roots.list
-tech/kayys/wayang/mcp/client/deployment/WayangMcpClientProcessor$$accessor.class
 META-INF/quarkus-build-steps.list

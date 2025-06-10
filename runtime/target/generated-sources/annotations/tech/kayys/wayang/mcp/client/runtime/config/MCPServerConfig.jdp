@@ -1,5 +1,3 @@
-#
-#Tue Jun 10 11:50:55 WIB 2025
 tech.kayys.wayang.mcp.client.runtime.config.MCPServerConfig.auth=Authentication configuration
 tech.kayys.wayang.mcp.client.runtime.config.MCPServerConfig.autoReconnect=Enable automatic reconnection
 tech.kayys.wayang.mcp.client.runtime.config.MCPServerConfig.clientInfo=Client information to send to the server

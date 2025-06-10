@@ -10,7 +10,7 @@ h|[[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_co
 h|Type
 h|Default
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus.mcp.enabled]]`link:#quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus.mcp.enabled[quarkus.mcp.enabled]`
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus-mcp-enabled]]`link:#quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus-mcp-enabled[quarkus.mcp.enabled]`
 
 
 [.description]
@@ -24,10 +24,10 @@ ifndef::add-copy-button-to-env-var[]
 Environment variable: `+++QUARKUS_MCP_ENABLED+++`
 endif::add-copy-button-to-env-var[]
 --|boolean 
-|`false`
+|`true`
 
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus.mcp.dev-mode]]`link:#quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus.mcp.dev-mode[quarkus.mcp.dev-mode]`
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus-mcp-dev-mode]]`link:#quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus-mcp-dev-mode[quarkus.mcp.dev-mode]`
 
 
 [.description]
@@ -44,7 +44,7 @@ endif::add-copy-button-to-env-var[]
 |`false`
 
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus.mcp.scan-packages]]`link:#quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus.mcp.scan-packages[quarkus.mcp.scan-packages]`
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus-mcp-scan-packages]]`link:#quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus-mcp-scan-packages[quarkus.mcp.scan-packages]`
 
 
 [.description]
@@ -61,7 +61,7 @@ endif::add-copy-button-to-env-var[]
 |
 
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus.mcp.native-image-support]]`link:#quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus.mcp.native-image-support[quarkus.mcp.native-image-support]`
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus-mcp-native-image-support]]`link:#quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus-mcp-native-image-support[quarkus.mcp.native-image-support]`
 
 
 [.description]
@@ -75,10 +75,10 @@ ifndef::add-copy-button-to-env-var[]
 Environment variable: `+++QUARKUS_MCP_NATIVE_IMAGE_SUPPORT+++`
 endif::add-copy-button-to-env-var[]
 --|boolean 
-|`false`
+|`true`
 
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus.mcp.verbose-logging]]`link:#quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus.mcp.verbose-logging[quarkus.mcp.verbose-logging]`
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus-mcp-verbose-logging]]`link:#quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus-mcp-verbose-logging[quarkus.mcp.verbose-logging]`
 
 
 [.description]
@@ -95,7 +95,7 @@ endif::add-copy-button-to-env-var[]
 |`false`
 
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus.mcp.validate-interfaces]]`link:#quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus.mcp.validate-interfaces[quarkus.mcp.validate-interfaces]`
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus-mcp-validate-interfaces]]`link:#quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus-mcp-validate-interfaces[quarkus.mcp.validate-interfaces]`
 
 
 [.description]
@@ -109,10 +109,10 @@ ifndef::add-copy-button-to-env-var[]
 Environment variable: `+++QUARKUS_MCP_VALIDATE_INTERFACES+++`
 endif::add-copy-button-to-env-var[]
 --|boolean 
-|`false`
+|`true`
 
 
-a|icon:lock[title=Fixed at build time] [[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus.mcp.max-generated-clients]]`link:#quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus.mcp.max-generated-clients[quarkus.mcp.max-generated-clients]`
+a|icon:lock[title=Fixed at build time] [[quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus-mcp-max-generated-clients]]`link:#quarkus-mcp-tech-kayys-wayang-mcp-client-deployment-mcp-build-time-config_quarkus-mcp-max-generated-clients[quarkus.mcp.max-generated-clients]`
 
 
 [.description]
@@ -126,6 +126,6 @@ ifndef::add-copy-button-to-env-var[]
 Environment variable: `+++QUARKUS_MCP_MAX_GENERATED_CLIENTS+++`
 endif::add-copy-button-to-env-var[]
 --|int 
-|`0`
+|`50`
 
 |===

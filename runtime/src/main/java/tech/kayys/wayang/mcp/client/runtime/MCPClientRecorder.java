@@ -26,9 +26,6 @@ public class MCPClientRecorder {
     
     /**
      * Initialize MCP connections for all configured servers
-     * 
-     * @param config the runtime configuration
-     * @param beanContainer the bean container
      */
     public void initializeMCPConnections(MCPRuntimeConfig config, BeanContainer beanContainer) {
         log.info("Initializing MCP client connections...");
@@ -97,8 +94,6 @@ public class MCPClientRecorder {
     
     /**
      * Validate the MCP runtime configuration
-     * 
-     * @param config the runtime configuration to validate
      */
     public void validateConfiguration(MCPRuntimeConfig config) {
         if (config.servers().isEmpty()) {
@@ -116,9 +111,6 @@ public class MCPClientRecorder {
     
     /**
      * Validate server configuration
-     * 
-     * @param serverName the server name
-     * @param config the server configuration to validate
      */
     private void validateServerConfig(String serverName, MCPServerConfig config) {
         if (config.transport() == null) {

@@ -38,6 +38,10 @@ import tech.kayys.wayang.mcp.client.runtime.config.MCPRuntimeConfig;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
 import tech.kayys.wayang.mcp.client.runtime.annotations.MCPClientQualifier;
+import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import io.quarkus.deployment.builditem.RunTimeConfigurationDefaultBuildItem;
+import tech.kayys.wayang.mcp.client.runtime.config.MCPConfigProducer;
+import tech.kayys.wayang.mcp.client.runtime.transport.MCPTransportFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -53,6 +57,22 @@ public class MCPClientExtension {
     @BuildStep
     FeatureBuildItem feature() {
         return new FeatureBuildItem(FEATURE);
+    }
+
+    @BuildStep
+    AdditionalBeanBuildItem beans() {
+        return AdditionalBeanBuildItem.builder()
+            .addBeanClass(MCPClientConfiguration.class)
+            .addBeanClass(MCPClientFactory.class)
+            .addBeanClass(MCPClientProducer.class)
+            .addBeanClass(MCPConfigProducer.class)
+            .addBeanClass(MCPTransportFactory.class)
+            .build();
+    }
+    
+    @BuildStep
+    RunTimeConfigurationDefaultBuildItem configuration() {
+        return new RunTimeConfigurationDefaultBuildItem("quarkus.mcp.servers.*.transport.type", "string");
     }
 
     @BuildStep

@@ -1,7 +1,9 @@
 package tech.kayys.wayang.mcp.client.runtime.transport;
 
-import tech.kayys.wayang.mcp.client.runtime.annotations.MCPClient;
 import java.time.Duration;
+import java.util.Map;
+import java.util.Optional;
+import io.smallrye.config.WithDefault;
 
 /**
  * Configuration for MCP transport instances
@@ -12,7 +14,7 @@ public interface MCPTransportConfig {
      * 
      * @return the transport type
      */
-    MCPClient.Transport type();
+    MCPTransportType type();
 
     /**
      * Get the transport URL
@@ -28,13 +30,14 @@ public interface MCPTransportConfig {
      * 
      * @return the command
      */
-    String command();
+    Optional<String> command();
 
     /**
      * Get the connection timeout
      * 
      * @return the connection timeout
      */
+    @WithDefault("PT30S")
     Duration connectionTimeout();
 
     /**
@@ -42,6 +45,7 @@ public interface MCPTransportConfig {
      * 
      * @return the read timeout
      */
+    @WithDefault("PT60S")
     Duration readTimeout();
 
     /**
@@ -49,6 +53,7 @@ public interface MCPTransportConfig {
      * 
      * @return true if auto-reconnect is enabled
      */
+    @WithDefault("true")
     boolean autoReconnect();
 
     /**
@@ -56,6 +61,7 @@ public interface MCPTransportConfig {
      * 
      * @return the maximum number of reconnect attempts
      */
+    @WithDefault("3")
     int maxReconnectAttempts();
 
     /**
@@ -63,5 +69,13 @@ public interface MCPTransportConfig {
      * 
      * @return the reconnection delay
      */
+    @WithDefault("PT5S")
     Duration reconnectDelay();
+
+    /**
+     * Get additional headers
+     * 
+     * @return the additional headers
+     */
+    Map<String, String> headers();
 }

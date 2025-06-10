@@ -1,6 +1,5 @@
 package tech.kayys.wayang.mcp.client.runtime.client;
 
-
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import tech.kayys.wayang.mcp.client.runtime.annotations.MCPClient;
@@ -10,6 +9,8 @@ import tech.kayys.wayang.mcp.client.runtime.schema.MCPResponse;
 import tech.kayys.wayang.mcp.client.runtime.schema.tools.CallToolRequest;
 import tech.kayys.wayang.mcp.client.runtime.schema.tools.CallToolParams;
 import tech.kayys.wayang.mcp.client.runtime.schema.tools.CallToolResponse;
+import tech.kayys.wayang.mcp.client.runtime.config.MCPRuntimeConfig;
+import tech.kayys.wayang.mcp.client.runtime.config.MCPServerConfig;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -37,6 +38,9 @@ public class MCPClientFactory {
     
     @Inject
     ObjectMapper objectMapper;
+    
+    @Inject
+    MCPRuntimeConfig runtimeConfig;
     
     private final AtomicLong requestIdCounter = new AtomicLong(1);
     
@@ -66,14 +70,26 @@ public class MCPClientFactory {
             throw new IllegalArgumentException("MCPClient annotation must specify a server name");
         }
         
+        // Verify server configuration exists
+        MCPServerConfig serverConfig = runtimeConfig.servers().get(serverName);
+        if (serverConfig == null) {
+            throw new IllegalArgumentException("No configuration found for MCP server: " + serverName);
+        }
+        
         log.debug("Creating MCP client of type: {}", clientType.getName());
         
         try {
+            // Initialize connection
+            connectionManager.initializeConnection(serverName, serverConfig).get(
+                serverConfig.connectionTimeout().orElse(runtimeConfig.connectionTimeout()).toMillis(),
+                java.util.concurrent.TimeUnit.MILLISECONDS
+            );
+            
             @SuppressWarnings("unchecked")
             T client = (T) Proxy.newProxyInstance(
                 clientType.getClassLoader(),
                 new Class<?>[] { clientType },
-                new MCPClientInvocationHandler(serverName, annotation)
+                new MCPClientInvocationHandler(serverName, serverConfig)
             );
             
             log.debug("Successfully created MCP client for server: {}", serverName);
@@ -90,11 +106,11 @@ public class MCPClientFactory {
     private class MCPClientInvocationHandler implements InvocationHandler {
         
         private final String serverName;
-        private final MCPClient annotation;
+        private final MCPServerConfig serverConfig;
         
-        public MCPClientInvocationHandler(String serverName, MCPClient annotation) {
+        public MCPClientInvocationHandler(String serverName, MCPServerConfig serverConfig) {
             this.serverName = serverName;
-            this.annotation = annotation;
+            this.serverConfig = serverConfig;
         }
         
         @Override
@@ -121,7 +137,10 @@ public class MCPClientFactory {
                 // Convert arguments to map
                 Map<String, Object> arguments = new HashMap<>();
                 if (args != null && args.length > 0) {
-                    arguments = objectMapper.convertValue(args[0], Map.class);
+                    java.lang.reflect.Parameter[] methodParams = method.getParameters();
+                    for (int i = 0; i < methodParams.length; i++) {
+                        arguments.put(methodParams[i].getName(), args[i]);
+                    }
                 }
                 params.arguments = arguments;
                 request.params = params;
@@ -129,9 +148,13 @@ public class MCPClientFactory {
                 // Send request
                 CompletableFuture<MCPResponse> future = connectionManager.sendRequest(serverName, request);
                 
+                // Get request timeout from configuration
+                Duration timeout = serverConfig.requestTimeout()
+                    .orElse(runtimeConfig.requestTimeout());
+                
                 // Wait for response with timeout
                 MCPResponse response = future.get(
-                    Duration.ofMillis(annotation.requestTimeout()).toMillis(),
+                    timeout.toMillis(),
                     java.util.concurrent.TimeUnit.MILLISECONDS
                 );
                 

@@ -1,8 +1,0 @@
-tech.kayys.wayang.mcp.client.runtime.transport.MCPTransportConfig.autoReconnect=Check if auto-reconnect is enabled\n\n@return true if auto-reconnect is enabled
-tech.kayys.wayang.mcp.client.runtime.transport.MCPTransportConfig.command=Get the command for stdio transport\nRequired for STDIO transport\n\n@return the command
-tech.kayys.wayang.mcp.client.runtime.transport.MCPTransportConfig.connectionTimeout=Get the connection timeout\n\n@return the connection timeout
-tech.kayys.wayang.mcp.client.runtime.transport.MCPTransportConfig.maxReconnectAttempts=Get the maximum number of reconnect attempts\n\n@return the maximum number of reconnect attempts
-tech.kayys.wayang.mcp.client.runtime.transport.MCPTransportConfig.readTimeout=Get the read timeout\n\n@return the read timeout
-tech.kayys.wayang.mcp.client.runtime.transport.MCPTransportConfig.reconnectDelay=Get the reconnection delay\n\n@return the reconnection delay
-tech.kayys.wayang.mcp.client.runtime.transport.MCPTransportConfig.type=Get the transport type\n\n@return the transport type
-tech.kayys.wayang.mcp.client.runtime.transport.MCPTransportConfig.url=Get the transport URL\nRequired for HTTP and WebSocket transports\n\n@return the transport URL

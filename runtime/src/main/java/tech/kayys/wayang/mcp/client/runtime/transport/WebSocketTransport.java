@@ -2,6 +2,7 @@ package tech.kayys.wayang.mcp.client.runtime.transport;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.annotation.PostConstruct;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 import tech.kayys.wayang.mcp.client.runtime.config.MCPServerConfig;
 import tech.kayys.wayang.mcp.client.runtime.annotations.MCPClientQualifier;
@@ -34,12 +35,16 @@ public class WebSocketTransport extends MCPTransport {
     
     private Session session;
     private final WebSocketClient client;
-    private final URI serverUri;
+    private URI serverUri;
     private final Sinks.One<Void> connectionSink = Sinks.one();
     
     public WebSocketTransport() {
         this.client = new WebSocketClient();
         this.client.setIdleTimeout(Duration.ofSeconds(30));
+    }
+    
+    @PostConstruct
+    public void init() {
         try {
             this.serverUri = new URI(serverConfig.transport().url());
         } catch (Exception e) {

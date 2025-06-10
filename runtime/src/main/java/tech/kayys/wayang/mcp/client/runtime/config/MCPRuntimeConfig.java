@@ -10,7 +10,7 @@ import io.smallrye.config.WithName;
 import java.time.Duration;
 import java.util.Map;
 
-@ConfigMapping(prefix = "mcp")
+@ConfigMapping(prefix = "quarkus.mcp")
 @ConfigRoot(phase = ConfigPhase.RUN_TIME)
 public interface MCPRuntimeConfig {
 

@@ -18,36 +18,10 @@ import tech.kayys.wayang.mcp.client.runtime.schema.MCPRequest;
 import tech.kayys.wayang.mcp.client.runtime.schema.MCPResponse;
 import tech.kayys.wayang.mcp.client.runtime.schema.PromptsCapability;
 import tech.kayys.wayang.mcp.client.runtime.schema.ServerCapabilities;
-import tech.kayys.wayang.mcp.client.runtime.schema.prompts.GetPromptParams;
-import tech.kayys.wayang.mcp.client.runtime.schema.prompts.GetPromptRequest;
-import tech.kayys.wayang.mcp.client.runtime.schema.prompts.GetPromptResponse;
-import tech.kayys.wayang.mcp.client.runtime.schema.prompts.ListPromptsParams;
-import tech.kayys.wayang.mcp.client.runtime.schema.prompts.ListPromptsRequest;
-import tech.kayys.wayang.mcp.client.runtime.schema.prompts.ListPromptsResponse;
-import tech.kayys.wayang.mcp.client.runtime.schema.prompts.Prompt;
-import tech.kayys.wayang.mcp.client.runtime.schema.prompts.PromptMessage;
-import tech.kayys.wayang.mcp.client.runtime.schema.resource.ListResourcesParams;
-import tech.kayys.wayang.mcp.client.runtime.schema.resource.ListResourcesRequest;
-import tech.kayys.wayang.mcp.client.runtime.schema.resource.ListResourcesResponse;
-import tech.kayys.wayang.mcp.client.runtime.schema.resource.ReadResourceParams;
-import tech.kayys.wayang.mcp.client.runtime.schema.resource.ReadResourceRequest;
-import tech.kayys.wayang.mcp.client.runtime.schema.resource.ReadResourceResponse;
-import tech.kayys.wayang.mcp.client.runtime.schema.resource.Resource;
-import tech.kayys.wayang.mcp.client.runtime.schema.resource.ResourceContent;
-import tech.kayys.wayang.mcp.client.runtime.schema.resource.ResourcesCapability;
-import tech.kayys.wayang.mcp.client.runtime.schema.tools.CallToolParams;
-import tech.kayys.wayang.mcp.client.runtime.schema.tools.CallToolRequest;
-import tech.kayys.wayang.mcp.client.runtime.schema.tools.CallToolResponse;
-import tech.kayys.wayang.mcp.client.runtime.schema.tools.ListToolsParams;
-import tech.kayys.wayang.mcp.client.runtime.schema.tools.ListToolsRequest;
-import tech.kayys.wayang.mcp.client.runtime.schema.tools.ListToolsResponse;
-import tech.kayys.wayang.mcp.client.runtime.schema.tools.Tool;
-import tech.kayys.wayang.mcp.client.runtime.schema.tools.ToolResult;
-import tech.kayys.wayang.mcp.client.runtime.schema.tools.ToolsCapability;
-import tech.kayys.wayang.mcp.client.runtime.transport.MCPTransport;
-import tech.kayys.wayang.mcp.client.runtime.transport.MCPTransportFactory;
-import tech.kayys.wayang.mcp.client.runtime.transport.MCPTransportConfig;
-import tech.kayys.wayang.mcp.client.runtime.annotations.MCPClient;
+import tech.kayys.wayang.mcp.client.runtime.schema.prompts.*;
+import tech.kayys.wayang.mcp.client.runtime.schema.resource.*;
+import tech.kayys.wayang.mcp.client.runtime.schema.tools.*;
+import tech.kayys.wayang.mcp.client.runtime.transport.*;
 import tech.kayys.wayang.mcp.client.runtime.exception.MCPException;
 
 import java.time.Duration;
@@ -58,6 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Optional;
+import java.util.HashMap;
 
 /**
  * Core MCP Client implementation
@@ -103,8 +79,8 @@ public class MCPClientImpl implements MCPClientInterface {
             // Create transport config
             MCPTransportConfig transportConfig = new MCPTransportConfig() {
                 @Override
-                public MCPClient.Transport type() {
-                    return config.getTransport();
+                public MCPTransportType type() {
+                    return MCPTransportType.HTTP;
                 }
                 
                 @Override
@@ -113,8 +89,8 @@ public class MCPClientImpl implements MCPClientInterface {
                 }
                 
                 @Override
-                public String command() {
-                    return null;
+                public Optional<String> command() {
+                    return Optional.empty();
                 }
                 
                 @Override
@@ -140,6 +116,16 @@ public class MCPClientImpl implements MCPClientInterface {
                 @Override
                 public Duration reconnectDelay() {
                     return config.getReconnectDelay();
+                }
+
+                @Override
+                public Map<String, String> headers() {
+                    Map<String, String> headers = new HashMap<>(config.getHeaders());
+                    // Add API key if not present
+                    if (!headers.containsKey("X-Goog-Api-Key")) {
+                        headers.put("X-Goog-Api-Key", config.getApiKey());
+                    }
+                    return headers;
                 }
             };
             

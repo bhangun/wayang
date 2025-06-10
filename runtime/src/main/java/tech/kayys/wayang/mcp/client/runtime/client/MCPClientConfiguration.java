@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import tech.kayys.wayang.mcp.client.runtime.config.MCPRuntimeConfig;
 import tech.kayys.wayang.mcp.client.runtime.config.MCPServerConfig;
+import tech.kayys.wayang.mcp.client.runtime.transport.MCPTransportType;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -11,7 +12,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import tech.kayys.wayang.mcp.client.runtime.annotations.MCPClient;
 
 /**
  * Configuration for MCP clients
@@ -23,7 +23,7 @@ public class MCPClientConfiguration {
     MCPRuntimeConfig runtimeConfig;
     
     private String serverUrl;
-    private MCPClient.Transport transport = MCPClient.Transport.WEBSOCKET;
+    private MCPTransportType transport = MCPTransportType.WEBSOCKET;
     private Duration connectionTimeout = Duration.ofSeconds(30);
     private Duration requestTimeout = Duration.ofSeconds(60);
     private int maxRetries = 3;
@@ -37,12 +37,13 @@ public class MCPClientConfiguration {
     private Duration heartbeatInterval = Duration.ofSeconds(30);
     private boolean enableCompression = false;
     private int maxMessageSize = 1024 * 1024; // 1MB
+    private String apiKey;
     
     private MCPClientConfiguration() {}
     
     // Getters
     public String getServerUrl() { return serverUrl; }
-    public MCPClient.Transport getTransport() { return transport; }
+    public MCPTransportType getTransport() { return transport; }
     public Duration getConnectionTimeout() { return connectionTimeout; }
     public Duration getRequestTimeout() { return requestTimeout; }
     public int getMaxRetries() { return maxRetries; }
@@ -52,6 +53,7 @@ public class MCPClientConfiguration {
     public Duration getReconnectDelay() { return reconnectDelay; }
     public int getMaxReconnectAttempts() { return maxReconnectAttempts; }
     public Map<String, String> getHeaders() { return new HashMap<>(headers); }
+    public String getApiKey() { return apiKey; }
     public boolean isEnableHeartbeat() { return enableHeartbeat; }
     public Duration getHeartbeatInterval() { return heartbeatInterval; }
     public boolean isEnableCompression() { return enableCompression; }
@@ -102,7 +104,7 @@ public class MCPClientConfiguration {
             return this;
         }
         
-        public Builder transport(MCPClient.Transport transport) {
+        public Builder transport(MCPTransportType transport) {
             config.transport = transport;
             return this;
         }
@@ -174,6 +176,11 @@ public class MCPClientConfiguration {
         
         public Builder maxMessageSize(int maxMessageSize) {
             config.maxMessageSize = maxMessageSize;
+            return this;
+        }
+        
+        public Builder apiKey(String apiKey) {
+            config.apiKey = apiKey;
             return this;
         }
         

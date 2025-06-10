@@ -1,0 +1,12 @@
+name: "Wayang MCP Client"
+artifact: "tech.kayys.wayang:wayang-mcp-client:${project.version}"
+metadata:
+  keywords:
+    - "mcp"
+    - "client"
+    - "wayang"
+  categories:
+    - "client"
+  guide: "https://github.com/kayys/wayang-mcp"
+  status: "stable"
+  unlisted: false

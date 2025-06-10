@@ -1,0 +1,114 @@
+
+:summaryTableId: config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config
+[.configuration-legend]
+icon:lock[title=Fixed at build time] Configuration property fixed at build time - All other configuration properties are overridable at runtime
+[.configuration-reference, cols="80,.^10,.^10"]
+|===
+
+h|[[config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config_configuration]]link:#config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config_configuration[Configuration property]
+
+h|Type
+h|Default
+
+a| [[config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config_mcp-servers-servers-auth-type]]`link:#config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config_mcp-servers-servers-auth-type[mcp.servers."servers".auth.type]`
+
+
+[.description]
+--
+Authentication type
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++MCP_SERVERS__SERVERS__AUTH_TYPE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++MCP_SERVERS__SERVERS__AUTH_TYPE+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|required icon:exclamation-circle[title=Configuration property is required]
+
+
+a| [[config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config_mcp-servers-servers-auth-token]]`link:#config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config_mcp-servers-servers-auth-token[mcp.servers."servers".auth.token]`
+
+
+[.description]
+--
+Authentication token
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++MCP_SERVERS__SERVERS__AUTH_TOKEN+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++MCP_SERVERS__SERVERS__AUTH_TOKEN+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|
+
+
+a| [[config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config_mcp-servers-servers-auth-api-key]]`link:#config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config_mcp-servers-servers-auth-api-key[mcp.servers."servers".auth.api-key]`
+
+
+[.description]
+--
+API key
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++MCP_SERVERS__SERVERS__AUTH_API_KEY+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++MCP_SERVERS__SERVERS__AUTH_API_KEY+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|
+
+
+a| [[config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config_mcp-servers-servers-auth-username]]`link:#config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config_mcp-servers-servers-auth-username[mcp.servers."servers".auth.username]`
+
+
+[.description]
+--
+Username for basic auth
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++MCP_SERVERS__SERVERS__AUTH_USERNAME+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++MCP_SERVERS__SERVERS__AUTH_USERNAME+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|
+
+
+a| [[config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config_mcp-servers-servers-auth-password]]`link:#config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config_mcp-servers-servers-auth-password[mcp.servers."servers".auth.password]`
+
+
+[.description]
+--
+Password for basic auth
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++MCP_SERVERS__SERVERS__AUTH_PASSWORD+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++MCP_SERVERS__SERVERS__AUTH_PASSWORD+++`
+endif::add-copy-button-to-env-var[]
+--|string 
+|
+
+
+a| [[config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config_mcp-servers-servers-auth-parameters-parameters]]`link:#config-group-tech-kayys-wayang-mcp-client-runtime-config-mcp-auth-config_mcp-servers-servers-auth-parameters-parameters[mcp.servers."servers".auth.parameters]`
+
+
+[.description]
+--
+Additional auth parameters
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++MCP_SERVERS__SERVERS__AUTH_PARAMETERS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++MCP_SERVERS__SERVERS__AUTH_PARAMETERS+++`
+endif::add-copy-button-to-env-var[]
+--|`Map<String,String>` 
+|
+
+|===

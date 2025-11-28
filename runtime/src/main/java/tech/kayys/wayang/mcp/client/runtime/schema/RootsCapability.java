@@ -1,5 +1,0 @@
-package tech.kayys.wayang.mcp.client.runtime.schema;
-
-public class RootsCapability {
-    public boolean listChanged;
-}

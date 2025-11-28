@@ -1,8 +1,0 @@
-#
-#Tue Jun 10 12:42:20 WIB 2025
-tech.kayys.wayang.mcp.client.runtime.config.MCPAuthConfig.apiKey=API key
-tech.kayys.wayang.mcp.client.runtime.config.MCPAuthConfig.parameters=Additional auth parameters
-tech.kayys.wayang.mcp.client.runtime.config.MCPAuthConfig.password=Password for basic auth
-tech.kayys.wayang.mcp.client.runtime.config.MCPAuthConfig.token=Authentication token
-tech.kayys.wayang.mcp.client.runtime.config.MCPAuthConfig.type=Authentication type
-tech.kayys.wayang.mcp.client.runtime.config.MCPAuthConfig.username=Username for basic auth

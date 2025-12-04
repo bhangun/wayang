@@ -1,0 +1,72 @@
+{
+    "$id": "https://kayys.tech/schema/v1/node-base.schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Node Base Schema",
+    "type": "object",
+    "required": [
+        "id",
+        "type"
+    ],
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "type": {
+            "type": "string"
+        },
+        "author": {
+            "$ref": "https://kayys.tech/schema/v1/author.schema.json"
+        },
+        "description": {
+            "$ref": "https://kayys.tech/schema/v1/description.schema.json"
+        },
+        "properties": {
+            "$ref": "https://kayys.tech/schema/v1/properties.schema.json"
+        },
+        "inputs": {
+            "$ref": "https://kayys.tech/schema/v1/port-descriptor.schema.json"
+        },
+        "outputs": {
+            "$ref": "https://kayys.tech/schema/v1/output.schema.json"
+        },
+        "rules": {
+            "$ref": "https://kayys.tech/schema/v1/rules.schema.json"
+        },
+        "validation": {
+            "$ref": "https://kayys.tech/schema/v1/validation.schema.json"
+        },
+        "errorHandling": {
+            "$ref": "https://kayys.tech/schema/v1/errorHandling.schema.json"
+        },
+        "observability": {
+            "$ref": "https://kayys.tech/schema/v1/observability.schema.json"
+        },
+        "audit": {
+            "$ref": "https://kayys.tech/schema/v1/audit.schema.json"
+        },
+        "sla": {
+            "$ref": "https://kayys.tech/schema/v1/sla.schema.json"
+        },
+        "lifecycle": {
+            "$ref": "https://kayys.tech/schema/v1/lifecycle.schema.json"
+        },
+        "execution": {
+            "$ref": "https://kayys.tech/schema/v1/execution.schema.json"
+        },
+        "triggers": {
+            "$ref": "https://kayys.tech/schema/v1/triggers.schema.json"
+        },
+        "policy": {
+            "$ref": "https://kayys.tech/schema/v1/policy.schema.json"
+        },
+        "telemetry": {
+            "$ref": "https://kayys.tech/schema/v1/telemetry.schema.json"
+        },
+        "provenance": {
+            "$ref": "https://kayys.tech/schema/v1/provenance.schema.json"
+        },
+        "resourceProfile": {
+            "$ref": "https://kayys.tech/schema/v1/resourceProfile.schema.json"
+        }
+    }
+}

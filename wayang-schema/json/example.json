@@ -1,0 +1,237 @@
+{
+    "workflow": {
+        "id": "chat_rag_flow",
+        "name": "Chat RAG Handler",
+        "version": "1.0.0",
+        "metadata": {
+            "createdBy": "kayys.tech",
+            "environment": "production"
+        },
+        "nodes": [
+            {
+                "id": "start_ws",
+                "type": "start.websocket",
+                "label": "WebSocket Start",
+                "position": {
+                    "x": 100,
+                    "y": 150
+                },
+                "properties": {
+                    "channel": "/chat",
+                    "authRequired": true
+                },
+                "outputs": [
+                    {
+                        "id": "msgOut",
+                        "schema": "MessagePayload"
+                    }
+                ],
+                "rules": {
+                    "canConnectTo": [
+                        "router",
+                        "agent",
+                        "memory",
+                        "custom.*"
+                    ]
+                }
+            },
+            {
+                "id": "router",
+                "type": "logic.router",
+                "label": "Router",
+                "position": {
+                    "x": 350,
+                    "y": 150
+                },
+                "properties": {
+                    "routes": [
+                        {
+                            "match": "input.type == 'query'",
+                            "to": "agent_1"
+                        },
+                        {
+                            "match": "input.type == 'ping'",
+                            "to": "end_direct"
+                        }
+                    ]
+                },
+                "inputs": [
+                    {
+                        "id": "in",
+                        "schema": "MessagePayload"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "id": "toAgent",
+                        "schema": "MessagePayload"
+                    },
+                    {
+                        "id": "toEnd",
+                        "schema": "MessagePayload"
+                    }
+                ],
+                "rules": {
+                    "canConnectTo": [
+                        "agent.*",
+                        "end.*"
+                    ],
+                    "disallow": [
+                        "start.*"
+                    ]
+                }
+            },
+            {
+                "id": "agent_1",
+                "type": "agent.llm",
+                "label": "Agent",
+                "position": {
+                    "x": 600,
+                    "y": 120
+                },
+                "properties": {
+                    "model": {
+                        "provider": "openai",
+                        "name": "gpt-4.1",
+                        "temperature": 0.2,
+                        "maxTokens": 2048
+                    },
+                    "memory": {
+                        "enabled": true,
+                        "vectorStore": "vectordb_1"
+                    },
+                    "tools": [
+                        "web_search",
+                        "calculator"
+                    ]
+                },
+                "inputs": [
+                    {
+                        "id": "promptIn",
+                        "schema": "MessagePayload"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "id": "embeddingQuery",
+                        "schema": "EmbeddingRequest"
+                    },
+                    {
+                        "id": "agentResponse",
+                        "schema": "LLMResponse"
+                    }
+                ],
+                "rules": {
+                    "canConnectTo": [
+                        "memory.*",
+                        "model.*",
+                        "end.websocket",
+                        "end.event",
+                        "custom.*"
+                    ],
+                    "inputLimit": 1
+                }
+            },
+            {
+                "id": "vectordb_1",
+                "type": "memory.vector",
+                "label": "Vector Store",
+                "position": {
+                    "x": 600,
+                    "y": 330
+                },
+                "properties": {
+                    "engine": "milvus",
+                    "collection": "chat_history",
+                    "dimension": 768,
+                    "topK": 5
+                },
+                "inputs": [
+                    {
+                        "id": "embedIn",
+                        "schema": "EmbeddingRequest"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "id": "results",
+                        "schema": "MemoryChunks"
+                    }
+                ],
+                "rules": {
+                    "canConnectTo": [
+                        "agent.*"
+                    ],
+                    "disallow": [
+                        "start.*"
+                    ]
+                }
+            },
+            {
+                "id": "end_ws",
+                "type": "end.websocket",
+                "label": "WebSocket Response",
+                "position": {
+                    "x": 900,
+                    "y": 150
+                },
+                "properties": {
+                    "channel": "/chat"
+                },
+                "inputs": [
+                    {
+                        "id": "out",
+                        "schema": "LLMResponse"
+                    }
+                ],
+                "rules": {
+                    "canConnectTo": []
+                }
+            },
+            {
+                "id": "end_direct",
+                "type": "end.simple",
+                "label": "Simple Response",
+                "position": {
+                    "x": 900,
+                    "y": 280
+                },
+                "properties": {
+                    "value": "Pong"
+                },
+                "inputs": [
+                    {
+                        "id": "in",
+                        "schema": "MessagePayload"
+                    }
+                ]
+            }
+        ],
+        "connections": [
+            {
+                "from": "start_ws.msgOut",
+                "to": "router.in"
+            },
+            {
+                "from": "router.toAgent",
+                "to": "agent_1.promptIn"
+            },
+            {
+                "from": "agent_1.embeddingQuery",
+                "to": "vectordb_1.embedIn"
+            },
+            {
+                "from": "vectordb_1.results",
+                "to": "agent_1.promptIn"
+            },
+            {
+                "from": "agent_1.agentResponse",
+                "to": "end_ws.out"
+            },
+            {
+                "from": "router.toEnd",
+                "to": "end_direct.in"
+            }
+        ]
+    }
+}

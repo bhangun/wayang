@@ -1,0 +1,349 @@
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: wayang
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: plugin-registry-config
+  namespace: wayang
+data:
+  application.yml: |
+    quarkus:
+      http:
+        port: 8080
+      datasource:
+        db-kind: postgresql
+        jdbc:
+          url: jdbc:postgresql://postgres-service:5432/plugin_registry
+      kafka:
+        bootstrap-servers: kafka-service:9092
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: plugin-registry-secrets
+  namespace: wayang
+type: Opaque
+stringData:
+  db-username: wayang
+  db-password: changeme
+  jwt-public-key: |
+    -----BEGIN PUBLIC KEY-----
+    ...
+    -----END PUBLIC KEY-----
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: plugin-registry
+  namespace: wayang
+  labels:
+    app: plugin-registry
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: plugin-registry
+  template:
+    metadata:
+      labels:
+        app: plugin-registry
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+      - name: plugin-registry
+        image: wayang/plugin-registry-service:1.0.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: plugin-registry-secrets
+              key: db-username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: plugin-registry-secrets
+              key: db-password
+        - name: DB_HOST
+          value: postgres-service
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: plugin_registry
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: kafka-service:9092
+        - name: REDIS_HOST
+          value: redis-service
+        - name: REDIS_PORT
+          value: "6379"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://jaeger-collector:4317
+        - name: JAVA_OPTS
+          value: "-Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /q/health/live
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /q/health/ready
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: config
+          mountPath: /deployments/config
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: plugin-registry-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: plugin-registry-service
+  namespace: wayang
+  labels:
+    app: plugin-registry
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: plugin-registry
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: plugin-registry-hpa
+  namespace: wayang
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: plugin-registry
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+###############################################################################
+# Ingress Configuration
+###############################################################################
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wayang-ingress
+  namespace: wayang
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.wayang.io
+    secretName: wayang-tls
+  rules:
+  - host: api.wayang.io
+    http:
+      paths:
+      - path: /api/v1/plugins
+        pathType: Prefix
+        backend:
+          service:
+            name: plugin-registry-service
+            port:
+              number: 8080
+      - path: /api/v1/loader
+        pathType: Prefix
+        backend:
+          service:
+            name: plugin-loader-service
+            port:
+              number: 8080
+
+---
+###############################################################################
+# Network Policies
+###############################################################################
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: plugin-registry-network-policy
+  namespace: wayang
+spec:
+  podSelector:
+    matchLabels:
+      app: plugin-registry
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: wayang
+    - podSelector:
+        matchLabels:
+          app: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: kafka
+    ports:
+    - protocol: TCP
+      port: 9092
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow DNS
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+###############################################################################
+# PostgreSQL StatefulSet
+###############################################################################
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: wayang
+spec:
+  ports:
+  - port: 5432
+    name: postgres
+  clusterIP: None
+  selector:
+    app: postgres
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: wayang
+spec:
+  serviceName: postgres-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_DB
+          value: plugin_registry
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: plugin-registry-secrets
+              key: db-username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: plugin-registry-secrets
+              key: db-password
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 20Gi
+
+---

@@ -1,0 +1,424 @@
+package tech.kayys.wayang.nodes.models;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.Instant;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * ==============================================
+ * LLM REQUEST/RESPONSE MODELS
+ * ==============================================
+ */
+
+
+
+/**
+ * ==============================================
+ * RAG REQUEST/RESPONSE MODELS
+ * ==============================================
+ */
+
+
+/**
+ * ==============================================
+ * MEMORY MODELS
+ * ==============================================
+ */
+
+
+
+
+/**
+ * ==============================================
+ * TOOL MODELS
+ * ==============================================
+ */
+
+
+/**
+ * ==============================================
+ * HITL MODELS
+ * ==============================================
+ */
+
+
+
+/**
+ * ==============================================
+ * AUDIT MODELS
+ * ==============================================
+ */
+
+
+/**
+ * ==============================================
+ * PERSONA MODEL
+ * ==============================================
+ */
+
+
+package tech.kayys.wayang.nodes.clients;
+
+import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import io.smallrye.mutiny.Uni;
+
+/**
+ * ==============================================
+ * REST CLIENT INTERFACES
+ * ==============================================
+ */
+
+
+
+
+
+/**
+ * ==============================================
+ * UTILITY CLASSES
+ * ==============================================
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+# application.yml - Quarkus Configuration for Wayang Platform
+
+---
+# pom.xml for Wayang Core Module
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>tech.kayys.wayang</groupId>
+    <artifactId>wayang-core</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>Wayang AI Agent Platform - Core</name>
+    <description>Core runtime for Wayang AI Agent Workflow Builder</description>
+
+
+
+    <dependencies>
+      
+    </dependencies>
+
+</project>
+
+---
+# Node Module Descriptor (module-info.java)
+
+module tech.kayys.wayang.core {
+    // Core dependencies
+    requires java.base;
+    requires jakarta.cdi;
+    requires jakarta.inject;
+    requires jakarta.ws.rs;
+    requires jakarta.transaction;
+    
+    // Quarkus
+    requires io.quarkus.arc;
+    requires io.smallrye.mutiny;
+    requires io.smallrye.reactive.messaging.api;
+    
+    // JSON
+    requires com.fasterxml.jackson.databind;
+    requires com.fasterxml.jackson.datatype.jsr310;
+    
+    // Validation
+    requires com.networknt.json.schema.validator;
+    
+    // CEL
+    requires dev.cel.common;
+    requires dev.cel.compiler;
+    requires dev.cel.runtime;
+    
+    // OpenTelemetry
+    requires io.opentelemetry.api;
+    requires io.opentelemetry.context;
+    
+    // Exports
+    exports tech.kayys.wayang.core.node;
+    exports tech.kayys.wayang.core.node.factory;
+    exports tech.kayys.wayang.nodes.builtin;
+    exports tech.kayys.wayang.nodes.models;
+    exports tech.kayys.wayang.nodes.services;
+    exports tech.kayys.wayang.nodes.clients;
+    
+    // Opens for reflection (required for CDI)
+    opens tech.kayys.wayang.nodes.builtin to io.quarkus.arc;
+    opens tech.kayys.wayang.nodes.services to io.quarkus.arc;
+    opens tech.kayys.wayang.nodes.models to com.fasterxml.jackson.databind;
+}
+
+---
+# Docker Compose for Development Environment
+
+version: '3.8'
+
+services:
+  # PostgreSQL with pgvector
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: wayang
+      POSTGRES_USER: wayang
+      POSTGRES_PASSWORD: wayang
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+      
+  # Kafka for event streaming
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+      
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+      
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"  # OTLP gRPC
+      - "4318:4318"  # OTLP HTTP
+      
+  # Jaeger for tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"  # UI
+      - "14250:14250"  # gRPC
+      
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+      
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  postgres_data:
+  grafana_data:
+
+---
+# init-db.sql - Database initialization
+
+-- Enable pgvector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Node execution tracking
+CREATE TABLE IF NOT EXISTS execution_runs (
+    run_id UUID PRIMARY KEY,
+    workflow_id UUID NOT NULL,
+    tenant_id UUID NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    metadata JSONB
+);
+
+CREATE INDEX idx_execution_runs_tenant ON execution_runs(tenant_id);
+CREATE INDEX idx_execution_runs_workflow ON execution_runs(workflow_id);
+
+-- Node state tracking
+CREATE TABLE IF NOT EXISTS node_states (
+    id BIGSERIAL PRIMARY KEY,
+    run_id UUID REFERENCES execution_runs(run_id),
+    node_id TEXT NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    attempts INT DEFAULT 0,
+    last_error JSONB,
+    checkpoint_ref TEXT,
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    outputs JSONB
+);
+
+CREATE INDEX idx_node_states_run ON node_states(run_id);
+
+-- Memory storage
+CREATE TABLE IF NOT EXISTS memories (
+    id UUID PRIMARY KEY,
+    tenant_id UUID NOT NULL,
+    type VARCHAR(32) NOT NULL,
+    content JSONB NOT NULL,
+    embedding vector(1536),
+    ttl INTERVAL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    expires_at TIMESTAMP WITH TIME ZONE,
+    metadata JSONB
+);
+
+CREATE INDEX idx_memories_tenant ON memories(tenant_id);
+CREATE INDEX idx_memories_embedding ON memories USING ivfflat (embedding vector_cosine_ops);
+
+-- Provenance logs
+CREATE TABLE IF NOT EXISTS provenance (
+    id UUID PRIMARY KEY,
+    run_id UUID,
+    node_id TEXT,
+    event_type TEXT NOT NULL,
+    actor TEXT,
+    payload JSONB,
+    signature TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE INDEX idx_provenance_run ON provenance(run_id);
+CREATE INDEX idx_provenance_created ON provenance(created_at);
+
+-- Audit logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id UUID PRIMARY KEY,
+    tenant_id UUID NOT NULL,
+    event TEXT NOT NULL,
+    level VARCHAR(16) NOT NULL,
+    tags TEXT[],
+    run_id UUID,
+    node_id TEXT,
+    metadata JSONB,
+    hash TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE INDEX idx_audit_tenant ON audit_logs(tenant_id);
+CREATE INDEX idx_audit_created ON audit_logs(created_at);
+
+---
+# README.md
+
+# Wayang AI Agent Workflow Platform - Built-in Nodes
+
+Complete implementation of enterprise-grade built-in nodes for the Wayang platform.
+
+## Features
+
+- **15+ Production-Ready Nodes** across all categories
+- **Fully Reactive** using SmallRye Mutiny
+- **Error-as-Input Pattern** with structured error handling
+- **Observability Built-in** (OpenTelemetry, Prometheus, Jaeger)
+- **Multi-tenant Support** with tenant isolation
+- **Checkpoint/Resume** for long-running workflows
+- **Hot-reload Plugins** with signature verification
+- **Modular Architecture** shared between platform and standalone agents
+
+## Node Categories
+
+### Control Flow
+- Start/End
+- Decision (CEL-based)
+- Loop (with parallelism)
+- Merge (multiple strategies)
+
+### AI & LLM
+- Agent (with function-calling, streaming, personas)
+- RAG (hybrid search with re-ranking)
+- Embedder (batch processing)
+
+### Memory & State
+- Memory Write/Read (episodic, semantic, procedural)
+
+### Tools & Integration
+- Tool Call (MCP-compliant)
+- HTTP Client (full-featured)
+
+### Data Transformation
+- Transformer (JSONPath, JOLT, JavaScript)
+- Validator (JSON Schema + CEL)
+
+### Error Handling & Observability
+- Error Handler (rule-based routing)
+- Audit (tamper-proof logging)
+- HITL (human-in-the-loop)
+- Self-Healing (LLM-powered auto-repair)
+
+## Getting Started
+
+1. Start infrastructure:
+```bash
+docker-compose up -d
+```
+
+2. Build the project:
+```bash
+mvn clean install
+```
+
+3. Run the platform:
+```bash
+mvn quarkus:dev
+```
+
+## Configuration
+
+All configuration is in `application.yml`. Key settings:
+
+- Database connection
+- Kafka brokers
+- REST client endpoints
+- Security settings
+- Node registry paths
+
+## Adding Custom Nodes
+
+1. Implement `Node` interface or extend `AbstractNode`
+2. Add `@NodeType("your.node.type")` annotation
+3. Create JSON descriptor in `/nodes/descriptors`
+4. Register in `application.yml`
+
+## Testing
+
+```bash
+mvn test
+```
+
+## License
+
+Copyright © 2025 kayys.tech

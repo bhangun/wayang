@@ -1,0 +1,36 @@
+{
+    "$id": "https://kayys.tech/schema/v1/memory.vector.schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Vector Memory Node",
+    "allOf": [
+        {
+            "$ref": "node-base.schema.json"
+        },
+        {
+            "type": "object",
+            "properties": {
+                "properties": {
+                    "type": "object",
+                    "required": [
+                        "engine",
+                        "collection"
+                    ],
+                    "properties": {
+                        "engine": {
+                            "type": "string"
+                        },
+                        "collection": {
+                            "type": "string"
+                        },
+                        "dimension": {
+                            "type": "integer"
+                        },
+                        "topK": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}

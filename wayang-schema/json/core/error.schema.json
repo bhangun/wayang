@@ -1,0 +1,93 @@
+{
+    "$id": "https://kayys.tech/schema/v1/concerns/error.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Error Payload",
+    "type": "object",
+    "required": [
+        "code",
+        "message",
+        "timestamp"
+    ],
+    "properties": {
+        "code": {
+            "type": "string"
+        },
+        "type": {
+            "type": "string",
+            "enum": [
+                "ToolError",
+                "LLMError",
+                "NetworkError",
+                "ValidationError",
+                "Timeout",
+                "PluginLoadError",
+                "SecurityError",
+                "CircuitOpen",
+                "Unknown"
+            ]
+        },
+        "message": {
+            "type": "string"
+        },
+        "details": {
+            "type": "object",
+            "additionalProperties": true
+        },
+        "retryable": {
+            "type": "boolean"
+        },
+        "severity": {
+            "type": "string",
+            "enum": [
+                "DEBUG",
+                "INFO",
+                "WARN",
+                "ERROR",
+                "CRITICAL"
+            ],
+            "default": "ERROR"
+        },
+        "origin": {
+            "type": "object",
+            "properties": {
+                "nodeId": {
+                    "type": "string"
+                },
+                "nodeType": {
+                    "type": "string"
+                },
+                "runId": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "attempt": {
+            "type": "integer",
+            "minimum": 0
+        },
+        "maxAttempts": {
+            "type": "integer",
+            "minimum": 0
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "provenanceRef": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "suggestedAction": {
+            "type": "string",
+            "enum": [
+                "retry",
+                "fallback",
+                "escalate",
+                "human_review",
+                "abort",
+                "ignore"
+            ]
+        }
+    }
+}

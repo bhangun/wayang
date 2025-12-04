@@ -1,0 +1,32 @@
+{
+    "$id": "https://kayys.tech/schema/v1/dependancy.schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Dependancy Schema",
+    "type": "object",
+    "required": [
+        "id",
+        "version"
+    ],
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "version": {
+            "type": "string",
+            "pattern": "^[\\^~]?\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.-]+)?$"
+        },
+        "optional": {
+            "type": "boolean",
+            "default": false
+        },
+        "scope": {
+            "type": "string",
+            "enum": [
+                "runtime",
+                "compile",
+                "test"
+            ],
+            "default": "runtime"
+        }
+    }
+}

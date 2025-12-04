@@ -1,0 +1,187 @@
+# Wayang Models - Complete Configuration
+
+quarkus:
+  application:
+    name: wayang-models
+    version: 1.0.0
+
+  # HTTP Configuration
+  http:
+    port: 8080
+    cors:
+      ~: true
+      origins: "*"
+      methods: "GET,POST,PUT,DELETE,OPTIONS"
+      headers: "*"
+    limits:
+      max-body-size: 10M
+
+  # OpenAPI / Swagger
+  smallrye-openapi:
+    path: /openapi
+    info-title: Wayang Models API
+    info-version: 1.0.0
+    info-description: Unified LLM runtime with KServe protocol support
+    
+  swagger-ui:
+    always-include: true
+    path: /swagger-ui
+
+  # Database
+  datasource:
+    db-kind: postgresql
+    username: ${DB_USERNAME:wayang}
+    password: ${DB_PASSWORD:wayang}
+    jdbc:
+      url: ${DB_URL:jdbc:postgresql://localhost:5432/wayang_models}
+      max-size: 20
+      min-size: 5
+    reactive:
+      url: ${DB_REACTIVE_URL:postgresql://localhost:5432/wayang_models}
+      max-size: 20
+
+  # Hibernate
+  hibernate-orm:
+    database:
+      generation: update
+    log:
+      sql: false
+      format-sql: true
+
+  # Flyway Migration
+  flyway:
+    migrate-at-start: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
+  # Logging
+  log:
+    level: INFO
+    category:
+      "tech.kayys.wayang": DEBUG
+      "org.hibernate": WARN
+    console:
+      enable: true
+      format: "%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n"
+      color: true
+
+  # Metrics
+  micrometer:
+    enabled: true
+    export:
+      prometheus:
+        enabled: true
+        path: /metrics
+    binder:
+      jvm: true
+      system: true
+      http-server: true
+
+  # OpenTelemetry
+  otel:
+    enabled: ${OTEL_ENABLED:true}
+    exporter:
+      otlp:
+        endpoint: ${OTEL_ENDPOINT:http://localhost:4317}
+    service:
+      name: wayang-models
+    traces:
+      sampler: parentbased_always_on
+
+  # Health
+  smallrye-health:
+    root-path: /health
+    liveness-path: /live
+    readiness-path: /ready
+
+  # Cache
+  cache:
+    enabled: true
+    type: caffeine
+    caffeine:
+      model-responses:
+        initial-capacity: 100
+        maximum-size: 1000
+        expire-after-write: 1H
+
+  # Redis (optional)
+  redis:
+    hosts: ${REDIS_HOSTS:redis://localhost:6379}
+    password: ${REDIS_PASSWORD:}
+    max-pool-size: 10
+    max-pool-waiting: 24
+
+  # REST Clients
+  rest-client:
+    # Ollama
+    ollama:
+      url: ${OLLAMA_URL:http://localhost:11434}
+      scope: jakarta.inject.Singleton
+      read-timeout: 60000
+      connect-timeout: 5000
+    
+    # OpenAI
+    openai:
+      url: ${OPENAI_API_URL:https://api.openai.com}
+      scope: jakarta.inject.Singleton
+      read-timeout: 90000
+      connect-timeout: 10000
+    
+    # vLLM
+    vllm:
+      url: ${VLLM_URL:http://localhost:8000}
+      scope: jakarta.inject.Singleton
+      read-timeout: 90000
+      connect-timeout: 10000
+    
+    # Triton
+    triton:
+      url: ${TRITON_URL:http://localhost:8000}
+      scope: jakarta.inject.Singleton
+      read-timeout: 90000
+      connect-timeout: 10000
+
+  # Native image
+  native:
+    additional-build-args: >
+      -H:+ReportExceptionStackTraces,
+      --initialize-at-run-time=io.netty.handler.ssl.ConscryptAlpnSslEngine
+
+  # Container Image
+  container-image:
+    build: true
+    push: false
+    registry: docker.io
+    group: kayys
+    name: wayang-models
+    tag: latest
+
+# Application-specific configuration
+wayang:
+  models:
+    # Default tenant
+    default-tenant: default
+    
+    # Model routing
+    routing:
+      strategy: cost-latency  # capability, cost-latency, latency-only
+      cache-enabled: true
+      cache-ttl: 1h
+    
+    # Safety
+    safety:
+      enabled: true
+      pii-detection: true
+      content-filtering: true
+    
+    # Rate limiting
+    rate-limit:
+      enabled: true
+      requests-per-minute: 60
+      burst-size: 10
+
+# Provider-specific configuration
+openai:
+  api:
+    key: ${OPENAI_API_KEY:}

@@ -1,0 +1,129 @@
+
+quarkus:
+  application:
+    name: wayang-ai-agent-platform
+    version: 1.0.0
+  
+  # HTTP Configuration
+  http:
+    port: 8080
+    cors: true
+    
+  # Reactive Configuration
+  reactive:
+    max-concurrent-streams: 100
+    
+  # REST Client Configuration
+  rest-client:
+    model-router:
+      url: ${MODEL_ROUTER_URL:http://localhost:8081}
+      scope: jakarta.inject.Singleton
+      
+    rag-service:
+      url: ${RAG_SERVICE_URL:http://localhost:8082}
+      scope: jakarta.inject.Singleton
+      
+    memory-service:
+      url: ${MEMORY_SERVICE_URL:http://localhost:8083}
+      scope: jakarta.inject.Singleton
+      
+    tool-gateway:
+      url: ${TOOL_GATEWAY_URL:http://localhost:8084}
+      scope: jakarta.inject.Singleton
+      
+    hitl-service:
+      url: ${HITL_SERVICE_URL:http://localhost:8085}
+      scope: jakarta.inject.Singleton
+      
+    audit-service:
+      url: ${AUDIT_SERVICE_URL:http://localhost:8086}
+      scope: jakarta.inject.Singleton
+  
+  # Database Configuration (PostgreSQL with pgvector)
+  datasource:
+    db-kind: postgresql
+    username: ${DB_USERNAME:wayang}
+    password: ${DB_PASSWORD:wayang}
+    jdbc:
+      url: ${DB_URL:jdbc:postgresql://localhost:5432/wayang}
+      max-size: 20
+      
+  # Kafka Configuration for Events
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    
+  # OpenTelemetry Configuration
+  otel:
+    enabled: true
+    exporter:
+      otlp:
+        endpoint: ${OTEL_ENDPOINT:http://localhost:4317}
+    service:
+      name: wayang-platform
+      
+  # Cache Configuration
+  cache:
+    caffeine:
+      node-schemas:
+        maximum-size: 1000
+        expire-after-write: 1h
+      
+# Wayang-specific Configuration
+wayang:
+  # Node Registry
+  nodes:
+    registry:
+      scan-packages:
+        - tech.kayys.wayang.nodes.builtin
+      descriptor-path: /nodes/descriptors
+      
+  # Plugin Manager
+  plugins:
+    enabled: true
+    repository: ${PLUGIN_REPO:file:///opt/wayang/plugins}
+    verify-signatures: true
+    allowed-types:
+      - maven
+      - jar
+      - wasm
+    hot-reload: true
+    
+  # Security
+  security:
+    secrets:
+      backend: ${SECRETS_BACKEND:env}
+      vault:
+        url: ${VAULT_URL:http://localhost:8200}
+        token: ${VAULT_TOKEN}
+    guardrails:
+      enabled: true
+      pii-detection: true
+      content-moderation: true
+      
+  # Execution
+  execution:
+    max-concurrent-nodes: 100
+    default-timeout-ms: 30000
+    checkpoint-enabled: true
+    
+  # Memory & RAG
+  memory:
+    default-ttl: P30D
+    consolidation-enabled: true
+    consolidation-schedule: "0 0 2 * * ?"
+    
+  rag:
+    default-index: default
+    hybrid-search: true
+    rerank-enabled: true
+    
+  # Observability
+  observability:
+    metrics-enabled: true
+    tracing-enabled: true
+    provenance-enabled: true
+    
+  # Cost Management
+  cost:
+    tracking-enabled: true
+    budget-alerts: true

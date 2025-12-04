@@ -1,0 +1,72 @@
+{
+    "$id": "https://kayys.tech/schema/v1/schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Kayys Workflow Root",
+    "type": "object",
+    "description": "Workflow Schema",
+    "author": {
+        "$ref": "author.schema.json"
+    },
+    "required": [
+        "id",
+        "version",
+        "logic"
+    ],
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "version": {
+            "type": "string"
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "createdBy": {
+            "type": "string"
+        },
+        "tenantId": {
+            "type": "string"
+        },
+        "logic": {
+            "$ref": "logic.schema.json"
+        },
+        "ui": {
+            "$ref": "ui.schema.json"
+        },
+        "runtime": {
+            "$ref": "runtime.schema.json"
+        },
+        "observability": {
+            "$ref": "observability.schema.json"
+        },
+        "audit": {
+            "$ref": "audit.schema.json"
+        },
+        "dataContracts": {
+            "type": "array",
+            "items": {
+                "$ref": "data-contracts.schema.json"
+            }
+        },
+        "policy": {
+            "$ref": "policy.schema.json"
+        },
+        "telemetry": {
+            "$ref": "telemetry.schema.json"
+        },
+        "provenance": {
+            "$ref": "provenance.schema.json"
+        },
+        "simulation": {
+            "$ref": "simulation.schema.json"
+        },
+        "comments": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+    }
+}

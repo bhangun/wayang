@@ -1,0 +1,64 @@
+{
+    "$id": "https://kayys.tech/schema/v1/concerns/validation.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "ValidationRule",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "description": {
+            "type": "string"
+        },
+        "level": {
+            "type": "string",
+            "enum": [
+                "error",
+                "warning",
+                "info"
+            ],
+            "default": "error"
+        },
+        "jsonSchema": {
+            "type": [
+                "object",
+                "string"
+            ]
+        },
+        "cel": {
+            "type": "string"
+        },
+        "customValidator": {
+            "type": "object",
+            "properties": {
+                "functionRef": {
+                    "type": "string"
+                },
+                "timeoutMs": {
+                    "type": "integer",
+                    "default": 3000
+                }
+            }
+        },
+        "onFailure": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "reject",
+                        "sanitize",
+                        "coerce",
+                        "log",
+                        "warn"
+                    ],
+                    "default": "reject"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "fallback": {}
+            }
+        }
+    }
+}

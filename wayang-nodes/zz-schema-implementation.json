@@ -1,0 +1,917 @@
+{
+    "nodes": [
+        {
+            "$schema": "https://kayys.tech/schema/v1/node-base.schema.json",
+            "id": "builtin.start",
+            "type": "control.start",
+            "author": {
+                "name": "Wayang Platform",
+                "organization": "kayys.tech"
+            },
+            "description": "Entry point for workflow execution. Validates initial inputs and sets up execution context.",
+            "inputs": {
+                "type": "array",
+                "items": [
+                    {
+                        "name": "workflowInputs",
+                        "displayName": "Workflow Inputs",
+                        "data": {
+                            "type": "object",
+                            "required": false
+                        }
+                    }
+                ]
+            },
+            "outputs": {
+                "channels": [
+                    {
+                        "name": "success",
+                        "type": "success",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ]
+            },
+            "properties": [],
+            "errorHandling": {
+                "retryPolicy": {
+                    "maxAttempts": 0
+                }
+            },
+            "observability": {
+                "enabled": true,
+                "collect": [
+                    "inputs",
+                    "outputs",
+                    "latency"
+                ]
+            },
+            "audit": {
+                "enabled": true,
+                "level": "INFO"
+            },
+            "resourceProfile": {
+                "cpu": "50m",
+                "memory": "64Mi",
+                "timeoutMs": 5000
+            }
+        },
+        {
+            "$schema": "https://kayys.tech/schema/v1/node-base.schema.json",
+            "id": "builtin.agent",
+            "type": "ai.agent",
+            "description": "LLM-powered reasoning agent with chain-of-thought, function calling, and persona support.",
+            "inputs": {
+                "type": "array",
+                "items": [
+                    {
+                        "name": "message",
+                        "displayName": "User Message",
+                        "description": "The input message or query for the agent",
+                        "data": {
+                            "type": "string",
+                            "required": true
+                        }
+                    },
+                    {
+                        "name": "ragContext",
+                        "displayName": "RAG Context",
+                        "description": "Retrieved documents for knowledge augmentation",
+                        "data": {
+                            "type": "object",
+                            "required": false
+                        }
+                    },
+                    {
+                        "name": "memory",
+                        "displayName": "Memory Context",
+                        "description": "Relevant memories for personalization",
+                        "data": {
+                            "type": "array",
+                            "required": false
+                        }
+                    }
+                ]
+            },
+            "outputs": {
+                "channels": [
+                    {
+                        "name": "success",
+                        "type": "success",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "response": {
+                                    "type": "string"
+                                },
+                                "model": {
+                                    "type": "string"
+                                },
+                                "tokensUsed": {
+                                    "type": "integer"
+                                },
+                                "cost": {
+                                    "type": "number"
+                                },
+                                "functionCalls": {
+                                    "type": "array"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "name": "error",
+                        "type": "error",
+                        "schema": {
+                            "$ref": "https://kayys.tech/schema/v1/concerns/error.schema.json"
+                        }
+                    }
+                ]
+            },
+            "properties": [
+                {
+                    "name": "persona",
+                    "displayName": "Agent Persona",
+                    "type": "string",
+                    "description": "Persona ID defining agent behavior and prompts"
+                },
+                {
+                    "name": "modelHints",
+                    "displayName": "Model Hints",
+                    "type": "object",
+                    "description": "Hints for model selection (capabilities, preferred models)",
+                    "default": {}
+                },
+                {
+                    "name": "maxTokens",
+                    "displayName": "Max Tokens",
+                    "type": "integer",
+                    "default": 1024,
+                    "validation": {
+                        "min": 1,
+                        "max": 32000
+                    }
+                },
+                {
+                    "name": "temperature",
+                    "displayName": "Temperature",
+                    "type": "number",
+                    "default": 0.7,
+                    "validation": {
+                        "min": 0,
+                        "max": 2
+                    }
+                },
+                {
+                    "name": "stream",
+                    "displayName": "Stream Response",
+                    "type": "boolean",
+                    "default": false
+                },
+                {
+                    "name": "functions",
+                    "displayName": "Available Functions",
+                    "type": "array",
+                    "description": "Functions the agent can call",
+                    "default": []
+                }
+            ],
+            "errorHandling": {
+                "retryPolicy": {
+                    "maxAttempts": 3,
+                    "backoff": "exponential",
+                    "initialDelayMs": 1000,
+                    "retryOn": [
+                        "LLMError",
+                        "NetworkError",
+                        "Timeout"
+                    ]
+                },
+                "fallback": {
+                    "type": "node",
+                    "nodeId": "fallback_agent"
+                }
+            },
+            "observability": {
+                "enabled": true,
+                "collect": [
+                    "inputs",
+                    "outputs",
+                    "model_tokens",
+                    "latency"
+                ]
+            },
+            "provenance": {
+                "enabled": true,
+                "collect": [
+                    "inputs",
+                    "outputs",
+                    "model_tokens"
+                ]
+            },
+            "resourceProfile": {
+                "cpu": "100m",
+                "memory": "256Mi",
+                "timeoutMs": 60000
+            }
+        },
+        {
+            "$schema": "https://kayys.tech/schema/v1/node-base.schema.json",
+            "id": "builtin.rag",
+            "type": "knowledge.rag",
+            "description": "Retrieval Augmented Generation with hybrid search and re-ranking.",
+            "inputs": {
+                "type": "array",
+                "items": [
+                    {
+                        "name": "query",
+                        "displayName": "Search Query",
+                        "data": {
+                            "type": "string",
+                            "required": true
+                        }
+                    }
+                ]
+            },
+            "outputs": {
+                "channels": [
+                    {
+                        "name": "success",
+                        "type": "success",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "documents": {
+                                    "type": "array"
+                                },
+                                "scores": {
+                                    "type": "array"
+                                },
+                                "context": {
+                                    "type": "string"
+                                },
+                                "citations": {
+                                    "type": "array"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "name": "error",
+                        "type": "error"
+                    }
+                ]
+            },
+            "properties": [
+                {
+                    "name": "index",
+                    "displayName": "Index Name",
+                    "type": "string",
+                    "default": "default"
+                },
+                {
+                    "name": "topK",
+                    "displayName": "Top K Results",
+                    "type": "integer",
+                    "default": 5,
+                    "validation": {
+                        "min": 1,
+                        "max": 100
+                    }
+                },
+                {
+                    "name": "hybrid",
+                    "displayName": "Use Hybrid Search",
+                    "type": "boolean",
+                    "default": true
+                },
+                {
+                    "name": "rerank",
+                    "displayName": "Apply Re-ranking",
+                    "type": "boolean",
+                    "default": true
+                },
+                {
+                    "name": "filters",
+                    "displayName": "Metadata Filters",
+                    "type": "object",
+                    "default": {}
+                }
+            ],
+            "errorHandling": {
+                "retryPolicy": {
+                    "maxAttempts": 2,
+                    "backoff": "fixed",
+                    "initialDelayMs": 500
+                }
+            },
+            "observability": {
+                "enabled": true
+            },
+            "resourceProfile": {
+                "cpu": "200m",
+                "memory": "512Mi",
+                "timeoutMs": 30000
+            }
+        },
+        {
+            "$schema": "https://kayys.tech/schema/v1/node-base.schema.json",
+            "id": "builtin.decision",
+            "type": "control.decision",
+            "description": "Conditional branching using CEL expressions for dynamic routing.",
+            "inputs": {
+                "type": "array",
+                "items": [
+                    {
+                        "name": "data",
+                        "displayName": "Input Data",
+                        "data": {
+                            "type": "object",
+                            "required": true
+                        }
+                    }
+                ]
+            },
+            "outputs": {
+                "channels": [
+                    {
+                        "name": "true",
+                        "type": "conditional",
+                        "condition": "result == true",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    {
+                        "name": "false",
+                        "type": "conditional",
+                        "condition": "result == false",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    {
+                        "name": "error",
+                        "type": "error"
+                    }
+                ]
+            },
+            "properties": [
+                {
+                    "name": "condition",
+                    "displayName": "Condition (CEL)",
+                    "type": "string",
+                    "required": true,
+                    "description": "CEL expression that evaluates to boolean",
+                    "validation": {
+                        "celExpression": "true"
+                    }
+                }
+            ],
+            "errorHandling": {
+                "retryPolicy": {
+                    "maxAttempts": 0
+                }
+            },
+            "resourceProfile": {
+                "cpu": "50m",
+                "memory": "128Mi",
+                "timeoutMs": 5000
+            }
+        },
+        {
+            "$schema": "https://kayys.tech/schema/v1/node-base.schema.json",
+            "id": "builtin.tool",
+            "type": "integration.tool",
+            "description": "Execute external tools via MCP protocol with schema validation.",
+            "inputs": {
+                "type": "array",
+                "items": [
+                    {
+                        "name": "parameters",
+                        "displayName": "Tool Parameters",
+                        "data": {
+                            "type": "object",
+                            "required": true
+                        }
+                    }
+                ]
+            },
+            "outputs": {
+                "channels": [
+                    {
+                        "name": "success",
+                        "type": "success",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "result": {},
+                                "tool": {
+                                    "type": "string"
+                                },
+                                "duration": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "name": "error",
+                        "type": "error"
+                    }
+                ]
+            },
+            "properties": [
+                {
+                    "name": "tool",
+                    "displayName": "Tool Name",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "timeout",
+                    "displayName": "Timeout (ms)",
+                    "type": "integer",
+                    "default": 30000,
+                    "validation": {
+                        "min": 1000,
+                        "max": 300000
+                    }
+                }
+            ],
+            "errorHandling": {
+                "retryPolicy": {
+                    "maxAttempts": 3,
+                    "backoff": "exponential",
+                    "initialDelayMs": 1000,
+                    "retryOn": [
+                        "ToolError",
+                        "NetworkError"
+                    ]
+                },
+                "circuitBreaker": {
+                    "enabled": true,
+                    "failureThreshold": 5,
+                    "successThreshold": 2,
+                    "timeoutMs": 60000
+                }
+            },
+            "observability": {
+                "enabled": true
+            },
+            "audit": {
+                "enabled": true,
+                "level": "INFO"
+            },
+            "resourceProfile": {
+                "cpu": "100m",
+                "memory": "256Mi",
+                "timeoutMs": 30000
+            }
+        },
+        {
+            "$schema": "https://kayys.tech/schema/v1/node-base.schema.json",
+            "id": "builtin.error.handler",
+            "type": "reliability.error_handler",
+            "description": "Process and route errors with retry, fallback, auto-fix, and escalation logic.",
+            "inputs": {
+                "type": "array",
+                "items": [
+                    {
+                        "name": "error",
+                        "displayName": "Error Input",
+                        "data": {
+                            "type": "object",
+                            "schema": {
+                                "$ref": "https://kayys.tech/schema/v1/concerns/error.schema.json"
+                            },
+                            "required": true
+                        }
+                    }
+                ]
+            },
+            "outputs": {
+                "channels": [
+                    {
+                        "name": "retry",
+                        "type": "conditional",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    {
+                        "name": "auto_fix",
+                        "type": "conditional",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    {
+                        "name": "human_review",
+                        "type": "conditional",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    {
+                        "name": "abort",
+                        "type": "conditional",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ]
+            },
+            "properties": [
+                {
+                    "name": "rules",
+                    "displayName": "Error Handling Rules",
+                    "type": "array",
+                    "description": "Array of condition-action rules for error routing",
+                    "default": [
+                        {
+                            "name": "retry-if-retryable",
+                            "when": "error.retryable == true && error.attempt < error.maxAttempts",
+                            "action": "retry"
+                        },
+                        {
+                            "name": "auto-fix-validation",
+                            "when": "error.type == 'ValidationError'",
+                            "action": "auto_fix"
+                        },
+                        {
+                            "name": "escalate-critical",
+                            "when": "error.type == 'LLMError' && error.attempt >= 1",
+                            "action": "human_review"
+                        },
+                        {
+                            "name": "abort-default",
+                            "when": "true",
+                            "action": "abort"
+                        }
+                    ]
+                }
+            ],
+            "errorHandling": {
+                "retryPolicy": {
+                    "maxAttempts": 0
+                }
+            },
+            "observability": {
+                "enabled": true
+            },
+            "audit": {
+                "enabled": true,
+                "level": "WARN"
+            },
+            "resourceProfile": {
+                "cpu": "50m",
+                "memory": "128Mi",
+                "timeoutMs": 10000
+            }
+        },
+        {
+            "$schema": "https://kayys.tech/schema/v1/node-base.schema.json",
+            "id": "builtin.memory.write",
+            "type": "memory.write",
+            "description": "Store information in agent memory (episodic, semantic, or procedural).",
+            "inputs": {
+                "type": "array",
+                "items": [
+                    {
+                        "name": "content",
+                        "displayName": "Memory Content",
+                        "data": {
+                            "type": "object",
+                            "required": true
+                        }
+                    }
+                ]
+            },
+            "outputs": {
+                "channels": [
+                    {
+                        "name": "success",
+                        "type": "success",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "memoryId": {
+                                    "type": "string"
+                                },
+                                "type": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "name": "error",
+                        "type": "error"
+                    }
+                ]
+            },
+            "properties": [
+                {
+                    "name": "type",
+                    "displayName": "Memory Type",
+                    "type": "string",
+                    "default": "episodic",
+                    "validation": {
+                        "enum": [
+                            "episodic",
+                            "semantic",
+                            "procedural"
+                        ]
+                    }
+                },
+                {
+                    "name": "ttl",
+                    "displayName": "Time to Live",
+                    "type": "string",
+                    "default": "P30D",
+                    "description": "ISO 8601 duration format (e.g., P30D for 30 days)"
+                }
+            ],
+            "errorHandling": {
+                "retryPolicy": {
+                    "maxAttempts": 2,
+                    "backoff": "fixed",
+                    "initialDelayMs": 500
+                }
+            },
+            "observability": {
+                "enabled": true
+            },
+            "resourceProfile": {
+                "cpu": "100m",
+                "memory": "256Mi",
+                "timeoutMs": 10000
+            }
+        },
+        {
+            "$schema": "https://kayys.tech/schema/v1/node-base.schema.json",
+            "id": "builtin.hitl",
+            "type": "governance.human_review",
+            "description": "Pause workflow for human review and approval.",
+            "inputs": {
+                "type": "array",
+                "items": [
+                    {
+                        "name": "data",
+                        "displayName": "Data for Review",
+                        "data": {
+                            "type": "object",
+                            "required": true
+                        }
+                    }
+                ]
+            },
+            "outputs": {
+                "channels": [
+                    {
+                        "name": "approved",
+                        "type": "conditional",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    {
+                        "name": "rejected",
+                        "type": "conditional",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    {
+                        "name": "corrected",
+                        "type": "conditional",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    {
+                        "name": "timeout",
+                        "type": "error"
+                    }
+                ]
+            },
+            "properties": [
+                {
+                    "name": "reviewType",
+                    "displayName": "Review Type",
+                    "type": "string",
+                    "default": "approval",
+                    "validation": {
+                        "enum": [
+                            "approval",
+                            "correction",
+                            "escalation"
+                        ]
+                    }
+                },
+                {
+                    "name": "timeout",
+                    "displayName": "Review Timeout (ms)",
+                    "type": "integer",
+                    "default": 3600000,
+                    "description": "Time to wait for human decision (default: 1 hour)"
+                },
+                {
+                    "name": "assignTo",
+                    "displayName": "Assign To",
+                    "type": "array",
+                    "description": "User IDs or roles to assign review task"
+                }
+            ],
+            "lifecycle": {
+                "beforeExecute": "createReviewTask",
+                "afterExecute": "recordDecision"
+            },
+            "observability": {
+                "enabled": true
+            },
+            "audit": {
+                "enabled": true,
+                "level": "INFO"
+            },
+            "resourceProfile": {
+                "cpu": "50m",
+                "memory": "128Mi",
+                "timeoutMs": 3600000
+            }
+        },
+        {
+            "$schema": "https://kayys.tech/schema/v1/node-base.schema.json",
+            "id": "builtin.audit",
+            "type": "governance.audit",
+            "description": "Log events for compliance and tracing with tamper-proof records.",
+            "inputs": {
+                "type": "array",
+                "items": [
+                    {
+                        "name": "event",
+                        "displayName": "Event Data",
+                        "data": {
+                            "type": "object",
+                            "required": true
+                        }
+                    }
+                ]
+            },
+            "outputs": {
+                "channels": [
+                    {
+                        "name": "success",
+                        "type": "success",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "auditId": {
+                                    "type": "string"
+                                },
+                                "level": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "name": "error",
+                        "type": "error"
+                    }
+                ]
+            },
+            "properties": [
+                {
+                    "name": "level",
+                    "displayName": "Audit Level",
+                    "type": "string",
+                    "default": "INFO",
+                    "validation": {
+                        "enum": [
+                            "DEBUG",
+                            "INFO",
+                            "WARN",
+                            "ERROR",
+                            "CRITICAL"
+                        ]
+                    }
+                },
+                {
+                    "name": "tags",
+                    "displayName": "Tags",
+                    "type": "array",
+                    "description": "Classification tags for the audit entry"
+                },
+                {
+                    "name": "sign",
+                    "displayName": "Sign Entry",
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Apply cryptographic signature for tamper-proof logging"
+                }
+            ],
+            "errorHandling": {
+                "retryPolicy": {
+                    "maxAttempts": 3,
+                    "backoff": "exponential"
+                }
+            },
+            "observability": {
+                "enabled": true
+            },
+            "resourceProfile": {
+                "cpu": "50m",
+                "memory": "128Mi",
+                "timeoutMs": 10000
+            }
+        },
+        {
+            "$schema": "https://kayys.tech/schema/v1/node-base.schema.json",
+            "id": "builtin.self.heal",
+            "type": "reliability.self_heal",
+            "description": "Auto-repair errors using LLM to fix malformed inputs or outputs.",
+            "inputs": {
+                "type": "array",
+                "items": [
+                    {
+                        "name": "error",
+                        "displayName": "Error Data",
+                        "data": {
+                            "type": "object",
+                            "required": true
+                        }
+                    }
+                ]
+            },
+            "outputs": {
+                "channels": [
+                    {
+                        "name": "success",
+                        "type": "success",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "fixed": {},
+                                "original": {},
+                                "tokensUsed": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "name": "error",
+                        "type": "error"
+                    }
+                ]
+            },
+            "properties": [
+                {
+                    "name": "targetSchema",
+                    "displayName": "Target Schema",
+                    "type": "object",
+                    "required": true,
+                    "description": "JSON Schema that the fixed output must conform to"
+                },
+                {
+                    "name": "maxAttempts",
+                    "displayName": "Max Repair Attempts",
+                    "type": "integer",
+                    "default": 2,
+                    "validation": {
+                        "min": 1,
+                        "max": 5
+                    }
+                }
+            ],
+            "errorHandling": {
+                "retryPolicy": {
+                    "maxAttempts": 1
+                },
+                "fallback": {
+                    "type": "node",
+                    "nodeId": "human_review"
+                }
+            },
+            "observability": {
+                "enabled": true
+            },
+            "provenance": {
+                "enabled": true,
+                "collect": [
+                    "inputs",
+                    "outputs",
+                    "model_tokens"
+                ]
+            },
+            "resourceProfile": {
+                "cpu": "100m",
+                "memory": "256Mi",
+                "timeoutMs": 30000
+            }
+        }
+    ]
+}

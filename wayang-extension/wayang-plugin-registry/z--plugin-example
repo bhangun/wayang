@@ -1,0 +1,707 @@
+package io.wayang.plugin.examples;
+
+import io.smallrye.mutiny.Uni;
+import io.wayang.plugin.spi.*;
+import io.wayang.plugin.common.*;
+import jakarta.enterprise.context.ApplicationScoped;
+import org.jboss.logging.Logger;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * Example Implementation: Data Processing Plugin
+ * 
+ * This example demonstrates all enhanced features:
+ * - Lifecycle management
+ * - Health checks
+ * - Configuration validation
+ * - Multi-tenancy
+ * - Error handling
+ * - Metrics collection
+ * - Hot reload support
+ * - Event emission
+ */
+@ApplicationScoped
+public class DataProcessingPlugin implements NodePlugin {
+
+    private static final Logger LOG = Logger.getLogger(DataProcessingPlugin.class);
+
+    // Plugin state
+    private volatile boolean initialized = false;
+    private volatile boolean started = false;
+    private PluginContext context;
+    
+    // Multi-tenant support
+    private final Map<String, TenantContext> tenantContexts = new ConcurrentHashMap<>();
+    
+    // Metrics
+    private final AtomicLong requestCount = new AtomicLong(0);
+    private final AtomicLong errorCount = new AtomicLong(0);
+    private final Map<String, AtomicLong> nodeExecutionCounts = new ConcurrentHashMap<>();
+    
+    // Event listeners
+    private final List<PluginEventListener> eventListeners = new ArrayList<>();
+    
+    // Node factories
+    private final Map<String, NodeFactoryRegistration> nodeFactories = new HashMap<>();
+    
+    // Configuration
+    private Map<String, Object> config = new HashMap<>();
+
+    public DataProcessingPlugin() {
+        // Register node factories
+        registerNodeFactories();
+    }
+
+    private void registerNodeFactories() {
+        // Data Transformer Node
+        nodeFactories.put("data-transformer", NodeFactoryRegistration.builder()
+            .factory(new DataTransformerNodeFactory())
+            .nodeTypeId("data-transformer")
+            .displayName("Data Transformer")
+            .description("Transforms data using custom rules")
+            .icon("transform")
+            .category("data-processing")
+            .order(1)
+            .tags(Set.of("data", "transform", "etl"))
+            .build()
+        );
+
+        // Data Validator Node
+        nodeFactories.put("data-validator", NodeFactoryRegistration.builder()
+            .factory(new DataValidatorNodeFactory())
+            .nodeTypeId("data-validator")
+            .displayName("Data Validator")
+            .description("Validates data against schema")
+            .icon("check-circle")
+            .category("data-processing")
+            .order(2)
+            .tags(Set.of("data", "validation", "quality"))
+            .build()
+        );
+
+        // Data Enricher Node
+        nodeFactories.put("data-enricher", NodeFactoryRegistration.builder()
+            .factory(new DataEnricherNodeFactory())
+            .nodeTypeId("data-enricher")
+            .displayName("Data Enricher")
+            .description("Enriches data with external sources")
+            .icon("plus-circle")
+            .category("data-processing")
+            .order(3)
+            .experimental(true) // Mark as experimental
+            .tags(Set.of("data", "enrichment", "augmentation"))
+            .build()
+        );
+    }
+
+    // ========================================================================
+    // Core Methods (Enhanced)
+    // ========================================================================
+
+    @Override
+    public Map<String, NodeFactoryRegistration> getNodeFactories() {
+        return Collections.unmodifiableMap(nodeFactories);
+    }
+
+    @Override
+    public List<NodeDescriptor> getNodeDescriptors() {
+        List<NodeDescriptor> descriptors = new ArrayList<>();
+
+        // Data Transformer Descriptor
+        descriptors.add(NodeDescriptor.builder()
+            .id("data-transformer")
+            .name("Data Transformer")
+            .version("1.0.0")
+            .description("Transforms data using JSONPath expressions")
+            .inputs(List.of(
+                PortDescriptor.builder()
+                    .name("data")
+                    .displayName("Input Data")
+                    .description("Data to transform")
+                    .schema(Map.of(
+                        "type", "object",
+                        "properties", Map.of(
+                            "records", Map.of("type", "array")
+                        )
+                    ))
+                    .required(true)
+                    .build()
+            ))
+            .outputs(Map.of(
+                "success", PortDescriptor.builder()
+                    .name("transformed")
+                    .displayName("Transformed Data")
+                    .schema(Map.of("type", "object"))
+                    .build(),
+                "error", PortDescriptor.builder()
+                    .name("error")
+                    .schema("/schemas/ErrorPayload.schema.json")
+                    .build()
+            ))
+            .properties(List.of(
+                PropertyDescriptor.builder()
+                    .name("transformRules")
+                    .displayName("Transform Rules")
+                    .description("JSONPath transformation rules")
+                    .type("array")
+                    .required(true)
+                    .validation(Map.of("minItems", 1))
+                    .build(),
+                PropertyDescriptor.builder()
+                    .name("batchSize")
+                    .displayName("Batch Size")
+                    .description("Number of records to process in parallel")
+                    .type("integer")
+                    .defaultValue(100)
+                    .validation(Map.of("minimum", 1, "maximum", 1000))
+                    .build()
+            ))
+            .capabilities(List.of("data-processing", "batch-processing"))
+            .resourceProfile(ResourceProfile.builder()
+                .cpu("200m")
+                .memory("256Mi")
+                .build())
+            .errorHandling(ErrorHandlingConfig.builder()
+                .retryPolicy(RetryPolicy.builder()
+                    .maxAttempts(3)
+                    .backoff("exponential")
+                    .initialDelayMs(500)
+                    .build())
+                .build())
+            .build()
+        );
+
+        // Add other descriptors...
+        return descriptors;
+    }
+
+    @Override
+    public Map<String, NodeCategory> getNodeCategories() {
+        return Map.of(
+            "data-processing", NodeCategory.builder()
+                .id("data-processing")
+                .name("Data Processing")
+                .description("Nodes for data transformation and processing")
+                .icon("database")
+                .color("#4A90E2")
+                .order(1)
+                .build()
+        );
+    }
+
+    // ========================================================================
+    // Lifecycle Management
+    // ========================================================================
+
+    @Override
+    public Uni<Void> initialize(PluginContext context) {
+        this.context = context;
+        
+        LOG.infof("Initializing plugin: %s version %s", 
+            context.getPluginId(), context.getVersion());
+
+        return Uni.createFrom().item(() -> {
+            // Load configuration
+            this.config = new HashMap<>(context.getConfiguration());
+            
+            // Validate configuration
+            ValidationResult validation = validateConfiguration(config);
+            if (!validation.isValid()) {
+                throw new IllegalArgumentException(
+                    "Invalid configuration: " + validation.getErrors()
+                );
+            }
+
+            // Initialize resources
+            initializeResources();
+
+            // Register metrics
+            registerMetrics();
+
+            initialized = true;
+            
+            emitEvent(PluginEvent.builder()
+                .eventType("plugin.initialized")
+                .timestamp(Instant.now())
+                .source(context.getPluginId())
+                .build());
+
+            LOG.info("Plugin initialized successfully");
+            return null;
+        });
+    }
+
+    @Override
+    public Uni<Void> start() {
+        if (!initialized) {
+            return Uni.createFrom().failure(
+                new IllegalStateException("Plugin not initialized")
+            );
+        }
+
+        return Uni.createFrom().item(() -> {
+            LOG.info("Starting plugin...");
+
+            // Start background tasks
+            startBackgroundTasks();
+
+            // Warm up caches
+            warmUpCaches();
+
+            started = true;
+
+            emitEvent(PluginEvent.builder()
+                .eventType("plugin.started")
+                .timestamp(Instant.now())
+                .source(context.getPluginId())
+                .build());
+
+            LOG.info("Plugin started successfully");
+            return null;
+        });
+    }
+
+    @Override
+    public Uni<Void> stop(Duration timeout) {
+        LOG.infof("Stopping plugin (timeout: %s)...", timeout);
+
+        return Uni.createFrom().item(() -> {
+            // Stop background tasks
+            stopBackgroundTasks();
+
+            // Cleanup tenant resources
+            for (String tenantId : tenantContexts.keySet()) {
+                cleanupTenantResources(tenantId).await().atMost(timeout);
+            }
+
+            started = false;
+
+            emitEvent(PluginEvent.builder()
+                .eventType("plugin.stopped")
+                .timestamp(Instant.now())
+                .source(context.getPluginId())
+                .build());
+
+            LOG.info("Plugin stopped successfully");
+            return null;
+        });
+    }
+
+    @Override
+    public Uni<Void> destroy() {
+        LOG.info("Destroying plugin...");
+
+        return Uni.createFrom().item(() -> {
+            // Final cleanup
+            tenantContexts.clear();
+            nodeExecutionCounts.clear();
+            eventListeners.clear();
+
+            initialized = false;
+
+            LOG.info("Plugin destroyed");
+            return null;
+        });
+    }
+
+    // ========================================================================
+    // Health & Readiness
+    // ========================================================================
+
+    @Override
+    public Uni<HealthCheckResult> healthCheck() {
+        Map<String, Object> details = new HashMap<>();
+        details.put("initialized", initialized);
+        details.put("started", started);
+        details.put("requestCount", requestCount.get());
+        details.put("errorCount", errorCount.get());
+        details.put("activeTenants", tenantContexts.size());
+
+        boolean healthy = initialized && started && 
+                         (errorCount.get() < requestCount.get() * 0.1); // < 10% error rate
+
+        return Uni.createFrom().item(
+            healthy 
+                ? HealthCheckResult.healthy("Plugin is healthy")
+                : HealthCheckResult.unhealthy("Plugin is unhealthy", details)
+        );
+    }
+
+    @Override
+    public Uni<ReadinessCheckResult> readinessCheck() {
+        if (!initialized || !started) {
+            return Uni.createFrom().item(
+                ReadinessCheckResult.notReady(
+                    "Plugin not ready",
+                    List.of("initialization", "startup")
+                )
+            );
+        }
+
+        // Check dependencies
+        List<String> pending = new ArrayList<>();
+        for (PluginDependency dep : getDependencies()) {
+            if (!isDependencyAvailable(dep)) {
+                pending.add(dep.getPluginId());
+            }
+        }
+
+        return Uni.createFrom().item(
+            pending.isEmpty()
+                ? ReadinessCheckResult.ready("Plugin is ready")
+                : ReadinessCheckResult.notReady("Dependencies not available", pending)
+        );
+    }
+
+    @Override
+    public PluginMetrics getMetrics() {
+        Map<String, Long> nodeCounts = new HashMap<>();
+        Map<String, Double> nodeLatencies = new HashMap<>();
+
+        for (Map.Entry<String, AtomicLong> entry : nodeExecutionCounts.entrySet()) {
+            nodeCounts.put(entry.getKey(), entry.getValue().get());
+            // Calculate average latency (simplified)
+            nodeLatencies.put(entry.getKey(), 15.0); // TODO: Real calculation
+        }
+
+        return PluginMetrics.builder()
+            .requestCount(requestCount.get())
+            .errorCount(errorCount.get())
+            .averageLatencyMs(calculateAverageLatency())
+            .p95LatencyMs(calculateP95Latency())
+            .p99LatencyMs(calculateP99Latency())
+            .activeRequests(0L) // TODO: Track active requests
+            .nodeExecutionCounts(nodeCounts)
+            .nodeAverageLatencies(nodeLatencies)
+            .build();
+    }
+
+    // ========================================================================
+    // Configuration & Validation
+    // ========================================================================
+
+    @Override
+    public Optional<ConfigurationSchema> getConfigurationSchema() {
+        Map<String, PropertySchema> properties = Map.of(
+            "maxConcurrency", PropertySchema.builder()
+                .type("integer")
+                .description("Maximum concurrent operations")
+                .defaultValue(10)
+                .minimum(1)
+                .maximum(100)
+                .build(),
+            
+            "cacheEnabled", PropertySchema.builder()
+                .type("boolean")
+                .description("Enable result caching")
+                .defaultValue(true)
+                .build(),
+            
+            "cacheTtlSeconds", PropertySchema.builder()
+                .type("integer")
+                .description("Cache TTL in seconds")
+                .defaultValue(3600)
+                .minimum(60)
+                .build()
+        );
+
+        return Optional.of(ConfigurationSchema.builder()
+            .properties(properties)
+            .required(List.of("maxConcurrency"))
+            .defaults(Map.of(
+                "maxConcurrency", 10,
+                "cacheEnabled", true,
+                "cacheTtlSeconds", 3600
+            ))
+            .build()
+        );
+    }
+
+    @Override
+    public ValidationResult validateConfiguration(Map<String, Object> config) {
+        ValidationResult result = ValidationResult.valid();
+
+        // Validate maxConcurrency
+        Object maxConcurrency = config.get("maxConcurrency");
+        if (maxConcurrency != null) {
+            if (!(maxConcurrency instanceof Number)) {
+                result.addError("maxConcurrency", "Must be a number");
+            } else {
+                int value = ((Number) maxConcurrency).intValue();
+                if (value < 1 || value > 100) {
+                    result.addError("maxConcurrency", "Must be between 1 and 100");
+                }
+            }
+        }
+
+        // Validate cacheTtlSeconds
+        Object cacheTtl = config.get("cacheTtlSeconds");
+        if (cacheTtl != null && cacheTtl instanceof Number) {
+            int value = ((Number) cacheTtl).intValue();
+            if (value < 60) {
+                result.addError("cacheTtlSeconds", "Must be at least 60 seconds");
+            }
+        }
+
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getConfiguration() {
+        return Collections.unmodifiableMap(config);
+    }
+
+    @Override
+    public Uni<Void> updateConfiguration(Map<String, Object> newConfig) {
+        return Uni.createFrom().item(() -> {
+            ValidationResult validation = validateConfiguration(newConfig);
+            if (!validation.isValid()) {
+                throw new IllegalArgumentException(
+                    "Invalid configuration: " + validation.getErrors()
+                );
+            }
+
+            this.config = new HashMap<>(newConfig);
+
+            emitEvent(PluginEvent.builder()
+                .eventType("plugin.configuration.updated")
+                .timestamp(Instant.now())
+                .source(context.getPluginId())
+                .data(Map.of("config", newConfig))
+                .build());
+
+            LOG.info("Configuration updated successfully");
+            return null;
+        });
+    }
+
+    // ========================================================================
+    // Multi-Tenancy Support
+    // ========================================================================
+
+    @Override
+    public boolean isMultiTenantAware() {
+        return true;
+    }
+
+    @Override
+    public Uni<Void> initializeTenant(String tenantId, Map<String, Object> tenantConfig) {
+        return Uni.createFrom().item(() -> {
+            LOG.infof("Initializing tenant: %s", tenantId);
+
+            TenantContext tenantContext = new TenantContext(tenantId, tenantConfig);
+            tenantContexts.put(tenantId, tenantContext);
+
+            emitEvent(PluginEvent.builder()
+                .eventType("tenant.initialized")
+                .timestamp(Instant.now())
+                .source(context.getPluginId())
+                .data(Map.of("tenantId", tenantId))
+                .build());
+
+            return null;
+        });
+    }
+
+    @Override
+    public Uni<Void> cleanupTenantResources(String tenantId) {
+        return Uni.createFrom().item(() -> {
+            LOG.infof("Cleaning up tenant resources: %s", tenantId);
+
+            TenantContext removed = tenantContexts.remove(tenantId);
+            if (removed != null) {
+                removed.cleanup();
+            }
+
+            return null;
+        });
+    }
+
+    // ========================================================================
+    // Error Handling
+    // ========================================================================
+
+    @Override
+    public Uni<ErrorHandlingDecision> handleNodeError(
+            String nodeId,
+            Throwable error,
+            NodeContext context) {
+        
+        errorCount.incrementAndGet();
+
+        LOG.errorf(error, "Error in node: %s", nodeId);
+
+        // Decide based on error type
+        if (error instanceof ValidationException) {
+            // Validation errors are not retryable
+            return Uni.createFrom().item(
+                ErrorHandlingDecision.escalate("Validation failed")
+            );
+        } else if (error instanceof TransientException) {
+            // Transient errors can be retried
+            return Uni.createFrom().item(
+                ErrorHandlingDecision.retry(3)
+            );
+        } else {
+            // Let platform handle it
+            return Uni.createFrom().item(
+                ErrorHandlingDecision.delegate()
+            );
+        }
+    }
+
+    // ========================================================================
+    // Advanced Capabilities
+    // ========================================================================
+
+    @Override
+    public Set<String> getCapabilities() {
+        return Set.of(
+            "basic-execution",
+            "error-handling",
+            "multi-tenancy",
+            "hot-reload",
+            "metrics",
+            "configuration-validation",
+            "batch-processing"
+        );
+    }
+
+    @Override
+    public boolean supportsHotReload() {
+        return true;
+    }
+
+    @Override
+    public Uni<PluginState> prepareForReload() {
+        Map<String, Object> state = new HashMap<>();
+        state.put("tenantContexts", new HashMap<>(tenantContexts));
+        state.put("configuration", new HashMap<>(config));
+        state.put("metrics", Map.of(
+            "requestCount", requestCount.get(),
+            "errorCount", errorCount.get()
+        ));
+
+        return Uni.createFrom().item(
+            PluginState.builder()
+                .state(state)
+                .build()
+        );
+    }
+
+    @Override
+    public Uni<Void> restoreState(PluginState state) {
+        return Uni.createFrom().item(() -> {
+            Map<String, Object> stateData = state.getState();
+
+            // Restore tenant contexts
+            @SuppressWarnings("unchecked")
+            Map<String, TenantContext> savedContexts = 
+                (Map<String, TenantContext>) stateData.get("tenantContexts");
+            if (savedContexts != null) {
+                tenantContexts.putAll(savedContexts);
+            }
+
+            // Restore configuration
+            @SuppressWarnings("unchecked")
+            Map<String, Object> savedConfig = 
+                (Map<String, Object>) stateData.get("configuration");
+            if (savedConfig != null) {
+                config = new HashMap<>(savedConfig);
+            }
+
+            LOG.info("State restored after hot reload");
+            return null;
+        });
+    }
+
+    // ========================================================================
+    // Helper Methods
+    // ========================================================================
+
+    private void initializeResources() {
+        // Initialize connection pools, caches, etc.
+    }
+
+    private void registerMetrics() {
+        // Register with metrics system
+    }
+
+    private void startBackgroundTasks() {
+        // Start periodic tasks
+    }
+
+    private void stopBackgroundTasks() {
+        // Stop periodic tasks
+    }
+
+    private void warmUpCaches() {
+        // Preload frequently used data
+    }
+
+    private boolean isDependencyAvailable(PluginDependency dep) {
+        // Check if dependency is available
+        return true;
+    }
+
+    private double calculateAverageLatency() {
+        // TODO: Real calculation
+        return 15.0;
+    }
+
+    private double calculateP95Latency() {
+        return 50.0;
+    }
+
+    private double calculateP99Latency() {
+        return 100.0;
+    }
+
+    @Override
+    public void emitEvent(PluginEvent event) {
+        for (PluginEventListener listener : eventListeners) {
+            try {
+                listener.onEvent(event);
+            } catch (Exception e) {
+                LOG.error("Error notifying listener", e);
+            }
+        }
+    }
+
+    // ========================================================================
+    // Inner Classes
+    // ========================================================================
+
+    private static class TenantContext {
+        private final String tenantId;
+        private final Map<String, Object> config;
+        
+        TenantContext(String tenantId, Map<String, Object> config) {
+            this.tenantId = tenantId;
+            this.config = config;
+        }
+        
+        void cleanup() {
+            // Cleanup tenant-specific resources
+        }
+    }
+}
+
+// Exception classes
+class ValidationException extends RuntimeException {
+    public ValidationException(String message) {
+        super(message);
+    }
+}
+
+class TransientException extends RuntimeException {
+    public TransientException(String message) {
+        super(message);
+    }
+}
+

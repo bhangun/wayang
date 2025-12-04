@@ -1,0 +1,35 @@
+{
+    "$id": "https://kayys.tech/schema/v1/execution.schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Execution Schema",
+    "type": "object",
+    "properties": {
+        "mode": {
+            "type": "string",
+            "enum": [
+                "sync",
+                "async",
+                "stream"
+            ],
+            "default": "sync"
+        },
+        "retryPolicy": {
+            "$ref": "#/definitions/ErrorHandlingConfig"
+        },
+        "timeoutMs": {
+            "type": "integer"
+        },
+        "emitEvents": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "sideEffects": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+    }
+}

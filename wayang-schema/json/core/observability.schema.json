@@ -1,0 +1,89 @@
+{
+    "$id": "https://kayys.tech/schema/v1/workflow.observability.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Observability Layer",
+    "type": "object",
+    "properties": {
+        "traces": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/trace"
+            }
+        },
+        "alerts": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/alert"
+            }
+        },
+        "metrics": {
+            "type": "object",
+            "properties": {
+                "throughput": {
+                    "type": "number"
+                },
+                "errorRate": {
+                    "type": "number"
+                },
+                "avgLatencyMs": {
+                    "type": "number"
+                },
+                "tokenUsage": {
+                    "type": "integer"
+                }
+            }
+        }
+    },
+    "$defs": {
+        "trace": {
+            "type": "object",
+            "properties": {
+                "traceId": {
+                    "type": "string"
+                },
+                "spanId": {
+                    "type": "string"
+                },
+                "parentSpanId": {
+                    "type": "string"
+                },
+                "ref": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "durationMs": {
+                    "type": "number"
+                },
+                "attributes": {
+                    "type": "object",
+                    "additionalProperties": true
+                }
+            }
+        },
+        "alert": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "ref": {
+                    "type": "string"
+                },
+                "resolved": {
+                    "type": "boolean"
+                }
+            }
+        }
+    }
+}

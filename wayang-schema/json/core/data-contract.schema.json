@@ -1,0 +1,48 @@
+{
+    "$id": "https://kayys.tech/schema/v1/data-contract.schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Data Contract Schema",
+    "type": "object",
+    "required": [
+        "id",
+        "type"
+    ],
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "displayName": {
+            "type": "string"
+        },
+        "description": {
+            "type": "string"
+        },
+        "type": {
+            "type": "string"
+        },
+        "jsonSchema": {
+            "oneOf": [
+                {
+                    "type": "object"
+                },
+                {
+                    "type": "string",
+                    "format": "uri"
+                }
+            ]
+        },
+        "constraints": {
+            "type": "object",
+            "additionalProperties": true
+        },
+        "transformations": {
+            "type": "array",
+            "items": {
+                "type": "object"
+            }
+        },
+        "version": {
+            "type": "string"
+        }
+    }
+}

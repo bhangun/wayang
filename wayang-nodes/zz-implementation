@@ -1,0 +1,31 @@
+
+
+
+
+package tech.kayys.wayang.nodes.builtin;
+
+import io.smallrye.mutiny.Uni;
+import tech.kayys.wayang.core.node.*;
+import jakarta.enterprise.context.ApplicationScoped;
+
+/**
+ * ==============================================
+ * CONTROL FLOW NODES
+ * ==============================================
+ */
+
+/**
+ * ==============================================
+ * AI & LLM NODES
+ * ==============================================
+ */
+
+
+
+
+
+
+
+
+
+

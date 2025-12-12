@@ -1,0 +1,10 @@
+package tech.kayys.wayang.model;
+
+public enum ConflictType {
+    NODE_ADDED_BOTH,
+    NODE_MODIFIED_DELETED,
+    NODE_MODIFIED_BOTH,
+    CONNECTION_ADDED_BOTH,
+    CONNECTION_MODIFIED_DELETED,
+    RUNTIME_MODIFIED_BOTH
+}

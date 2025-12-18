@@ -1,0 +1,613 @@
+// ============================================================================
+// BUILT-IN NODES REGISTRATION & BOOTSTRAP
+// ============================================================================
+
+package io.agentic.platform.registry;
+
+import io.agentic.platform.nodes.*;
+import io.quarkus.runtime.StartupEvent;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
+import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+
+/**
+ * Bootstrap service for registering all built-in nodes.
+ * Runs at application startup to ensure all core nodes are available.
+ */
+@ApplicationScoped
+public class BuiltInNodesBootstrap {
+    
+    private static final Logger LOG = Logger.getLogger(BuiltInNodesBootstrap.class);
+    
+    @Inject
+    NodeRegistry nodeRegistry;
+    
+    /**
+     * Register all built-in nodes on startup.
+     */
+    void onStart(@Observes StartupEvent ev) {
+        LOG.info("=".repeat(80));
+        LOG.info("Registering Built-in Nodes");
+        LOG.info("=".repeat(80));
+        
+        try {
+            registerSystemNodes();
+            registerIntegrationNodes();
+            registerDataNodes();
+            registerAgentNodes();
+            
+            LOG.info("=".repeat(80));
+            LOG.info("Built-in Nodes Registration Complete");
+            LOG.info("=".repeat(80));
+            
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to register built-in nodes");
+            throw new RuntimeException("Built-in nodes registration failed", e);
+        }
+    }
+    
+    /**
+     * Register system/error handling nodes.
+     */
+    private void registerSystemNodes() {
+        LOG.info("Registering System Nodes:");
+        
+        register("builtin.error-handler", ErrorHandlerNode.class);
+        register("builtin.self-healing", SelfHealingNode.class);
+        register("builtin.human-decision", HumanDecisionNode.class);
+        register("builtin.audit", AuditNode.class);
+        register("builtin.validator", ValidatorNode.class);
+        
+        LOG.info("  ✓ System nodes registered");
+    }
+    
+    /**
+     * Register integration nodes.
+     */
+    private void registerIntegrationNodes() {
+        LOG.info("Registering Integration Nodes:");
+        
+        register("builtin.http", HttpNode.class);
+        register("builtin.graphql", GraphQLNode.class);
+        register("builtin.websocket", WebSocketNode.class);
+        register("builtin.grpc", GRPCNode.class);
+        register("builtin.mqtt", MQTTNode.class);
+        register("builtin.kafka", KafkaNode.class);
+        
+        LOG.info("  ✓ Integration nodes registered");
+    }
+    
+    /**
+     * Register data nodes.
+     */
+    private void registerDataNodes() {
+        LOG.info("Registering Data Nodes:");
+        
+        register("builtin.database", DatabaseNode.class);
+        register("builtin.transform", TransformNode.class);
+        register("builtin.csv", CSVNode.class);
+        register("builtin.json", JSONNode.class);
+        register("builtin.xml", XMLNode.class);
+        register("builtin.file", FileNode.class);
+        register("builtin.s3", S3Node.class);
+        
+        LOG.info("  ✓ Data nodes registered");
+    }
+    
+    /**
+     * Register agent/AI nodes.
+     */
+    private void registerAgentNodes() {
+        LOG.info("Registering Agent Nodes:");
+        
+        register("builtin.llm", LLMNode.class);
+        register("builtin.rag", RAGNode.class);
+        register("builtin.agent", AutonomousAgentNode.class);
+        register("builtin.embedding", EmbeddingNode.class);
+        register("builtin.classification", ClassificationNode.class);
+        register("builtin.summarization", SummarizationNode.class);
+        
+        LOG.info("  ✓ Agent nodes registered");
+    }
+    
+    /**
+     * Helper method to register a node.
+     */
+    private void register(String nodeType, Class<? extends io.agentic.platform.node.Node> nodeClass) {
+        try {
+            nodeRegistry.registerBuiltIn(nodeType, nodeClass);
+            LOG.debugf("    - %s -> %s", nodeType, nodeClass.getSimpleName());
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to register node: %s", nodeType);
+            throw e;
+        }
+    }
+}
+
+// ============================================================================
+// ADDITIONAL INTEGRATION NODES (Stubs for completeness)
+// ============================================================================
+
+package io.agentic.platform.nodes;
+
+/**
+ * GraphQLNode - GraphQL client.
+ */
+@ApplicationScoped
+@NodeInfo(name = "GraphQL", capabilities = {"network", "graphql"}, category = "integration")
+class GraphQLNode extends IntegrationNode {
+    private static final Logger LOG = Logger.getLogger(GraphQLNode.class);
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        String endpoint = context.getInput("endpoint", String.class);
+        String query = context.getInput("query", String.class);
+        Map<String, Object> variables = context.getInput("variables", Map.class);
+        
+        LOG.infof("GraphQL query to: %s", endpoint);
+        
+        // Implementation would use GraphQL client
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of("data", Map.of()))
+        );
+    }
+}
+
+/**
+ * WebSocketNode - WebSocket client.
+ */
+@ApplicationScoped
+@NodeInfo(name = "WebSocket", capabilities = {"network", "websocket", "realtime"}, category = "integration")
+class WebSocketNode extends IntegrationNode {
+    private static final Logger LOG = Logger.getLogger(WebSocketNode.class);
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        String url = context.getInput("url", String.class);
+        String message = context.getInput("message", String.class);
+        
+        LOG.infof("WebSocket connection to: %s", url);
+        
+        // Implementation would use WebSocket client
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of("status", "connected"))
+        );
+    }
+}
+
+/**
+ * GRPCNode - gRPC client.
+ */
+@ApplicationScoped
+@NodeInfo(name = "gRPC", capabilities = {"network", "grpc"}, category = "integration")
+class GRPCNode extends IntegrationNode {
+    private static final Logger LOG = Logger.getLogger(GRPCNode.class);
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        String service = context.getInput("service", String.class);
+        String method = context.getInput("method", String.class);
+        Object request = context.getInput("request");
+        
+        LOG.infof("gRPC call: %s.%s", service, method);
+        
+        // Implementation would use gRPC client
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of("response", Map.of()))
+        );
+    }
+}
+
+/**
+ * MQTTNode - MQTT pub/sub.
+ */
+@ApplicationScoped
+@NodeInfo(name = "MQTT", capabilities = {"network", "mqtt", "iot"}, category = "integration")
+class MQTTNode extends IntegrationNode {
+    private static final Logger LOG = Logger.getLogger(MQTTNode.class);
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        String broker = context.getInput("broker", String.class);
+        String topic = context.getInput("topic", String.class);
+        String message = context.getInput("message", String.class);
+        
+        LOG.infof("MQTT publish to: %s/%s", broker, topic);
+        
+        // Implementation would use MQTT client
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of("published", true))
+        );
+    }
+}
+
+/**
+ * KafkaNode - Apache Kafka producer/consumer.
+ */
+@ApplicationScoped
+@NodeInfo(name = "Kafka", capabilities = {"network", "kafka", "streaming"}, category = "integration")
+class KafkaNode extends IntegrationNode {
+    private static final Logger LOG = Logger.getLogger(KafkaNode.class);
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        String topic = context.getInput("topic", String.class);
+        String message = context.getInput("message", String.class);
+        String operation = context.getInput("operation", String.class, "produce");
+        
+        LOG.infof("Kafka %s: %s", operation, topic);
+        
+        // Implementation would use Kafka client
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of("offset", 0))
+        );
+    }
+}
+
+// ============================================================================
+// DATA PROCESSING NODES
+// ============================================================================
+
+/**
+ * CSVNode - CSV processing.
+ */
+@ApplicationScoped
+@NodeInfo(name = "CSV", capabilities = {"data_processing", "csv"}, category = "data")
+class CSVNode extends IntegrationNode {
+    private static final Logger LOG = Logger.getLogger(CSVNode.class);
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        String operation = context.getInput("operation", String.class, "parse");
+        Object data = context.getInput("data");
+        
+        LOG.debugf("CSV operation: %s", operation);
+        
+        return switch (operation) {
+            case "parse" -> parseCSV(data);
+            case "generate" -> generateCSV(data);
+            default -> Uni.createFrom().item(
+                ExecutionResult.failed("Unknown operation: " + operation)
+            );
+        };
+    }
+    
+    private Uni<ExecutionResult> parseCSV(Object data) {
+        // Implementation would parse CSV
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of("rows", List.of()))
+        );
+    }
+    
+    private Uni<ExecutionResult> generateCSV(Object data) {
+        // Implementation would generate CSV
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of("csv", ""))
+        );
+    }
+}
+
+/**
+ * JSONNode - JSON processing.
+ */
+@ApplicationScoped
+@NodeInfo(name = "JSON", capabilities = {"data_processing", "json"}, category = "data")
+class JSONNode extends IntegrationNode {
+    private static final Logger LOG = Logger.getLogger(JSONNode.class);
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        String operation = context.getInput("operation", String.class, "parse");
+        Object data = context.getInput("data");
+        
+        LOG.debugf("JSON operation: %s", operation);
+        
+        // Implementation would process JSON
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of("result", data))
+        );
+    }
+}
+
+/**
+ * XMLNode - XML processing.
+ */
+@ApplicationScoped
+@NodeInfo(name = "XML", capabilities = {"data_processing", "xml"}, category = "data")
+class XMLNode extends IntegrationNode {
+    private static final Logger LOG = Logger.getLogger(XMLNode.class);
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        String operation = context.getInput("operation", String.class, "parse");
+        Object data = context.getInput("data");
+        
+        LOG.debugf("XML operation: %s", operation);
+        
+        // Implementation would process XML
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of("result", data))
+        );
+    }
+}
+
+/**
+ * FileNode - File system operations.
+ */
+@ApplicationScoped
+@NodeInfo(name = "File", capabilities = {"filesystem"}, category = "data")
+class FileNode extends IntegrationNode {
+    private static final Logger LOG = Logger.getLogger(FileNode.class);
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        String operation = context.getInput("operation", String.class, "read");
+        String path = context.getInput("path", String.class);
+        
+        LOG.infof("File operation: %s on %s", operation, path);
+        
+        // Implementation would handle file operations
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of("result", ""))
+        );
+    }
+}
+
+/**
+ * S3Node - AWS S3 operations.
+ */
+@ApplicationScoped
+@NodeInfo(name = "S3", capabilities = {"cloud", "storage"}, category = "data")
+class S3Node extends IntegrationNode {
+    private static final Logger LOG = Logger.getLogger(S3Node.class);
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        String operation = context.getInput("operation", String.class, "read");
+        String bucket = context.getInput("bucket", String.class);
+        String key = context.getInput("key", String.class);
+        
+        LOG.infof("S3 %s: %s/%s", operation, bucket, key);
+        
+        // Implementation would use AWS SDK
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of("result", ""))
+        );
+    }
+}
+
+// ============================================================================
+// ADDITIONAL AGENT NODES
+// ============================================================================
+
+/**
+ * EmbeddingNode - Text embedding generation.
+ */
+@ApplicationScoped
+@NodeInfo(name = "Embedding", capabilities = {"llm_access", "embedding"}, category = "agent")
+class EmbeddingNode extends AgentNode {
+    private static final Logger LOG = Logger.getLogger(EmbeddingNode.class);
+    
+    @Inject
+    io.agentic.platform.rag.EmbeddingService embeddingService;
+    
+    @Override
+    protected Uni<ExecutionResult> executeAgent(NodeContext context) {
+        String text = context.getInput("text", String.class);
+        String model = context.getConfig().get("model", String.class, "text-embedding-ada-002");
+        
+        LOG.debugf("Generating embedding for text (length=%d)", text.length());
+        
+        return embeddingService.embed(text, model)
+            .map(embedding -> ExecutionResult.success(Map.of(
+                "embedding", embedding,
+                "dimensions", embedding.length,
+                "model", model
+            )));
+    }
+}
+
+/**
+ * ClassificationNode - Text classification.
+ */
+@ApplicationScoped
+@NodeInfo(name = "Classification", capabilities = {"llm_access", "classification"}, category = "agent")
+class ClassificationNode extends AgentNode {
+    private static final Logger LOG = Logger.getLogger(ClassificationNode.class);
+    
+    @Inject
+    io.agentic.platform.llm.LLMService llmService;
+    
+    @Override
+    protected Uni<ExecutionResult> executeAgent(NodeContext context) {
+        String text = context.getInput("text", String.class);
+        List<String> labels = context.getInput("labels", List.class);
+        
+        LOG.debugf("Classifying text into %d categories", labels.size());
+        
+        // Build classification prompt
+        String prompt = String.format("""
+            Classify the following text into one of these categories: %s
+            
+            Text: %s
+            
+            Respond with only the category name.
+            """,
+            String.join(", ", labels),
+            text
+        );
+        
+        return llmService.complete(prompt, Map.of())
+            .map(result -> {
+                String category = result.trim();
+                double confidence = 1.0; // Could calculate from logprobs
+                
+                return ExecutionResult.success(Map.of(
+                    "category", category,
+                    "confidence", confidence,
+                    "text", text
+                ));
+            });
+    }
+}
+
+/**
+ * SummarizationNode - Text summarization.
+ */
+@ApplicationScoped
+@NodeInfo(name = "Summarization", capabilities = {"llm_access", "summarization"}, category = "agent")
+class SummarizationNode extends AgentNode {
+    private static final Logger LOG = Logger.getLogger(SummarizationNode.class);
+    
+    @Inject
+    io.agentic.platform.llm.LLMService llmService;
+    
+    @Override
+    protected Uni<ExecutionResult> executeAgent(NodeContext context) {
+        String text = context.getInput("text", String.class);
+        int maxLength = context.getConfig().get("maxLength", Integer.class, 100);
+        String style = context.getConfig().get("style", String.class, "concise");
+        
+        LOG.infof("Summarizing text (length=%d, target=%d)", text.length(), maxLength);
+        
+        String prompt = String.format("""
+            Summarize the following text in a %s style, keeping it under %d words:
+            
+            %s
+            """,
+            style,
+            maxLength,
+            text
+        );
+        
+        return llmService.complete(prompt, Map.of())
+            .map(summary -> ExecutionResult.success(Map.of(
+                "summary", summary,
+                "originalLength", text.length(),
+                "summaryLength", summary.length(),
+                "compressionRatio", (double) summary.length() / text.length()
+            )));
+    }
+}
+
+// ============================================================================
+// NODE REGISTRY STATISTICS & MONITORING
+// ============================================================================
+
+package io.agentic.platform.registry;
+
+import io.quarkus.runtime.ShutdownEvent;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
+import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+
+/**
+ * Registry monitoring and statistics service.
+ */
+@ApplicationScoped
+public class RegistryMonitor {
+    
+    private static final Logger LOG = Logger.getLogger(RegistryMonitor.class);
+    
+    @Inject
+    NodeRegistry nodeRegistry;
+    
+    @Inject
+    NodeFactory nodeFactory;
+    
+    /**
+     * Log statistics on shutdown.
+     */
+    void onShutdown(@Observes ShutdownEvent ev) {
+        LOG.info("=".repeat(80));
+        LOG.info("Node Registry Shutdown Statistics");
+        LOG.info("=".repeat(80));
+        
+        try {
+            // Get factory statistics
+            var factoryStats = nodeFactory.getStatistics();
+            
+            LOG.infof("Active Node Instances: %d", factoryStats.getTotalInstances());
+            
+            if (!factoryStats.getInstancesByType().isEmpty()) {
+                LOG.info("Instances by Type:");
+                factoryStats.getInstancesByType().forEach((type, count) -> 
+                    LOG.infof("  - %s: %d", type, count)
+                );
+            }
+            
+            // Pool statistics
+            var poolStats = factoryStats.getPoolStatistics();
+            if (poolStats != null && !poolStats.getPoolSizes().isEmpty()) {
+                LOG.info("Pool Statistics:");
+                poolStats.getPoolSizes().forEach((type, size) -> 
+                    LOG.infof("  - %s: %d pooled", type, size)
+                );
+            }
+            
+            LOG.info("=".repeat(80));
+            
+        } catch (Exception e) {
+            LOG.errorf(e, "Error generating shutdown statistics");
+        }
+    }
+}
+
+// ============================================================================
+// CONFIGURATION PROPERTIES
+// ============================================================================
+
+package io.agentic.platform.config;
+
+import io.smallrye.config.ConfigMapping;
+import io.smallrye.config.WithDefault;
+import java.util.Optional;
+
+/**
+ * Node Registry configuration.
+ */
+@ConfigMapping(prefix = "node.registry")
+public interface NodeRegistryConfig {
+    
+    /**
+     * Plugin repository URL.
+     */
+    @WithDefault("https://registry.agentic.io/plugins")
+    String repositoryUrl();
+    
+    /**
+     * Plugin cache directory.
+     */
+    @WithDefault("/tmp/node-plugins")
+    String cacheDir();
+    
+    /**
+     * Enable hot reload.
+     */
+    @WithDefault("true")
+    boolean hotReloadEnabled();
+    
+    /**
+     * Enable security scanning.
+     */
+    @WithDefault("true")
+    boolean securityScanEnabled();
+    
+    /**
+     * Node pool configuration.
+     */
+    PoolConfig pool();
+    
+    interface PoolConfig {
+        @WithDefault("10")
+        int maxSizePerType();
+        
+        @WithDefault("60000")
+        int maxIdleTimeMs();
+        
+        @WithDefault("true")
+        boolean enabled();
+    }
+}

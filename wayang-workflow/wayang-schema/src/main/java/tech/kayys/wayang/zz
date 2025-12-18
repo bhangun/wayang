@@ -1,0 +1,2192 @@
+// ============================================================================
+// BUILT-IN NODES - CORE IMPLEMENTATIONS
+// ============================================================================
+
+package io.agentic.platform.nodes;
+
+import io.agentic.platform.node.*;
+import io.agentic.platform.schema.*;
+import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+import java.util.*;
+
+// ============================================================================
+// ERROR HANDLING NODES
+// ============================================================================
+
+/**
+ * ErrorHandlerNode - Central error handling with routing logic.
+ * 
+ * Capabilities:
+ * - Rule-based error routing (CEL expressions)
+ * - Retry scheduling with backoff
+ * - Automatic fallback selection
+ * - Human escalation
+ * - Error metrics and tracking
+ */
+@ApplicationScoped
+@NodeInfo(
+    name = "Error Handler",
+    capabilities = {"error_handling", "retry", "routing"},
+    category = "system"
+)
+public class ErrorHandlerNode extends IntegrationNode {
+    
+    private static final Logger LOG = Logger.getLogger(ErrorHandlerNode.class);
+    
+    @Inject
+    io.agentic.platform.policy.CELEvaluator celEvaluator;
+    
+    @Inject
+    io.agentic.platform.metrics.MetricsCollector metricsCollector;
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        ErrorPayload error = context.getInput("error", ErrorPayload.class);
+        
+        if (error == null) {
+            return Uni.createFrom().item(
+                ExecutionResult.failed("No error payload provided")
+            );
+        }
+        
+        LOG.infof("Handling error: type=%s, retryable=%s, attempt=%d/%d",
+            error.getType(), error.isRetryable(), error.getAttempt(), error.getMaxAttempts());
+        
+        // Get error handling rules from config
+        List<ErrorRule> rules = loadRules(context.getConfig());
+        
+        // Evaluate rules in order
+        for (ErrorRule rule : rules) {
+            if (evaluateRule(rule, error, context)) {
+                LOG.infof("Matched rule: %s -> action: %s", rule.getName(), rule.getAction());
+                
+                // Record metrics
+                metricsCollector.recordErrorHandling(
+                    error.getType(),
+                    rule.getAction(),
+                    error.getAttempt()
+                );
+                
+                return executeAction(rule.getAction(), error, context);
+            }
+        }
+        
+        // No rule matched - default to abort
+        LOG.warnf("No rule matched for error type: %s, defaulting to abort", error.getType());
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of("action", "abort", "error", error))
+                .withOutputChannel("abort")
+        );
+    }
+    
+    private List<ErrorRule> loadRules(NodeConfig config) {
+        List<Map<String, Object>> rulesConfig = config.get("rules", List.class);
+        
+        if (rulesConfig == null || rulesConfig.isEmpty()) {
+            return getDefaultRules();
+        }
+        
+        return rulesConfig.stream()
+            .map(ErrorRule::fromMap)
+            .toList();
+    }
+    
+    private List<ErrorRule> getDefaultRules() {
+        return List.of(
+            ErrorRule.builder()
+                .name("retry-if-transient")
+                .when("error.retryable == true && error.attempt < error.maxAttempts")
+                .action("retry")
+                .build(),
+            ErrorRule.builder()
+                .name("auto-fix-validation")
+                .when("error.type == 'ValidationError'")
+                .action("auto_fix")
+                .build(),
+            ErrorRule.builder()
+                .name("escalate-to-human")
+                .when("error.type == 'LLMError' && error.attempt >= 1")
+                .action("human_review")
+                .build(),
+            ErrorRule.builder()
+                .name("abort-default")
+                .when("true")
+                .action("abort")
+                .build()
+        );
+    }
+    
+    private boolean evaluateRule(ErrorRule rule, ErrorPayload error, NodeContext context) {
+        try {
+            Map<String, Object> variables = Map.of(
+                "error", errorToMap(error),
+                "context", context.toMap()
+            );
+            
+            return celEvaluator.evaluateBoolean(rule.getWhen(), variables);
+            
+        } catch (Exception e) {
+            LOG.errorf(e, "Error evaluating rule: %s", rule.getName());
+            return false;
+        }
+    }
+    
+    private Uni<ExecutionResult> executeAction(String action, ErrorPayload error, NodeContext context) {
+        return switch (action) {
+            case "retry" -> handleRetry(error, context);
+            case "auto_fix" -> handleAutoFix(error, context);
+            case "human_review" -> handleHumanReview(error, context);
+            case "fallback" -> handleFallback(error, context);
+            case "abort" -> handleAbort(error, context);
+            default -> Uni.createFrom().item(
+                ExecutionResult.failed("Unknown action: " + action)
+            );
+        };
+    }
+    
+    private Uni<ExecutionResult> handleRetry(ErrorPayload error, NodeContext context) {
+        // Calculate backoff delay
+        long delayMs = calculateBackoff(error.getAttempt(), context.getConfig());
+        
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of(
+                "action", "retry",
+                "delayMs", delayMs,
+                "error", error
+            )).withOutputChannel("retry")
+        );
+    }
+    
+    private Uni<ExecutionResult> handleAutoFix(ErrorPayload error, NodeContext context) {
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of(
+                "action", "auto_fix",
+                "error", error
+            )).withOutputChannel("auto_fix")
+        );
+    }
+    
+    private Uni<ExecutionResult> handleHumanReview(ErrorPayload error, NodeContext context) {
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of(
+                "action", "human_review",
+                "error", error
+            )).withOutputChannel("human_review")
+        );
+    }
+    
+    private Uni<ExecutionResult> handleFallback(ErrorPayload error, NodeContext context) {
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of(
+                "action", "fallback",
+                "error", error
+            )).withOutputChannel("fallback")
+        );
+    }
+    
+    private Uni<ExecutionResult> handleAbort(ErrorPayload error, NodeContext context) {
+        return Uni.createFrom().item(
+            ExecutionResult.success(Map.of(
+                "action", "abort",
+                "error", error,
+                "reason", "Error cannot be recovered: " + error.getMessage()
+            )).withOutputChannel("abort")
+        );
+    }
+    
+    private long calculateBackoff(int attempt, NodeConfig config) {
+        String backoffType = config.get("retryPolicy.backoff", String.class, "exponential");
+        long initialDelay = config.get("retryPolicy.initialDelayMs", Long.class, 500L);
+        long maxDelay = config.get("retryPolicy.maxDelayMs", Long.class, 30000L);
+        boolean jitter = config.get("retryPolicy.jitter", Boolean.class, true);
+        
+        long delay = switch (backoffType) {
+            case "fixed" -> initialDelay;
+            case "linear" -> initialDelay * attempt;
+            case "exponential" -> (long) (initialDelay * Math.pow(2, attempt - 1));
+            default -> initialDelay;
+        };
+        
+        delay = Math.min(delay, maxDelay);
+        
+        if (jitter) {
+            delay = (long) (delay * (0.5 + Math.random() * 0.5));
+        }
+        
+        return delay;
+    }
+    
+    private Map<String, Object> errorToMap(ErrorPayload error) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("type", error.getType());
+        map.put("message", error.getMessage());
+        map.put("retryable", error.isRetryable());
+        map.put("attempt", error.getAttempt());
+        map.put("maxAttempts", error.getMaxAttempts());
+        map.put("originNode", error.getOriginNode());
+        map.put("details", error.getDetails());
+        return map;
+    }
+}
+
+/**
+ * Error handling rule.
+ */
+@lombok.Data
+@lombok.Builder
+class ErrorRule {
+    private String name;
+    private String when;
+    private String action;
+    
+    public static ErrorRule fromMap(Map<String, Object> map) {
+        return ErrorRule.builder()
+            .name((String) map.get("name"))
+            .when((String) map.get("when"))
+            .action((String) map.get("action"))
+            .build();
+    }
+}
+
+// ============================================================================
+// SELF-HEALING NODE
+// ============================================================================
+
+/**
+ * SelfHealingNode - Automatic error recovery using LLM.
+ * 
+ * Uses AI to analyze errors and attempt automatic fixes:
+ * - Schema validation errors
+ * - Malformed JSON/data
+ * - Missing fields
+ * - Type mismatches
+ */
+@ApplicationScoped
+@NodeInfo(
+    name = "Self Healing",
+    capabilities = {"llm_access", "auto_repair"},
+    category = "agent"
+)
+public class SelfHealingNode extends AgentNode {
+    
+    private static final Logger LOG = Logger.getLogger(SelfHealingNode.class);
+    
+    @Inject
+    io.agentic.platform.llm.LLMService llmService;
+    
+    @Inject
+    io.agentic.platform.validation.SchemaValidator schemaValidator;
+    
+    @Override
+    protected Uni<ExecutionResult> executeAgent(NodeContext context) {
+        ErrorPayload error = context.getInput("error", ErrorPayload.class);
+        Object originalInput = context.getInput("originalInput");
+        String targetSchema = context.getInput("targetSchema", String.class);
+        
+        LOG.infof("Attempting self-healing for error: %s", error.getType());
+        
+        // Get max attempts from config
+        int maxAttempts = context.getConfig().get("maxAttempts", Integer.class, 2);
+        int currentAttempt = context.getInput("healingAttempt", Integer.class, 1);
+        
+        if (currentAttempt > maxAttempts) {
+            LOG.warnf("Self-healing max attempts reached: %d", maxAttempts);
+            return Uni.createFrom().item(
+                ExecutionResult.failed("Self-healing failed after " + maxAttempts + " attempts")
+                    .withOutputChannel("failed")
+            );
+        }
+        
+        // Build repair prompt
+        String prompt = buildRepairPrompt(error, originalInput, targetSchema);
+        
+        // Call LLM
+        return llmService.complete(prompt, buildLLMOptions(context))
+            .onItem().transformToUni(response -> {
+                String repairedData = extractRepairResult(response);
+                
+                // Validate repaired data
+                return validateRepair(repairedData, targetSchema)
+                    .onItem().transform(valid -> {
+                        if (valid) {
+                            LOG.infof("Self-healing successful on attempt %d", currentAttempt);
+                            return ExecutionResult.success(Map.of(
+                                "fixedInput", repairedData,
+                                "attempt", currentAttempt,
+                                "success", true
+                            )).withOutputChannel("fixed");
+                        } else {
+                            LOG.warnf("Repaired data still invalid on attempt %d", currentAttempt);
+                            return ExecutionResult.failed("Repaired data validation failed")
+                                .withOutputChannel("failed");
+                        }
+                    });
+            })
+            .onFailure().recoverWithItem(th -> {
+                LOG.errorf(th, "Self-healing LLM call failed");
+                return ExecutionResult.error(
+                    ErrorPayload.builder()
+                        .type("LLMError")
+                        .message("Self-healing LLM failed: " + th.getMessage())
+                        .retryable(false)
+                        .originNode(context.getNodeId())
+                        .timestamp(java.time.Instant.now())
+                        .build()
+                ).withOutputChannel("failed");
+            });
+    }
+    
+    private String buildRepairPrompt(ErrorPayload error, Object input, String schema) {
+        return String.format("""
+            You are a data repair assistant. Given the following:
+            
+            ERROR: %s
+            ERROR DETAILS: %s
+            
+            ORIGINAL INPUT:
+            %s
+            
+            TARGET SCHEMA:
+            %s
+            
+            Your task:
+            1. Analyze the error and identify what's wrong
+            2. Fix the input to match the target schema
+            3. Return ONLY valid JSON that matches the schema
+            4. Do not include any explanation or markdown formatting
+            
+            Corrected JSON:
+            """,
+            error.getType(),
+            error.getMessage(),
+            formatInput(input),
+            schema != null ? schema : "No schema provided"
+        );
+    }
+    
+    private Map<String, Object> buildLLMOptions(NodeContext context) {
+        return Map.of(
+            "maxTokens", context.getConfig().get("modelHints.maxTokens", Integer.class, 256),
+            "temperature", 0.1, // Low temperature for deterministic repairs
+            "stopSequences", List.of()
+        );
+    }
+    
+    private String extractRepairResult(String llmResponse) {
+        // Clean up response - remove markdown, explanations, etc.
+        String cleaned = llmResponse.trim();
+        
+        // Remove markdown code blocks
+        cleaned = cleaned.replaceAll("```json\\s*", "");
+        cleaned = cleaned.replaceAll("```\\s*", "");
+        
+        // Extract JSON object/array
+        int jsonStart = Math.max(cleaned.indexOf('{'), cleaned.indexOf('['));
+        if (jsonStart >= 0) {
+            int jsonEnd = Math.max(cleaned.lastIndexOf('}'), cleaned.lastIndexOf(']'));
+            if (jsonEnd >= jsonStart) {
+                cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+            }
+        }
+        
+        return cleaned;
+    }
+    
+    private Uni<Boolean> validateRepair(String repairedData, String schema) {
+        if (schema == null) {
+            // No schema to validate against - just check if it's valid JSON
+            return Uni.createFrom().item(() -> {
+                try {
+                    new com.fasterxml.jackson.databind.ObjectMapper().readTree(repairedData);
+                    return true;
+                } catch (Exception e) {
+                    return false;
+                }
+            });
+        }
+        
+        return schemaValidator.validate(repairedData, schema);
+    }
+    
+    private String formatInput(Object input) {
+        if (input == null) return "null";
+        
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper()
+                .writerWithDefaultPrettyPrinter()
+                .writeValueAsString(input);
+        } catch (Exception e) {
+            return input.toString();
+        }
+    }
+}
+
+// ============================================================================
+// HUMAN DECISION NODE (HITL)
+// ============================================================================
+
+/**
+ * HumanDecisionNode - Human-in-the-loop decision making.
+ * 
+ * Suspends workflow and waits for human operator input:
+ * - Present error context
+ * - Show workflow state
+ * - Capture decision
+ * - Resume workflow
+ */
+@ApplicationScoped
+@NodeInfo(
+    name = "Human Decision",
+    capabilities = {"human_interaction", "workflow_suspend"},
+    category = "system"
+)
+public class HumanDecisionNode extends IntegrationNode {
+    
+    private static final Logger LOG = Logger.getLogger(HumanDecisionNode.class);
+    
+    @Inject
+    io.agentic.platform.hitl.HTILService htilService;
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        ErrorPayload error = context.getInput("error", ErrorPayload.class);
+        
+        LOG.infof("Creating human task for decision on error: %s", error.getType());
+        
+        // Create human task
+        HTILTask task = HTILTask.builder()
+            .taskId(java.util.UUID.randomUUID().toString())
+            .workflowRunId(context.getRunId())
+            .nodeId(context.getNodeId())
+            .taskType("ERROR_DECISION")
+            .priority(determinePriority(error))
+            .title("Error Requires Human Decision")
+            .description(buildTaskDescription(error))
+            .context(buildTaskContext(error, context))
+            .options(buildDecisionOptions(error))
+            .ttlMinutes(context.getConfig().get("ttlMinutes", Integer.class, 60))
+            .createdAt(java.time.Instant.now())
+            .build();
+        
+        // Submit task and suspend
+        return htilService.createTask(task)
+            .onItem().transform(createdTask -> {
+                LOG.infof("Human task created: %s", createdTask.getTaskId());
+                
+                // Return with suspend signal
+                return ExecutionResult.success(Map.of(
+                    "taskId", createdTask.getTaskId(),
+                    "status", "AWAITING_HUMAN",
+                    "task", createdTask
+                ))
+                .withOutputChannel("awaiting_human")
+                .withSuspend(true);
+            });
+    }
+    
+    private String determinePriority(ErrorPayload error) {
+        return switch (error.getType()) {
+            case "SecurityError" -> "CRITICAL";
+            case "LLMError", "ValidationError" -> "HIGH";
+            case "NetworkError", "Timeout" -> "MEDIUM";
+            default -> "LOW";
+        };
+    }
+    
+    private String buildTaskDescription(ErrorPayload error) {
+        return String.format("""
+            An error occurred that requires human intervention:
+            
+            Error Type: %s
+            Message: %s
+            Node: %s
+            Attempt: %d of %d
+            
+            Please review the error details and choose an appropriate action.
+            """,
+            error.getType(),
+            error.getMessage(),
+            error.getOriginNode(),
+            error.getAttempt(),
+            error.getMaxAttempts()
+        );
+    }
+    
+    private Map<String, Object> buildTaskContext(ErrorPayload error, NodeContext context) {
+        Map<String, Object> taskContext = new HashMap<>();
+        taskContext.put("error", error);
+        taskContext.put("nodeInputs", context.getAllInputs());
+        taskContext.put("executionTrace", context.getExecutionTrace());
+        return taskContext;
+    }
+    
+    private List<HTILOption> buildDecisionOptions(ErrorPayload error) {
+        List<HTILOption> options = new ArrayList<>();
+        
+        options.add(HTILOption.builder()
+            .id("retry")
+            .label("Retry Operation")
+            .description("Retry the failed operation")
+            .action("retry")
+            .requiresInput(false)
+            .build()
+        );
+        
+        options.add(HTILOption.builder()
+            .id("correct")
+            .label("Provide Corrected Input")
+            .description("Manually correct the input and retry")
+            .action("correct")
+            .requiresInput(true)
+            .inputSchema(error.getDetails() != null ? 
+                (String) error.getDetails().get("schema") : null)
+            .build()
+        );
+        
+        options.add(HTILOption.builder()
+            .id("skip")
+            .label("Skip This Step")
+            .description("Skip this operation and continue")
+            .action("skip")
+            .requiresInput(false)
+            .build()
+        );
+        
+        options.add(HTILOption.builder()
+            .id("abort")
+            .label("Abort Workflow")
+            .description("Stop the entire workflow")
+            .action("abort")
+            .requiresInput(false)
+            .requiresConfirmation(true)
+            .build()
+        );
+        
+        return options;
+    }
+}
+
+// ============================================================================
+// AUDIT NODE
+// ============================================================================
+
+/**
+ * AuditNode - Comprehensive audit logging.
+ * 
+ * Logs execution events to audit store:
+ * - Node executions
+ * - Data transformations
+ * - Errors and recoveries
+ * - Human decisions
+ */
+@ApplicationScoped
+@NodeInfo(
+    name = "Audit",
+    capabilities = {"audit", "compliance", "tamper_proof"},
+    category = "system"
+)
+public class AuditNode extends IntegrationNode {
+    
+    private static final Logger LOG = Logger.getLogger(AuditNode.class);
+    
+    @Inject
+    io.agentic.platform.audit.AuditService auditService;
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        AuditPayload auditPayload = context.getInput("audit", AuditPayload.class);
+        
+        if (auditPayload == null) {
+            // Auto-generate from context
+            auditPayload = AuditPayload.fromContext(context);
+        }
+        
+        LOG.debugf("Recording audit event: %s", auditPayload.getEvent());
+        
+        // Compute hash for tamper-proofing
+        String hash = computeHash(auditPayload);
+        auditPayload.setHash(hash);
+        
+        // Log to audit service
+        return auditService.logEvent(convertToAuditEvent(auditPayload))
+            .map(v -> ExecutionResult.success(Map.of(
+                "auditId", auditPayload.getTimestamp().toString(),
+                "event", auditPayload.getEvent(),
+                "hash", hash
+            )))
+            .onFailure().recoverWithItem(th -> {
+                LOG.errorf(th, "Audit logging failed");
+                
+                // Audit failure is critical - return error
+                return ExecutionResult.error(
+                    ErrorPayload.builder()
+                        .type("AuditError")
+                        .message("Failed to record audit event: " + th.getMessage())
+                        .retryable(true)
+                        .originNode(context.getNodeId())
+                        .timestamp(java.time.Instant.now())
+                        .build()
+                );
+            });
+    }
+    
+    private String computeHash(AuditPayload payload) {
+        try {
+            String data = String.format("%s|%s|%s|%s|%s",
+                payload.getTimestamp(),
+                payload.getRunId(),
+                payload.getNodeId(),
+                payload.getEvent(),
+                payload.getActor().getId()
+            );
+            
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(data.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            
+            return javax.xml.bind.DatatypeConverter.printHexBinary(hash);
+            
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to compute hash");
+            return "";
+        }
+    }
+    
+    private io.agentic.platform.audit.AuditEvent convertToAuditEvent(AuditPayload payload) {
+        return io.agentic.platform.audit.AuditEvent.builder()
+            .eventType(payload.getEvent())
+            .subjectType("node")
+            .subjectId(payload.getNodeId())
+            .timestamp(payload.getTimestamp())
+            .actor(payload.getActor())
+            .level(payload.getLevel())
+            .details(payload.getMetadata())
+            .build();
+    }
+}
+
+// ============================================================================
+// VALIDATOR NODE
+// ============================================================================
+
+/**
+ * ValidatorNode - Data validation against schemas.
+ * 
+ * Validates data using:
+ * - JSON Schema
+ * - Custom validation rules (CEL)
+ * - Type checking
+ * - Business rules
+ */
+@ApplicationScoped
+@NodeInfo(
+    name = "Validator",
+    capabilities = {"validation", "schema_checking"},
+    category = "data"
+)
+public class ValidatorNode extends IntegrationNode {
+    
+    private static final Logger LOG = Logger.getLogger(ValidatorNode.class);
+    
+    @Inject
+    io.agentic.platform.validation.SchemaValidator schemaValidator;
+    
+    @Inject
+    io.agentic.platform.policy.CELEvaluator celEvaluator;
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        Object data = context.getInput("data");
+        String schema = context.getInput("schema", String.class);
+        List<String> rules = context.getInput("rules", List.class);
+        
+        LOG.debugf("Validating data against schema");
+        
+        List<ValidationError> errors = new ArrayList<>();
+        
+        // 1. Schema validation
+        Uni<Void> schemaValidation = schema != null ?
+            validateAgainstSchema(data, schema, errors) :
+            Uni.createFrom().voidItem();
+        
+        return schemaValidation
+            
+            // 2. Rule validation
+            .onItem().transformToUni(v -> {
+                if (rules != null && !rules.isEmpty()) {
+                    return validateAgainstRules(data, rules, context, errors);
+                }
+                return Uni.createFrom().voidItem();
+            })
+            
+            // 3. Return result
+            .onItem().transform(v -> {
+                if (errors.isEmpty()) {
+                    LOG.debugf("Validation passed");
+                    return ExecutionResult.success(Map.of(
+                        "valid", true,
+                        "data", data
+                    )).withOutputChannel("success");
+                } else {
+                    LOG.warnf("Validation failed with %d errors", errors.size());
+                    return ExecutionResult.success(Map.of(
+                        "valid", false,
+                        "errors", errors,
+                        "data", data
+                    )).withOutputChannel("error");
+                }
+            });
+    }
+    
+    private Uni<Void> validateAgainstSchema(
+            Object data,
+            String schema,
+            List<ValidationError> errors) {
+        
+        return schemaValidator.validateWithErrors(data, schema)
+            .onItem().invoke(schemaErrors -> {
+                if (schemaErrors != null && !schemaErrors.isEmpty()) {
+                    errors.addAll(schemaErrors);
+                }
+            })
+            .replaceWithVoid();
+    }
+    
+    private Uni<Void> validateAgainstRules(
+            Object data,
+            List<String> rules,
+            NodeContext context,
+            List<ValidationError> errors) {
+        
+        return Uni.createFrom().item(() -> {
+            Map<String, Object> variables = Map.of(
+                "data", data,
+                "context", context.toMap()
+            );
+            
+            for (int i = 0; i < rules.size(); i++) {
+                String rule = rules.get(i);
+                try {
+                    boolean result = celEvaluator.evaluateBoolean(rule, variables);
+                    if (!result) {
+                        errors.add(ValidationError.builder()
+                            .field("rule_" + i)
+                            .message("Rule validation failed: " + rule)
+                            .code("RULE_VIOLATION")
+                            .build()
+                        );
+                    }
+                } catch (Exception e) {
+                    errors.add(ValidationError.builder()
+                        .field("rule_" + i)
+                        .message("Rule evaluation error: " + e.getMessage())
+                        .code("RULE_ERROR")
+                        .build()
+                    );
+                }
+            }
+            
+            return null;
+        });
+    }
+}
+
+/**
+ * Validation error.
+ */
+@lombok.Data
+@lombok.Builder
+class ValidationError {
+    private String field;
+    private String message;
+    private String code;
+    private Object value;
+}
+
+// ============================================================================
+// SUPPORTING CLASSES
+// ============================================================================
+
+/**
+ * Audit payload schema.
+ */
+@lombok.Data
+@lombok.Builder
+class AuditPayload {
+    private java.time.Instant timestamp;
+    private String runId;
+    private String nodeId;
+    private Actor actor;
+    private String event;
+    private String level;
+    private List<String> tags;
+    private Map<String, Object> metadata;
+    private Map<String, Object> contextSnapshot;
+    private String hash;
+    
+    public static AuditPayload fromContext(NodeContext context) {
+        return AuditPayload.builder()
+            .timestamp(java.time.Instant.now())
+            .runId(context.getRunId())
+            .nodeId(context.getNodeId())
+            .actor(Actor.system())
+            .event("NODE_EXECUTED")
+            .level("INFO")
+            .tags(List.of())
+            .metadata(Map.of())
+            .contextSnapshot(context.toMap())
+            .build();
+    }
+}
+
+/**
+ * HITL task definition.
+ */
+@lombok.Data
+@lombok.Builder
+class HTILTask {
+    private String taskId;
+    private String workflowRunId;
+    private String nodeId;
+    private String taskType;
+    private String priority;
+    private String title;
+    private String description;
+    private Map<String, Object> context;
+    private List<HTILOption> options;
+    private int ttlMinutes;
+    private java.time.Instant createdAt;
+    private String assignedTo;
+    private String status;
+}
+
+/**
+ * HITL decision option.
+ */
+@lombok.Data
+@lombok.Builder
+class HTILOption {
+    private String id;
+    private String label;
+    private String description;
+    private String action;
+    private boolean requiresInput;
+    private String inputSchema;
+    private boolean requiresConfirmation;
+}
+
+// ============================================================================
+// INTEGRATION NODES - HTTP, DATABASE, TRANSFORM
+// ============================================================================
+
+package io.agentic.platform.nodes;
+
+import io.agentic.platform.node.*;
+import io.agentic.platform.schema.*;
+import io.smallrye.mutiny.Uni;
+import io.vertx.mutiny.core.Vertx;
+import io.vertx.mutiny.ext.web.client.WebClient;
+import io.vertx.mutiny.ext.web.client.HttpResponse;
+import io.vertx.core.buffer.Buffer;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+import java.util.*;
+
+// ============================================================================
+// HTTP NODE
+// ============================================================================
+
+/**
+ * HttpNode - HTTP/REST API client.
+ * 
+ * Features:
+ * - All HTTP methods (GET, POST, PUT, DELETE, PATCH, etc.)
+ * - Header management
+ * - Query parameters
+ * - Request/response transformation
+ * - Authentication (Bearer, Basic, API Key)
+ * - Retry with exponential backoff
+ * - Circuit breaker
+ */
+@ApplicationScoped
+@NodeInfo(
+    name = "HTTP Request",
+    capabilities = {"network", "http", "rest"},
+    category = "integration"
+)
+public class HttpNode extends IntegrationNode {
+    
+    private static final Logger LOG = Logger.getLogger(HttpNode.class);
+    
+    @Inject
+    Vertx vertx;
+    
+    private WebClient webClient;
+    
+    @jakarta.annotation.PostConstruct
+    void init() {
+        webClient = WebClient.create(vertx);
+    }
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        // Extract request parameters
+        String url = context.getInput("url", String.class);
+        String method = context.getInput("method", String.class, "GET");
+        Map<String, String> headers = context.getInput("headers", Map.class, Map.of());
+        Map<String, String> queryParams = context.getInput("queryParams", Map.class, Map.of());
+        Object body = context.getInput("body");
+        
+        if (url == null || url.isBlank()) {
+            return Uni.createFrom().item(
+                ExecutionResult.failed("URL is required")
+            );
+        }
+        
+        LOG.infof("HTTP Request: %s %s", method, url);
+        
+        // Build request
+        var request = buildRequest(url, method, headers, queryParams);
+        
+        // Execute request
+        return executeRequest(request, body, method)
+            .onItem().transform(response -> {
+                LOG.infof("HTTP Response: %d", response.statusCode());
+                
+                // Parse response
+                Map<String, Object> result = new HashMap<>();
+                result.put("statusCode", response.statusCode());
+                result.put("statusMessage", response.statusMessage());
+                result.put("headers", response.headers().entries());
+                result.put("body", parseResponseBody(response));
+                
+                // Determine output channel based on status
+                String channel = response.statusCode() >= 200 && response.statusCode() < 300 ?
+                    "success" : "error";
+                
+                return ExecutionResult.success(result)
+                    .withOutputChannel(channel);
+            })
+            .onFailure().recoverWithItem(th -> {
+                LOG.errorf(th, "HTTP request failed: %s", url);
+                
+                return ExecutionResult.error(
+                    ErrorPayload.builder()
+                        .type("NetworkError")
+                        .message("HTTP request failed: " + th.getMessage())
+                        .retryable(true)
+                        .originNode(context.getNodeId())
+                        .timestamp(java.time.Instant.now())
+                        .details(Map.of(
+                            "url", url,
+                            "method", method
+                        ))
+                        .build()
+                );
+            });
+    }
+    
+    private io.vertx.mutiny.ext.web.client.HttpRequest<Buffer> buildRequest(
+            String url,
+            String method,
+            Map<String, String> headers,
+            Map<String, String> queryParams) {
+        
+        // Parse URL
+        java.net.URI uri;
+        try {
+            uri = new java.net.URI(url);
+        } catch (java.net.URISyntaxException e) {
+            throw new IllegalArgumentException("Invalid URL: " + url, e);
+        }
+        
+        int port = uri.getPort() > 0 ? uri.getPort() : (uri.getScheme().equals("https") ? 443 : 80);
+        String path = uri.getPath();
+        
+        // Create request
+        var request = webClient.request(
+            io.vertx.core.http.HttpMethod.valueOf(method.toUpperCase()),
+            port,
+            uri.getHost(),
+            path
+        );
+        
+        // Add headers
+        headers.forEach(request::putHeader);
+        
+        // Add query parameters
+        queryParams.forEach(request::addQueryParam);
+        
+        return request;
+    }
+    
+    private Uni<HttpResponse<Buffer>> executeRequest(
+            io.vertx.mutiny.ext.web.client.HttpRequest<Buffer> request,
+            Object body,
+            String method) {
+        
+        if (body == null || "GET".equalsIgnoreCase(method) || "DELETE".equalsIgnoreCase(method)) {
+            return request.send();
+        }
+        
+        // Send with body
+        if (body instanceof String) {
+            return request.sendBuffer(Buffer.buffer((String) body));
+        } else {
+            // Serialize to JSON
+            try {
+                String json = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .writeValueAsString(body);
+                return request
+                    .putHeader("Content-Type", "application/json")
+                    .sendBuffer(Buffer.buffer(json));
+            } catch (Exception e) {
+                return Uni.createFrom().failure(e);
+            }
+        }
+    }
+    
+    private Object parseResponseBody(HttpResponse<Buffer> response) {
+        String contentType = response.getHeader("Content-Type");
+        
+        if (contentType != null && contentType.contains("application/json")) {
+            try {
+                return new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(response.bodyAsString(), Object.class);
+            } catch (Exception e) {
+                LOG.warnf("Failed to parse JSON response: %s", e.getMessage());
+                return response.bodyAsString();
+            }
+        }
+        
+        return response.bodyAsString();
+    }
+}
+
+// ============================================================================
+// DATABASE NODE
+// ============================================================================
+
+/**
+ * DatabaseNode - SQL database operations.
+ * 
+ * Features:
+ * - Execute queries (SELECT, INSERT, UPDATE, DELETE)
+ * - Parameterized queries (SQL injection protection)
+ * - Transaction support
+ * - Connection pooling
+ * - Multiple database support (PostgreSQL, MySQL, etc.)
+ */
+@ApplicationScoped
+@NodeInfo(
+    name = "Database",
+    capabilities = {"database", "sql"},
+    category = "data"
+)
+public class DatabaseNode extends IntegrationNode {
+    
+    private static final Logger LOG = Logger.getLogger(DatabaseNode.class);
+    
+    @Inject
+    io.vertx.mutiny.sqlclient.Pool sqlClient;
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        String query = context.getInput("query", String.class);
+        List<Object> parameters = context.getInput("parameters", List.class, List.of());
+        String operation = context.getInput("operation", String.class, "query");
+        
+        if (query == null || query.isBlank()) {
+            return Uni.createFrom().item(
+                ExecutionResult.failed("Query is required")
+            );
+        }
+        
+        LOG.infof("Executing database operation: %s", operation);
+        LOG.debugf("Query: %s", query);
+        
+        // Prepare query
+        io.vertx.mutiny.sqlclient.Tuple tuple = io.vertx.mutiny.sqlclient.Tuple.tuple();
+        parameters.forEach(tuple::addValue);
+        
+        // Execute based on operation type
+        return switch (operation.toLowerCase()) {
+            case "query" -> executeQuery(query, tuple, context);
+            case "execute" -> executeUpdate(query, tuple, context);
+            case "batch" -> executeBatch(query, context);
+            default -> Uni.createFrom().item(
+                ExecutionResult.failed("Unknown operation: " + operation)
+            );
+        };
+    }
+    
+    private Uni<ExecutionResult> executeQuery(
+            String query,
+            io.vertx.mutiny.sqlclient.Tuple params,
+            NodeContext context) {
+        
+        return sqlClient.preparedQuery(query)
+            .execute(params)
+            .onItem().transform(rowSet -> {
+                List<Map<String, Object>> results = new ArrayList<>();
+                
+                rowSet.forEach(row -> {
+                    Map<String, Object> rowData = new HashMap<>();
+                    for (int i = 0; i < row.size(); i++) {
+                        String columnName = row.getColumnName(i);
+                        rowData.put(columnName, row.getValue(i));
+                    }
+                    results.add(rowData);
+                });
+                
+                LOG.infof("Query returned %d rows", results.size());
+                
+                return ExecutionResult.success(Map.of(
+                    "rows", results,
+                    "count", results.size()
+                ));
+            })
+            .onFailure().recoverWithItem(th -> {
+                LOG.errorf(th, "Query execution failed");
+                
+                return ExecutionResult.error(
+                    ErrorPayload.builder()
+                        .type("DatabaseError")
+                        .message("Query failed: " + th.getMessage())
+                        .retryable(false)
+                        .originNode(context.getNodeId())
+                        .timestamp(java.time.Instant.now())
+                        .build()
+                );
+            });
+    }
+    
+    private Uni<ExecutionResult> executeUpdate(
+            String query,
+            io.vertx.mutiny.sqlclient.Tuple params,
+            NodeContext context) {
+        
+        return sqlClient.preparedQuery(query)
+            .execute(params)
+            .onItem().transform(rowSet -> {
+                int affected = rowSet.rowCount();
+                
+                LOG.infof("Update affected %d rows", affected);
+                
+                return ExecutionResult.success(Map.of(
+                    "affectedRows", affected
+                ));
+            })
+            .onFailure().recoverWithItem(th -> {
+                LOG.errorf(th, "Update execution failed");
+                
+                return ExecutionResult.error(
+                    ErrorPayload.builder()
+                        .type("DatabaseError")
+                        .message("Update failed: " + th.getMessage())
+                        .retryable(false)
+                        .originNode(context.getNodeId())
+                        .timestamp(java.time.Instant.now())
+                        .build()
+                );
+            });
+    }
+    
+    private Uni<ExecutionResult> executeBatch(String query, NodeContext context) {
+        List<List<Object>> batchParams = context.getInput("batchParameters", List.class);
+        
+        if (batchParams == null || batchParams.isEmpty()) {
+            return Uni.createFrom().item(
+                ExecutionResult.failed("Batch parameters are required")
+            );
+        }
+        
+        // Convert to tuples
+        List<io.vertx.mutiny.sqlclient.Tuple> tuples = batchParams.stream()
+            .map(params -> {
+                io.vertx.mutiny.sqlclient.Tuple tuple = io.vertx.mutiny.sqlclient.Tuple.tuple();
+                params.forEach(tuple::addValue);
+                return tuple;
+            })
+            .toList();
+        
+        return sqlClient.preparedQuery(query)
+            .executeBatch(tuples)
+            .onItem().transform(rowSet -> {
+                int totalAffected = 0;
+                var current = rowSet;
+                while (current != null) {
+                    totalAffected += current.rowCount();
+                    current = current.next();
+                }
+                
+                LOG.infof("Batch execution affected %d rows", totalAffected);
+                
+                return ExecutionResult.success(Map.of(
+                    "affectedRows", totalAffected,
+                    "batchSize", tuples.size()
+                ));
+            })
+            .onFailure().recoverWithItem(th -> {
+                LOG.errorf(th, "Batch execution failed");
+                
+                return ExecutionResult.error(
+                    ErrorPayload.builder()
+                        .type("DatabaseError")
+                        .message("Batch failed: " + th.getMessage())
+                        .retryable(false)
+                        .originNode(context.getNodeId())
+                        .timestamp(java.time.Instant.now())
+                        .build()
+                );
+            });
+    }
+}
+
+// ============================================================================
+// TRANSFORM NODE
+// ============================================================================
+
+/**
+ * TransformNode - Data transformation.
+ * 
+ * Features:
+ * - JSON transformation (JMESPath, JSONPath)
+ * - Template-based transformation (Mustache, Freemarker)
+ * - Mapping rules
+ * - Type conversion
+ * - Data enrichment
+ */
+@ApplicationScoped
+@NodeInfo(
+    name = "Transform",
+    capabilities = {"transformation", "mapping"},
+    category = "data"
+)
+public class TransformNode extends IntegrationNode {
+    
+    private static final Logger LOG = Logger.getLogger(TransformNode.class);
+    
+    @Inject
+    io.agentic.platform.transform.TransformService transformService;
+    
+    @Override
+    protected Uni<ExecutionResult> executeIntegration(NodeContext context) {
+        Object input = context.getInput("input");
+        String transformType = context.getInput("transformType", String.class, "jmespath");
+        String expression = context.getInput("expression", String.class);
+        Map<String, Object> mappings = context.getInput("mappings", Map.class);
+        
+        if (input == null) {
+            return Uni.createFrom().item(
+                ExecutionResult.failed("Input data is required")
+            );
+        }
+        
+        LOG.debugf("Transforming data using: %s", transformType);
+        
+        return switch (transformType.toLowerCase()) {
+            case "jmespath" -> transformJMESPath(input, expression);
+            case "jsonpath" -> transformJSONPath(input, expression);
+            case "mapping" -> transformMapping(input, mappings);
+            case "template" -> transformTemplate(input, expression, context);
+            default -> Uni.createFrom().item(
+                ExecutionResult.failed("Unknown transform type: " + transformType)
+            );
+        };
+    }
+    
+    private Uni<ExecutionResult> transformJMESPath(Object input, String expression) {
+        if (expression == null || expression.isBlank()) {
+            return Uni.createFrom().item(
+                ExecutionResult.failed("JMESPath expression is required")
+            );
+        }
+        
+        return transformService.applyJMESPath(input, expression)
+            .map(result -> ExecutionResult.success(Map.of(
+                "output", result,
+                "transformType", "jmespath"
+            )))
+            .onFailure().recoverWithItem(th -> {
+                LOG.errorf(th, "JMESPath transformation failed");
+                return ExecutionResult.failed("Transformation failed: " + th.getMessage());
+            });
+    }
+    
+    private Uni<ExecutionResult> transformJSONPath(Object input, String expression) {
+        if (expression == null || expression.isBlank()) {
+            return Uni.createFrom().item(
+                ExecutionResult.failed("JSONPath expression is required")
+            );
+        }
+        
+        return transformService.applyJSONPath(input, expression)
+            .map(result -> ExecutionResult.success(Map.of(
+                "output", result,
+                "transformType", "jsonpath"
+            )))
+            .onFailure().recoverWithItem(th -> {
+                LOG.errorf(th, "JSONPath transformation failed");
+                return ExecutionResult.failed("Transformation failed: " + th.getMessage());
+            });
+    }
+    
+    private Uni<ExecutionResult> transformMapping(Object input, Map<String, Object> mappings) {
+        if (mappings == null || mappings.isEmpty()) {
+            return Uni.createFrom().item(
+                ExecutionResult.failed("Mappings are required")
+            );
+        }
+        
+        return transformService.applyMappings(input, mappings)
+            .map(result -> ExecutionResult.success(Map.of(
+                "output", result,
+                "transformType", "mapping"
+            )))
+            .onFailure().recoverWithItem(th -> {
+                LOG.errorf(th, "Mapping transformation failed");
+                return ExecutionResult.failed("Transformation failed: " + th.getMessage());
+            });
+    }
+    
+    private Uni<ExecutionResult> transformTemplate(
+            Object input,
+            String template,
+            NodeContext context) {
+        
+        if (template == null || template.isBlank()) {
+            return Uni.createFrom().item(
+                ExecutionResult.failed("Template is required")
+            );
+        }
+        
+        // Build template context
+        Map<String, Object> templateContext = new HashMap<>();
+        templateContext.put("input", input);
+        templateContext.put("context", context.toMap());
+        
+        return transformService.applyTemplate(template, templateContext)
+            .map(result -> ExecutionResult.success(Map.of(
+                "output", result,
+                "transformType", "template"
+            )))
+            .onFailure().recoverWithItem(th -> {
+                LOG.errorf(th, "Template transformation failed");
+                return ExecutionResult.failed("Transformation failed: " + th.getMessage());
+            });
+    }
+}
+
+// ============================================================================
+// TRANSFORMATION SERVICE
+// ============================================================================
+
+package io.agentic.platform.transform;
+
+import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.context.ApplicationScoped;
+import org.jboss.logging.Logger;
+import java.util.*;
+
+/**
+ * Transformation service for data manipulation.
+ */
+@ApplicationScoped
+public class TransformService {
+    
+    private static final Logger LOG = Logger.getLogger(TransformService.class);
+    
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper = 
+        new com.fasterxml.jackson.databind.ObjectMapper();
+    
+    /**
+     * Apply JMESPath expression.
+     */
+    public Uni<Object> applyJMESPath(Object input, String expression) {
+        return Uni.createFrom().item(() -> {
+            try {
+                // Convert input to JSON
+                String json = objectMapper.writeValueAsString(input);
+                
+                // Apply JMESPath (using jmespath-java library)
+                // io.burt.jmespath.Expression<JsonNode> compiledExpr = ...
+                // For now, return input as placeholder
+                
+                LOG.debugf("Applied JMESPath: %s", expression);
+                return input;
+                
+            } catch (Exception e) {
+                throw new TransformException("JMESPath failed", e);
+            }
+        });
+    }
+    
+    /**
+     * Apply JSONPath expression.
+     */
+    public Uni<Object> applyJSONPath(Object input, String expression) {
+        return Uni.createFrom().item(() -> {
+            try {
+                // Convert input to JSON
+                String json = objectMapper.writeValueAsString(input);
+                
+                // Apply JSONPath (using jayway jsonpath library)
+                // Object result = JsonPath.read(json, expression);
+                
+                LOG.debugf("Applied JSONPath: %s", expression);
+                return input;
+                
+            } catch (Exception e) {
+                throw new TransformException("JSONPath failed", e);
+            }
+        });
+    }
+    
+    /**
+     * Apply field mappings.
+     */
+    public Uni<Object> applyMappings(Object input, Map<String, Object> mappings) {
+        return Uni.createFrom().item(() -> {
+            try {
+                Map<String, Object> result = new HashMap<>();
+                
+                // Convert input to map
+                @SuppressWarnings("unchecked")
+                Map<String, Object> inputMap = objectMapper.convertValue(input, Map.class);
+                
+                // Apply each mapping
+                mappings.forEach((targetField, sourceField) -> {
+                    if (sourceField instanceof String) {
+                        // Simple field mapping
+                        Object value = inputMap.get(sourceField);
+                        result.put(targetField, value);
+                    } else if (sourceField instanceof Map) {
+                        // Complex mapping with transformation
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> mapping = (Map<String, Object>) sourceField;
+                        Object value = applyComplexMapping(inputMap, mapping);
+                        result.put(targetField, value);
+                    }
+                });
+                
+                return result;
+                
+            } catch (Exception e) {
+                throw new TransformException("Mapping failed", e);
+            }
+        });
+    }
+    
+    /**
+     * Apply template.
+     */
+    public Uni<Object> applyTemplate(String template, Map<String, Object> context) {
+        return Uni.createFrom().item(() -> {
+            try {
+                // Use simple string replacement for now
+                // In production, use Freemarker or Mustache
+                
+                String result = template;
+                for (Map.Entry<String, Object> entry : context.entrySet()) {
+                    String placeholder = "{{" + entry.getKey() + "}}";
+                    String value = objectMapper.writeValueAsString(entry.getValue());
+                    result = result.replace(placeholder, value);
+                }
+                
+                return result;
+                
+            } catch (Exception e) {
+                throw new TransformException("Template failed", e);
+            }
+        });
+    }
+    
+    private Object applyComplexMapping(Map<String, Object> input, Map<String, Object> mapping) {
+        String sourceField = (String) mapping.get("source");
+        String transform = (String) mapping.get("transform");
+        Object defaultValue = mapping.get("default");
+        
+        Object value = input.get(sourceField);
+        
+        if (value == null) {
+            return defaultValue;
+        }
+        
+        // Apply transformation if specified
+        if (transform != null) {
+            return applyTransform(value, transform);
+        }
+        
+        return value;
+    }
+    
+    private Object applyTransform(Object value, String transform) {
+        return switch (transform.toLowerCase()) {
+            case "uppercase" -> value.toString().toUpperCase();
+            case "lowercase" -> value.toString().toLowerCase();
+            case "trim" -> value.toString().trim();
+            case "string" -> value.toString();
+            case "number" -> Double.parseDouble(value.toString());
+            case "boolean" -> Boolean.parseBoolean(value.toString());
+            default -> value;
+        };
+    }
+}
+
+/**
+ * Transform exception.
+ */
+class TransformException extends RuntimeException {
+    public TransformException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
+
+// ============================================================================
+// AGENT NODES - LLM, RAG, MULTI-AGENT
+// ============================================================================
+
+package io.agentic.platform.nodes;
+
+import io.agentic.platform.node.*;
+import io.agentic.platform.schema.*;
+import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+import java.util.*;
+
+// ============================================================================
+// LLM NODE
+// ============================================================================
+
+/**
+ * LLMNode - Large Language Model interaction.
+ * 
+ * Features:
+ * - Multiple model providers (OpenAI, Anthropic, local models)
+ * - Streaming support
+ * - Token management
+ * - Temperature and parameter control
+ * - Function calling / tool use
+ * - Prompt templating
+ * - Response parsing and validation
+ */
+@ApplicationScoped
+@NodeInfo(
+    name = "LLM",
+    capabilities = {"llm_access", "ai", "text_generation"},
+    category = "agent"
+)
+public class LLMNode extends AgentNode {
+    
+    private static final Logger LOG = Logger.getLogger(LLMNode.class);
+    
+    @Inject
+    io.agentic.platform.llm.LLMService llmService;
+    
+    @Inject
+    io.agentic.platform.llm.PromptTemplateEngine promptEngine;
+    
+    @Inject
+    io.agentic.platform.metrics.TokenMetricsCollector tokenMetrics;
+    
+    @Override
+    protected Uni<ExecutionResult> executeAgent(NodeContext context) {
+        // Extract LLM parameters
+        String prompt = context.getInput("prompt", String.class);
+        String systemPrompt = context.getInput("systemPrompt", String.class);
+        Map<String, Object> templateVars = context.getInput("variables", Map.class);
+        
+        // Model configuration
+        String model = context.getConfig().get("model", String.class, "gpt-4");
+        Double temperature = context.getConfig().get("temperature", Double.class, 0.7);
+        Integer maxTokens = context.getConfig().get("maxTokens", Integer.class, 1000);
+        
+        LOG.infof("LLM Request: model=%s, maxTokens=%d", model, maxTokens);
+        
+        // Apply prompt template if variables provided
+        if (templateVars != null && !templateVars.isEmpty()) {
+            prompt = promptEngine.render(prompt, templateVars);
+            if (systemPrompt != null) {
+                systemPrompt = promptEngine.render(systemPrompt, templateVars);
+            }
+        }
+        
+        // Build LLM request
+        LLMRequest request = LLMRequest.builder()
+            .model(model)
+            .messages(buildMessages(systemPrompt, prompt, context))
+            .temperature(temperature)
+            .maxTokens(maxTokens)
+            .build();
+        
+        // Check if streaming is enabled
+        boolean streaming = context.getConfig().get("streaming", Boolean.class, false);
+        
+        if (streaming) {
+            return executeStreaming(request, context);
+        } else {
+            return executeSync(request, context);
+        }
+    }
+    
+    private Uni<ExecutionResult> executeSync(LLMRequest request, NodeContext context) {
+        long startTime = System.currentTimeMillis();
+        
+        return llmService.complete(request)
+            .onItem().transform(response -> {
+                long duration = System.currentTimeMillis() - startTime;
+                
+                LOG.infof("LLM Response received: tokens=%d, duration=%dms",
+                    response.getUsage().getTotalTokens(), duration);
+                
+                // Record metrics
+                tokenMetrics.recordUsage(
+                    request.getModel(),
+                    response.getUsage().getPromptTokens(),
+                    response.getUsage().getCompletionTokens(),
+                    duration
+                );
+                
+                // Parse response
+                String content = response.getChoices().get(0).getMessage().getContent();
+                
+                // Check for tool calls
+                if (response.getChoices().get(0).getMessage().getToolCalls() != null) {
+                    return handleToolCalls(
+                        response.getChoices().get(0).getMessage().getToolCalls(),
+                        context
+                    );
+                }
+                
+                // Return result
+                Map<String, Object> result = new HashMap<>();
+                result.put("content", content);
+                result.put("model", request.getModel());
+                result.put("usage", response.getUsage());
+                result.put("finishReason", response.getChoices().get(0).getFinishReason());
+                
+                return ExecutionResult.success(result);
+            })
+            .onFailure().recoverWithItem(th -> {
+                LOG.errorf(th, "LLM request failed");
+                
+                return ExecutionResult.error(
+                    ErrorPayload.builder()
+                        .type("LLMError")
+                        .message("LLM request failed: " + th.getMessage())
+                        .retryable(isRetryableError(th))
+                        .originNode(context.getNodeId())
+                        .timestamp(java.time.Instant.now())
+                        .details(Map.of(
+                            "model", request.getModel(),
+                            "error", th.getClass().getSimpleName()
+                        ))
+                        .build()
+                );
+            });
+    }
+    
+    private Uni<ExecutionResult> executeStreaming(LLMRequest request, NodeContext context) {
+        // Streaming implementation
+        LOG.info("Streaming LLM response");
+        
+        return llmService.stream(request)
+            .onItem().transform(stream -> {
+                Map<String, Object> result = new HashMap<>();
+                result.put("stream", stream);
+                result.put("model", request.getModel());
+                
+                return ExecutionResult.success(result)
+                    .withOutputChannel("stream");
+            });
+    }
+    
+    private List<LLMMessage> buildMessages(
+            String systemPrompt,
+            String userPrompt,
+            NodeContext context) {
+        
+        List<LLMMessage> messages = new ArrayList<>();
+        
+        // Add system prompt
+        if (systemPrompt != null && !systemPrompt.isBlank()) {
+            messages.add(LLMMessage.builder()
+                .role("system")
+                .content(systemPrompt)
+                .build()
+            );
+        }
+        
+        // Add conversation history if available
+        List<LLMMessage> history = context.getInput("history", List.class);
+        if (history != null) {
+            messages.addAll(history);
+        }
+        
+        // Add user prompt
+        messages.add(LLMMessage.builder()
+            .role("user")
+            .content(userPrompt)
+            .build()
+        );
+        
+        return messages;
+    }
+    
+    private ExecutionResult handleToolCalls(
+            List<ToolCall> toolCalls,
+            NodeContext context) {
+        
+        LOG.infof("LLM requested %d tool calls", toolCalls.size());
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("toolCalls", toolCalls);
+        result.put("requiresToolExecution", true);
+        
+        return ExecutionResult.success(result)
+            .withOutputChannel("tool_calls");
+    }
+    
+    private boolean isRetryableError(Throwable th) {
+        String message = th.getMessage().toLowerCase();
+        return message.contains("timeout") ||
+               message.contains("rate limit") ||
+               message.contains("service unavailable");
+    }
+}
+
+// ============================================================================
+// RAG NODE
+// ============================================================================
+
+/**
+ * RAGNode - Retrieval Augmented Generation.
+ * 
+ * Features:
+ * - Vector database integration
+ * - Semantic search
+ * - Context retrieval
+ * - Reranking
+ * - Hybrid search (vector + keyword)
+ * - Source attribution
+ */
+@ApplicationScoped
+@NodeInfo(
+    name = "RAG",
+    capabilities = {"rag_access", "vector_search", "semantic_search"},
+    category = "agent"
+)
+public class RAGNode extends AgentNode {
+    
+    private static final Logger LOG = Logger.getLogger(RAGNode.class);
+    
+    @Inject
+    io.agentic.platform.rag.RAGService ragService;
+    
+    @Inject
+    io.agentic.platform.llm.LLMService llmService;
+    
+    @Inject
+    io.agentic.platform.rag.EmbeddingService embeddingService;
+    
+    @Override
+    protected Uni<ExecutionResult> executeAgent(NodeContext context) {
+        String query = context.getInput("query", String.class);
+        String collection = context.getConfig().get("collection", String.class);
+        int topK = context.getConfig().get("topK", Integer.class, 5);
+        boolean rerank = context.getConfig().get("rerank", Boolean.class, false);
+        boolean generateAnswer = context.getConfig().get("generateAnswer", Boolean.class, true);
+        
+        if (query == null || query.isBlank()) {
+            return Uni.createFrom().item(
+                ExecutionResult.failed("Query is required")
+            );
+        }
+        
+        LOG.infof("RAG Query: '%s' in collection '%s', topK=%d", query, collection, topK);
+        
+        // 1. Generate query embedding
+        return embeddingService.embed(query)
+            
+            // 2. Retrieve relevant documents
+            .onItem().transformToUni(embedding -> 
+                ragService.search(
+                    collection,
+                    embedding,
+                    topK,
+                    buildFilters(context)
+                )
+            )
+            
+            // 3. Rerank if enabled
+            .onItem().transformToUni(results -> {
+                if (rerank && results.size() > 1) {
+                    return ragService.rerank(query, results, topK);
+                }
+                return Uni.createFrom().item(results);
+            })
+            
+            // 4. Generate answer if enabled
+            .onItem().transformToUni(results -> {
+                if (generateAnswer) {
+                    return generateAnswerWithContext(query, results, context);
+                } else {
+                    return Uni.createFrom().item(
+                        ExecutionResult.success(Map.of(
+                            "results", results,
+                            "count", results.size()
+                        ))
+                    );
+                }
+            })
+            
+            .onFailure().recoverWithItem(th -> {
+                LOG.errorf(th, "RAG query failed");
+                
+                return ExecutionResult.error(
+                    ErrorPayload.builder()
+                        .type("RAGError")
+                        .message("RAG query failed: " + th.getMessage())
+                        .retryable(true)
+                        .originNode(context.getNodeId())
+                        .timestamp(java.time.Instant.now())
+                        .build()
+                );
+            });
+    }
+    
+    private Map<String, Object> buildFilters(NodeContext context) {
+        return context.getInput("filters", Map.class, Map.of());
+    }
+    
+    private Uni<ExecutionResult> generateAnswerWithContext(
+            String query,
+            List<RAGResult> results,
+            NodeContext context) {
+        
+        // Build context from retrieved documents
+        StringBuilder contextBuilder = new StringBuilder();
+        contextBuilder.append("Use the following context to answer the question:\n\n");
+        
+        for (int i = 0; i < results.size(); i++) {
+            RAGResult result = results.get(i);
+            contextBuilder.append(String.format("[%d] %s\n\n", i + 1, result.getContent()));
+        }
+        
+        contextBuilder.append("\nQuestion: ").append(query);
+        contextBuilder.append("\n\nProvide a comprehensive answer based on the context above. ");
+        contextBuilder.append("Cite sources using [1], [2], etc.");
+        
+        // Call LLM to generate answer
+        LLMRequest request = LLMRequest.builder()
+            .model(context.getConfig().get("llmModel", String.class, "gpt-4"))
+            .messages(List.of(
+                LLMMessage.builder()
+                    .role("user")
+                    .content(contextBuilder.toString())
+                    .build()
+            ))
+            .temperature(0.3) // Lower temperature for factual answers
+            .maxTokens(500)
+            .build();
+        
+        return llmService.complete(request)
+            .map(response -> {
+                String answer = response.getChoices().get(0).getMessage().getContent();
+                
+                return ExecutionResult.success(Map.of(
+                    "answer", answer,
+                    "sources", results,
+                    "query", query,
+                    "usage", response.getUsage()
+                ));
+            });
+    }
+}
+
+// ============================================================================
+// AGENT NODE (Multi-Agent Orchestration)
+// ============================================================================
+
+/**
+ * AgentNode - Autonomous agent with reasoning and tool use.
+ * 
+ * Features:
+ * - Autonomous decision making
+ * - Tool selection and execution
+ * - Multi-step planning
+ * - Memory and state management
+ * - Reflection and self-correction
+ * - Goal-oriented behavior
+ */
+@ApplicationScoped
+@NodeInfo(
+    name = "Agent",
+    capabilities = {"agent", "reasoning", "tool_execution", "planning"},
+    category = "agent"
+)
+public class AutonomousAgentNode extends AgentNode {
+    
+    private static final Logger LOG = Logger.getLogger(AutonomousAgentNode.class);
+    
+    @Inject
+    io.agentic.platform.llm.LLMService llmService;
+    
+    @Inject
+    io.agentic.platform.agent.AgentMemory agentMemory;
+    
+    @Inject
+    io.agentic.platform.agent.ToolRegistry toolRegistry;
+    
+    @Override
+    protected Uni<ExecutionResult> executeAgent(NodeContext context) {
+        String goal = context.getInput("goal", String.class);
+        String agentRole = context.getConfig().get("role", String.class, "assistant");
+        int maxIterations = context.getConfig().get("maxIterations", Integer.class, 5);
+        
+        if (goal == null || goal.isBlank()) {
+            return Uni.createFrom().item(
+                ExecutionResult.failed("Goal is required")
+            );
+        }
+        
+        LOG.infof("Agent started: role=%s, goal='%s'", agentRole, goal);
+        
+        // Initialize agent state
+        AgentState state = AgentState.builder()
+            .goal(goal)
+            .role(agentRole)
+            .iteration(0)
+            .maxIterations(maxIterations)
+            .history(new ArrayList<>())
+            .completed(false)
+            .build();
+        
+        // Load available tools
+        return toolRegistry.getAvailableTools(context)
+            .onItem().transformToUni(tools -> {
+                state.setAvailableTools(tools);
+                return executeAgentLoop(state, context);
+            });
+    }
+    
+    private Uni<ExecutionResult> executeAgentLoop(AgentState state, NodeContext context) {
+        if (state.getIteration() >= state.getMaxIterations()) {
+            LOG.warnf("Agent reached max iterations: %d", state.getMaxIterations());
+            return Uni.createFrom().item(buildFinalResult(state, false));
+        }
+        
+        if (state.isCompleted()) {
+            LOG.infof("Agent completed goal in %d iterations", state.getIteration());
+            return Uni.createFrom().item(buildFinalResult(state, true));
+        }
+        
+        LOG.infof("Agent iteration %d/%d", 
+            state.getIteration() + 1, state.getMaxIterations());
+        
+        // Build agent prompt
+        String prompt = buildAgentPrompt(state);
+        
+        // Get agent decision
+        return llmService.complete(buildLLMRequest(prompt, state))
+            .onItem().transformToUni(response -> {
+                AgentDecision decision = parseAgentDecision(response);
+                state.addHistory(decision);
+                state.incrementIteration();
+                
+                return executeDecision(decision, state, context);
+            })
+            .onItem().transformToUni(result -> {
+                // Update state based on execution result
+                state.setLastResult(result);
+                
+                // Check if goal is achieved
+                if (isGoalAchieved(state)) {
+                    state.setCompleted(true);
+                }
+                
+                // Continue loop
+                return executeAgentLoop(state, context);
+            })
+            .onFailure().recoverWithItem(th -> {
+                LOG.errorf(th, "Agent execution failed");
+                return buildErrorResult(state, th);
+            });
+    }
+    
+    private String buildAgentPrompt(AgentState state) {
+        StringBuilder prompt = new StringBuilder();
+        
+        prompt.append("You are an AI agent with the role: ").append(state.getRole()).append("\n\n");
+        prompt.append("Your goal: ").append(state.getGoal()).append("\n\n");
+        
+        // Add available tools
+        prompt.append("Available tools:\n");
+        state.getAvailableTools().forEach(tool -> {
+            prompt.append("- ").append(tool.getName()).append(": ")
+                  .append(tool.getDescription()).append("\n");
+        });
+        prompt.append("\n");
+        
+        // Add execution history
+        if (!state.getHistory().isEmpty()) {
+            prompt.append("Previous actions:\n");
+            state.getHistory().forEach(decision -> {
+                prompt.append("- ").append(decision.getAction())
+                      .append(": ").append(decision.getReasoning()).append("\n");
+            });
+            prompt.append("\n");
+        }
+        
+        prompt.append("What should you do next? Respond in this format:\n");
+        prompt.append("THOUGHT: <your reasoning>\n");
+        prompt.append("ACTION: <tool_name or 'COMPLETE'>\n");
+        prompt.append("INPUT: <tool input as JSON or explanation if COMPLETE>\n");
+        
+        return prompt.toString();
+    }
+    
+    private LLMRequest buildLLMRequest(String prompt, AgentState state) {
+        return LLMRequest.builder()
+            .model("gpt-4")
+            .messages(List.of(
+                LLMMessage.builder()
+                    .role("user")
+                    .content(prompt)
+                    .build()
+            ))
+            .temperature(0.7)
+            .maxTokens(500)
+            .build();
+    }
+    
+    private AgentDecision parseAgentDecision(LLMResponse response) {
+        String content = response.getChoices().get(0).getMessage().getContent();
+        
+        // Parse structured response
+        String thought = extractSection(content, "THOUGHT:");
+        String action = extractSection(content, "ACTION:");
+        String input = extractSection(content, "INPUT:");
+        
+        return AgentDecision.builder()
+            .reasoning(thought)
+            .action(action)
+            .input(input)
+            .timestamp(java.time.Instant.now())
+            .build();
+    }
+    
+    private String extractSection(String content, String marker) {
+        int start = content.indexOf(marker);
+        if (start < 0) return "";
+        
+        start += marker.length();
+        int end = content.indexOf("\n", start);
+        if (end < 0) end = content.length();
+        
+        return content.substring(start, end).trim();
+    }
+    
+    private Uni<Map<String, Object>> executeDecision(
+            AgentDecision decision,
+            AgentState state,
+            NodeContext context) {
+        
+        if ("COMPLETE".equalsIgnoreCase(decision.getAction())) {
+            return Uni.createFrom().item(Map.of(
+                "status", "COMPLETED",
+                "result", decision.getInput()
+            ));
+        }
+        
+        // Execute tool
+        LOG.infof("Agent executing tool: %s", decision.getAction());
+        
+        return toolRegistry.executeTool(
+            decision.getAction(),
+            decision.getInput(),
+            context
+        ).map(toolResult -> Map.of(
+            "status", "TOOL_EXECUTED",
+            "tool", decision.getAction(),
+            "result", toolResult
+        ));
+    }
+    
+    private boolean isGoalAchieved(AgentState state) {
+        if (state.getLastResult() == null) return false;
+        
+        String status = (String) state.getLastResult().get("status");
+        return "COMPLETED".equals(status);
+    }
+    
+    private ExecutionResult buildFinalResult(AgentState state, boolean success) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", success);
+        result.put("iterations", state.getIteration());
+        result.put("goal", state.getGoal());
+        result.put("history", state.getHistory());
+        result.put("finalResult", state.getLastResult());
+        
+        return ExecutionResult.success(result);
+    }
+    
+    private ExecutionResult buildErrorResult(AgentState state, Throwable th) {
+        return ExecutionResult.error(
+            ErrorPayload.builder()
+                .type("AgentError")
+                .message("Agent execution failed: " + th.getMessage())
+                .retryable(false)
+                .originNode("agent")
+                .timestamp(java.time.Instant.now())
+                .details(Map.of(
+                    "iteration", state.getIteration(),
+                    "history", state.getHistory()
+                ))
+                .build()
+        );
+    }
+}
+
+// ============================================================================
+// SUPPORTING CLASSES
+// ============================================================================
+
+/**
+ * LLM Request.
+ */
+@lombok.Data
+@lombok.Builder
+
+
+/**
+ * LLM Message.
+ */
+@lombok.Data
+@lombok.Builder
+
+
+/**
+ * LLM Response.
+ */
+@lombok.Data
+@lombok.Builder
+
+
+@lombok.Data
+@lombok.Builder
+
+
+
+
+
+
+
+
+

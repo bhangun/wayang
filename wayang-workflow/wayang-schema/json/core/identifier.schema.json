@@ -1,0 +1,8 @@
+{
+    "$id": "https://kayys.tech/schema/v1/identifier.schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Identifier Schema",
+    "type": "string",
+    "pattern": "^[a-z0-9_.-]+(/[a-z0-9_.-]+)?$",
+    "description": "Unique plugin ID (namespace/name)"
+}

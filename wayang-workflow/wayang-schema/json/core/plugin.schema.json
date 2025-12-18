@@ -1,0 +1,209 @@
+{
+    "$id": "https://kayys.tech/schema/v1/plugin.schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Plugin Schema",
+    "type": "object",
+    "required": [
+        "id",
+        "name",
+        "version",
+        "implementation",
+        "inputs",
+        "outputs",
+        "type",
+        "coordinate",
+        "digest"
+    ],
+    "properties": {
+        "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+/[a-z0-9-]+$",
+            "description": "Unique plugin ID (namespace/name)"
+        },
+        "name": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 128
+        },
+        "version": {
+            "$ref": "#/definitions/SemVer"
+        },
+        "description": {
+            "type": "string",
+            "maxLength": 2000
+        },
+        "author": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string",
+                    "format": "email"
+                },
+                "organization": {
+                    "type": "string"
+                }
+            }
+        },
+        "implementation": {
+            "$ref": "#/definitions/PluginImplementation"
+        },
+        "inputs": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/PortDescriptorV2"
+            }
+        },
+        "outputs": {
+            "$ref": "#/definitions/OutputsV2"
+        },
+        "properties": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/PropertyDescriptor"
+            }
+        },
+        "capabilities": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": [
+                    "network",
+                    "filesystem",
+                    "database",
+                    "llm_access",
+                    "gpu",
+                    "tool_execution",
+                    "rag_access",
+                    "memory_access"
+                ]
+            },
+            "uniqueItems": true
+        },
+        "requiredSecrets": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "sandboxLevel": {
+            "type": "string",
+            "enum": [
+                "trusted",
+                "semi-trusted",
+                "untrusted"
+            ],
+            "default": "semi-trusted"
+        },
+        "resourceProfile": {
+            "$ref": "#/definitions/ResourceProfile"
+        },
+        "errorHandling": {
+            "$ref": "#/definitions/ErrorHandlingConfig"
+        },
+        "checksum": {
+            "type": "string",
+            "pattern": "^(sha256|sha512|blake3):[a-f0-9]{64,128}$"
+        },
+        "signature": {
+            "type": "string"
+        },
+        "publishedBy": {
+            "type": "string"
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "status": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "scanning",
+                "approved",
+                "rejected",
+                "revoked",
+                "deprecated"
+            ],
+            "default": "pending"
+        },
+        "tags": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "dependencies": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/DependencyDescriptor"
+            }
+        },
+        "compatibility": {
+            "type": "object",
+            "properties": {
+                "engine": {
+                    "type": "string"
+                },
+                "minRuntimeVersion": {
+                    "type": "string"
+                },
+                "maxRuntimeVersion": {
+                    "type": "string"
+                },
+                "breakingChanges": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "type": {
+            "type": "string",
+            "enum": [
+                "maven",
+                "wasm",
+                "container",
+                "python",
+                "jar",
+                "node",
+                "binary"
+            ]
+        },
+        "coordinate": {
+            "type": "string",
+            "description": "Artifact coordinate (e.g., 'com.example:plugin:1.0.0')"
+        },
+        "digest": {
+            "type": "string",
+            "pattern": "^(sha256|sha512|blake3):[a-f0-9]{64,128}$"
+        },
+        "repository": {
+            "type": "string",
+            "format": "uri"
+        },
+        "entrypoint": {
+            "type": "string"
+        },
+        "runtime": {
+            "type": "object",
+            "properties": {
+                "javaVersion": {
+                    "type": "string"
+                },
+                "wasmRuntime": {
+                    "type": "string"
+                },
+                "pythonVersion": {
+                    "type": "string"
+                },
+                "nodeVersion": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

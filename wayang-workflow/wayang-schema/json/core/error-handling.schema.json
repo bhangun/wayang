@@ -1,0 +1,134 @@
+{
+    "$id": "https://kayys.tech/schema/v1/concerns/errorHandlingConfig.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "ErrorHandlingConfig",
+    "type": "object",
+    "properties": {
+        "retryPolicy": {
+            "type": "object",
+            "properties": {
+                "maxAttempts": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 3
+                },
+                "initialDelayMs": {
+                    "type": "integer",
+                    "default": 200
+                },
+                "maxDelayMs": {
+                    "type": "integer",
+                    "default": 30000
+                },
+                "backoff": {
+                    "type": "string",
+                    "enum": [
+                        "fixed",
+                        "exponential",
+                        "linear"
+                    ],
+                    "default": "exponential"
+                },
+                "jitter": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "retryOn": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "fallback": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "node",
+                        "static",
+                        "none"
+                    ],
+                    "default": "none"
+                },
+                "nodeId": {
+                    "type": "string"
+                },
+                "staticResponse": {
+                    "type": [
+                        "object",
+                        "string"
+                    ]
+                }
+            }
+        },
+        "circuitBreaker": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "failureThreshold": {
+                    "type": "integer",
+                    "default": 5
+                },
+                "successThreshold": {
+                    "type": "integer",
+                    "default": 2
+                },
+                "timeoutMs": {
+                    "type": "integer",
+                    "default": 60000
+                },
+                "windowMs": {
+                    "type": "integer",
+                    "default": 600000
+                }
+            }
+        },
+        "escalation": {
+            "type": "object",
+            "properties": {
+                "onSeverityAtLeast": {
+                    "type": "string",
+                    "enum": [
+                        "WARN",
+                        "ERROR",
+                        "CRITICAL"
+                    ],
+                    "default": "ERROR"
+                },
+                "notify": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "humanReview": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "thresholdSeverity": {
+                    "type": "string",
+                    "enum": [
+                        "WARN",
+                        "ERROR",
+                        "CRITICAL"
+                    ],
+                    "default": "CRITICAL"
+                },
+                "reviewQueue": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

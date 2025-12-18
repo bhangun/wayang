@@ -1,0 +1,18 @@
+{
+    "$id": "https://kayys.tech/schema/v1/author.schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Author Schema",
+    "type": "object",
+    "properties": {
+        "name": {
+            "type": "string"
+        },
+        "email": {
+            "type": "string",
+            "format": "email"
+        },
+        "organization": {
+            "type": "string"
+        }
+    }
+}

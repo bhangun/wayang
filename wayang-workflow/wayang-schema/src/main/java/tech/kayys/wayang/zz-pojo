@@ -1,0 +1,880 @@
+// ============================================================================
+// SCHEMA DOMAIN MODELS - MODULAR DESIGN
+// ============================================================================
+
+package io.agentic.platform.schema;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.*;
+import java.time.Instant;
+import java.util.*;
+
+/**
+ * Core schema classes following the unified schema specification.
+ * 
+ * Design Principles:
+ * - Immutability where possible (using Lombok @Builder)
+ * - Validation annotations for input validation
+ * - JSON serialization support
+ * - Null-safety with Optional where appropriate
+ * - Clear separation of concerns
+ */
+
+// ============================================================================
+// PLUGIN DESCRIPTOR
+// ============================================================================
+
+/**
+ * Plugin descriptor - complete plugin specification.
+ * This is the primary metadata for plugin registration.
+ */
+@lombok.Data
+@lombok.Builder(toBuilder = true)
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class PluginDescriptor {
+    
+    @NotNull(message = "Plugin ID is required")
+    @Pattern(regexp = "^[a-z0-9-]+/[a-z0-9-]+$", 
+             message = "Plugin ID must match format: namespace/name")
+    private String id;
+    
+    @NotBlank(message = "Plugin name is required")
+    @Size(min = 3, max = 128)
+    private String name;
+    
+    @NotNull(message = "Version is required")
+    @Pattern(regexp = "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.-]+)?(\\+[a-zA-Z0-9.-]+)?$",
+             message = "Version must be in semantic versioning format")
+    private String version;
+    
+    @Size(max = 2000)
+    private String description;
+    
+    private PluginAuthor author;
+    
+    @NotNull(message = "Implementation is required")
+    private PluginImplementation implementation;
+    
+    @NotEmpty(message = "At least one input is required")
+    private List<PortDescriptorV2> inputs;
+    
+    @NotNull(message = "Outputs are required")
+    private OutputsV2 outputs;
+    
+    private List<PropertyDescriptor> properties;
+    
+    private List<String> capabilities;
+    
+    private List<String> requiredSecrets;
+    
+    @NotNull
+    @lombok.Builder.Default
+    private String sandboxLevel = "semi-trusted";
+    
+    private ResourceProfile resourceProfile;
+    
+    private ErrorHandlingConfig errorHandling;
+    
+    private String checksum;
+    
+    private String signature;
+    
+    private String publishedBy;
+    
+    private Instant createdAt;
+    
+    @lombok.Builder.Default
+    private String status = "pending";
+    
+    private List<String> tags;
+    
+    private List<DependencyDescriptor> dependencies;
+    
+    private Map<String, Object> compatibility;
+    
+    private Map<String, Object> ui;
+    
+    private Map<String, Object> metadata;
+    
+    // Helper methods
+    public boolean isBuiltIn() {
+        return id != null && id.startsWith("builtin.");
+    }
+    
+    public boolean isTrusted() {
+        return "trusted".equals(sandboxLevel);
+    }
+    
+    public boolean hasCapability(String capability) {
+        return capabilities != null && capabilities.contains(capability);
+    }
+}
+
+/**
+ * Plugin author information.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class PluginAuthor {
+    private String name;
+    
+    @Email
+    private String email;
+    
+    private String organization;
+}
+
+// ============================================================================
+// PORT DESCRIPTORS (INPUTS/OUTPUTS)
+// ============================================================================
+
+/**
+ * Port descriptor V2 - describes input/output data structure.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class PortDescriptorV2 {
+    
+    @NotBlank
+    @Pattern(regexp = "^[a-zA-Z_][a-zA-Z0-9_]*$")
+    private String name;
+    
+    private String displayName;
+    
+    private String description;
+    
+    @NotNull
+    private PortDataType data;
+    
+    private PortUIConfig ui;
+    
+    public boolean isRequired() {
+        return data != null && data.isRequired();
+    }
+}
+
+/**
+ * Port data type specification.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class PortDataType {
+    
+    @NotNull
+    private DataType type;
+    
+    private DataFormat format;
+    
+    private Object schema; // Can be Map or String (URI)
+    
+    @lombok.Builder.Default
+    private DataMultiplicity multiplicity = DataMultiplicity.SINGLE;
+    
+    @lombok.Builder.Default
+    private DataSource source = DataSource.INPUT;
+    
+    @lombok.Builder.Default
+    private boolean required = true;
+    
+    private Object defaultValue;
+    
+    @lombok.Builder.Default
+    private boolean sensitive = false;
+    
+    private Object example;
+}
+
+/**
+ * Data type enumeration.
+ */
+public enum DataType {
+    JSON,
+    STRING,
+    MARKDOWN,
+    NUMBER,
+    BOOLEAN,
+    OBJECT,
+    ARRAY,
+    BINARY,
+    FILE_REF,
+    IMAGE,
+    AUDIO,
+    VIDEO,
+    EMBEDDING,
+    VECTOR,
+    LLM_COMPLETION,
+    TOOL_CALL,
+    EVENT,
+    MEMORY_REF,
+    RAG_REF
+}
+
+/**
+ * Data format enumeration.
+ */
+public enum DataFormat {
+    TEXT,
+    HTML,
+    YAML,
+    BASE64,
+    URI,
+    SSE,
+    STREAM,
+    JWT,
+    SQL,
+    GRAPHQL,
+    PROTOBUF
+}
+
+/**
+ * Data multiplicity.
+ */
+public enum DataMultiplicity {
+    SINGLE,
+    LIST,
+    MAP,
+    STREAM
+}
+
+/**
+ * Data source.
+ */
+public enum DataSource {
+    INPUT,
+    CONTEXT,
+    RAG,
+    MEMORY,
+    ENVIRONMENT,
+    SECRET
+}
+
+/**
+ * Port UI configuration.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class PortUIConfig {
+    private String widget;
+    private Integer order;
+    private String helpText;
+    private String visibleWhen; // CEL expression
+    
+    @lombok.Builder.Default
+    private boolean editable = true;
+}
+
+// ============================================================================
+// OUTPUTS
+// ============================================================================
+
+/**
+ * Outputs V2 - multiple output channels with conditions.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class OutputsV2 {
+    
+    private List<OutputChannel> channels;
+    
+    private PortDescriptorV2 defaultOutput;
+    
+    @lombok.Builder.Default
+    private boolean streaming = false;
+    
+    public Optional<OutputChannel> findChannel(String name) {
+        if (channels == null) return Optional.empty();
+        return channels.stream()
+            .filter(ch -> ch.getName().equals(name))
+            .findFirst();
+    }
+}
+
+/**
+ * Output channel - conditional routing.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class OutputChannel {
+    
+    @NotBlank
+    private String name;
+    
+    private String displayName;
+    
+    private String description;
+    
+    @NotNull
+    private OutputChannelType type;
+    
+    private String condition; // CEL expression
+    
+    @NotNull
+    private PortDescriptorV2 schema;
+    
+    private Integer order;
+}
+
+/**
+ * Output channel type.
+ */
+public enum OutputChannelType {
+    SUCCESS,
+    ERROR,
+    CONDITIONAL,
+    AGENT_DECISION,
+    STREAM,
+    EVENT,
+    FALLBACK
+}
+
+// ============================================================================
+// PROPERTY DESCRIPTOR
+// ============================================================================
+
+/**
+ * Property descriptor - node configuration properties.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class PropertyDescriptor {
+    
+    @NotBlank
+    @Pattern(regexp = "^[a-zA-Z_][a-zA-Z0-9_]*$")
+    private String name;
+    
+    private String displayName;
+    
+    private String description;
+    
+    @NotNull
+    private PropertyType type;
+    
+    private Object defaultValue;
+    
+    @lombok.Builder.Default
+    private boolean required = false;
+    
+    private PropertyValidation validation;
+    
+    @lombok.Builder.Default
+    private boolean sensitive = false;
+}
+
+/**
+ * Property type.
+ */
+public enum PropertyType {
+    STRING,
+    NUMBER,
+    INTEGER,
+    BOOLEAN,
+    OBJECT,
+    ARRAY,
+    SECRET,
+    REFERENCE
+}
+
+/**
+ * Property validation rules.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class PropertyValidation {
+    private Number min;
+    private Number max;
+    private String pattern;
+    private List<Object> enumValues;
+    private String celExpression;
+}
+
+// ============================================================================
+// DEPENDENCY DESCRIPTOR
+// ============================================================================
+
+/**
+ * Dependency descriptor - plugin dependencies.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class DependencyDescriptor {
+    
+    @NotBlank
+    private String id;
+    
+    @NotBlank
+    @Pattern(regexp = "^[\\^~]?\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.-]+)?$")
+    private String version;
+    
+    @lombok.Builder.Default
+    private boolean optional = false;
+    
+    @lombok.Builder.Default
+    private DependencyScope scope = DependencyScope.RUNTIME;
+}
+
+/**
+ * Dependency scope.
+ */
+public enum DependencyScope {
+    RUNTIME,
+    COMPILE,
+    TEST
+}
+
+// ============================================================================
+// RESOURCE PROFILE
+// ============================================================================
+
+/**
+ * Resource profile - resource requirements.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ResourceProfile {
+    
+    @lombok.Builder.Default
+    @Pattern(regexp = "^\\d+m?$")
+    private String cpu = "100m";
+    
+    @lombok.Builder.Default
+    @Pattern(regexp = "^\\d+[KMG]i?$")
+    private String memory = "128Mi";
+    
+    @lombok.Builder.Default
+    @Min(0)
+    private Integer gpu = 0;
+    
+    @Pattern(regexp = "^\\d+[KMG]i?$")
+    private String ephemeralStorage;
+    
+    @lombok.Builder.Default
+    @Min(100)
+    private Integer timeoutMs = 30000;
+}
+
+// ============================================================================
+// ERROR HANDLING CONFIG
+// ============================================================================
+
+/**
+ * Error handling configuration.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ErrorHandlingConfig {
+    
+    private RetryPolicy retryPolicy;
+    
+    private String fallbackNodeId;
+    
+    @lombok.Builder.Default
+    private HumanReviewThreshold humanReviewThreshold = HumanReviewThreshold.CRITICAL;
+    
+    @lombok.Builder.Default
+    private boolean autoHealEnabled = false;
+    
+    private CircuitBreakerConfig circuitBreaker;
+}
+
+/**
+ * Retry policy configuration.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class RetryPolicy {
+    
+    @lombok.Builder.Default
+    @Min(0)
+    @Max(20)
+    private Integer maxAttempts = 3;
+    
+    @lombok.Builder.Default
+    private BackoffStrategy backoff = BackoffStrategy.EXPONENTIAL;
+    
+    @lombok.Builder.Default
+    @Min(100)
+    private Integer initialDelayMs = 500;
+    
+    @lombok.Builder.Default
+    private Integer maxDelayMs = 30000;
+    
+    @lombok.Builder.Default
+    private boolean jitter = true;
+}
+
+/**
+ * Backoff strategy.
+ */
+public enum BackoffStrategy {
+    FIXED,
+    EXPONENTIAL,
+    LINEAR
+}
+
+/**
+ * Human review threshold.
+ */
+public enum HumanReviewThreshold {
+    NEVER,
+    INFO,
+    WARNING,
+    ERROR,
+    CRITICAL
+}
+
+/**
+ * Circuit breaker configuration.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class CircuitBreakerConfig {
+    
+    @lombok.Builder.Default
+    private boolean enabled = true;
+    
+    @lombok.Builder.Default
+    private Integer failureThreshold = 5;
+    
+    @lombok.Builder.Default
+    private Integer successThreshold = 2;
+    
+    @lombok.Builder.Default
+    private Integer timeoutMs = 60000;
+}
+
+// ============================================================================
+// ERROR PAYLOAD
+// ============================================================================
+
+/**
+ * Error payload - standardized error structure.
+ * Used throughout the system for error propagation.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ErrorPayload {
+    
+    @NotNull
+    private ErrorType type;
+    
+    @NotBlank
+    private String message;
+    
+    private Map<String, Object> details;
+    
+    @NotNull
+    private boolean retryable;
+    
+    @NotBlank
+    private String originNode;
+    
+    private String originRunId;
+    
+    @lombok.Builder.Default
+    @Min(0)
+    private Integer attempt = 0;
+    
+    @lombok.Builder.Default
+    @Min(0)
+    private Integer maxAttempts = 3;
+    
+    @NotNull
+    private Instant timestamp;
+    
+    private ErrorAction suggestedAction;
+    
+    private String provenanceRef;
+    
+    private String stackTrace;
+    
+    // Helper methods
+    public boolean canRetry() {
+        return retryable && (attempt == null || maxAttempts == null || attempt < maxAttempts);
+    }
+    
+    public ErrorPayload incrementAttempt() {
+        return this.toBuilder()
+            .attempt(attempt != null ? attempt + 1 : 1)
+            .build();
+    }
+}
+
+/**
+ * Error type enumeration.
+ */
+public enum ErrorType {
+    TOOL_ERROR,
+    LLM_ERROR,
+    NETWORK_ERROR,
+    VALIDATION_ERROR,
+    TIMEOUT,
+    PLUGIN_LOAD_ERROR,
+    SECURITY_ERROR,
+    UNKNOWN_ERROR
+}
+
+/**
+ * Error action suggestion.
+ */
+public enum ErrorAction {
+    RETRY,
+    FALLBACK,
+    ESCALATE,
+    HUMAN_REVIEW,
+    ABORT,
+    AUTO_FIX
+}
+
+// ============================================================================
+// PLUGIN IMPLEMENTATION
+// ============================================================================
+
+/**
+ * Plugin implementation specification.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class PluginImplementation {
+    
+    @NotNull
+    private ImplementationType type;
+    
+    @NotBlank
+    private String coordinate;
+    
+    @NotBlank
+    @Pattern(regexp = "^(sha256|sha512|blake3):[a-f0-9]{64,128}$")
+    private String digest;
+    
+    private String repository;
+    
+    private String entrypoint;
+    
+    private RuntimeConfig runtime;
+}
+
+/**
+ * Implementation type.
+ */
+public enum ImplementationType {
+    MAVEN,
+    WASM,
+    CONTAINER,
+    PYTHON,
+    JAR,
+    NODE,
+    BINARY
+}
+
+/**
+ * Runtime configuration.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+
+// ============================================================================
+// TELEMETRY CONFIG
+// ============================================================================
+
+/**
+ * Telemetry configuration.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class TelemetryConfig {
+    
+    @lombok.Builder.Default
+    private boolean enabled = true;
+    
+    private List<TelemetryEvent> events;
+    
+    @lombok.Builder.Default
+    @Min(0)
+    @Max(1)
+    private Double sampleRate = 0.05;
+    
+    @lombok.Builder.Default
+    private String traceContextHeader = "x-trace-id";
+    
+    private String metricsPrefix;
+}
+
+/**
+ * Telemetry event types.
+ */
+public enum TelemetryEvent {
+    LATENCY,
+    MEMORY,
+    TOKEN_USAGE,
+    ERRORS,
+    THROUGHPUT,
+    CUSTOM
+}
+
+// ============================================================================
+// POLICY CONFIG
+// ============================================================================
+
+/**
+ * Policy configuration.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class PolicyConfig {
+    
+    private AccessPolicy accessPolicy;
+    
+    private RateLimitConfig rateLimit;
+    
+    @Min(0)
+    private Integer dataRetentionDays;
+    
+    @lombok.Builder.Default
+    private PIIHandling piiHandling = PIIHandling.REDACT;
+    
+    private NetworkEgressPolicy networkEgressPolicy;
+}
+
+/**
+ * Access policy.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class AccessPolicy {
+    private List<String> rolesAllowed;
+    private List<String> principals;
+}
+
+/**
+ * Rate limit configuration.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class RateLimitConfig {
+    @Positive
+    private Double requestsPerSecond;
+    
+    @Positive
+    private Integer burst;
+}
+
+/**
+ * PII handling strategy.
+ */
+public enum PIIHandling {
+    REDACT,
+    HASH,
+    TOKENIZE,
+    NONE
+}
+
+/**
+ * Network egress policy.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class NetworkEgressPolicy {
+    private List<String> allowedDomains;
+    private List<String> deniedDomains;
+}
+
+// ============================================================================
+// PROVENANCE CONFIG
+// ============================================================================
+
+/**
+ * Provenance configuration.
+ */
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ProvenanceConfig {
+    
+    @lombok.Builder.Default
+    private boolean enabled = true;
+    
+    private List<ProvenanceItem> collect;
+    
+    @lombok.Builder.Default
+    @Min(0)
+    private Integer retentionDays = 30;
+}
+
+/**
+ * Provenance items to collect.
+ */
+public enum ProvenanceItem {
+    INPUTS,
+    OUTPUTS,
+    MODEL_TOKENS,
+    LATENCY,
+    STDERR,
+    STDOUT
+}

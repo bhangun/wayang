@@ -5,9 +5,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import tech.kayys.wayang.domain.Workflow;
 import tech.kayys.wayang.model.ConnectionDefinition;
 import tech.kayys.wayang.model.LogicDefinition;
-import tech.kayys.wayang.model.NodeDefinition;
-import tech.kayys.wayang.model.RuntimeConfig;
-import tech.kayys.wayang.model.UIDefinition;
+import tech.kayys.wayang.schema.node.NodeDefinition;
+import tech.kayys.wayang.schema.governance.RuntimeConfig;
+import tech.kayys.wayang.schema.workflow.UIDefinition;
 
 import org.jboss.logging.Logger;
 

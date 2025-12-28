@@ -2,6 +2,7 @@ package tech.kayys.wayang.node.model;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
+import tech.kayys.wayang.common.spi.Node;
 
 /**
  * Node factory for creating instances.

@@ -1,15 +1,21 @@
 package tech.kayys.wayang.node.model;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import tech.kayys.wayang.schema.ExecutionError;
+import tech.kayys.wayang.schema.ExecutionStatus;
+
 /**
  * Node execution result container.
  */
 @lombok.Data
 @lombok.Builder(toBuilder = true)
-class NodeExecutionResult {
+public class NodeExecutionResult {
     private final String nodeId;
     private final ExecutionStatus status;
     private final Map<String, Object> outputChannels;
-    private final ErrorPayload error;
+    private final ExecutionError error;
     private final String blockReason;
     private final String humanTaskId;
     private final Map<String, Object> metadata;
@@ -25,7 +31,7 @@ class NodeExecutionResult {
                 .build();
     }
 
-    public static NodeExecutionResult error(String nodeId, ErrorPayload error) {
+    public static NodeExecutionResult error(String nodeId, ExecutionError error) {
         return NodeExecutionResult.builder()
                 .nodeId(nodeId)
                 .status(ExecutionStatus.ERROR)
@@ -64,7 +70,7 @@ class NodeExecutionResult {
                 .build();
     }
 
-    public static NodeExecutionResult aborted(String nodeId, ErrorPayload error) {
+    public static NodeExecutionResult aborted(String nodeId, ExecutionError error) {
         return NodeExecutionResult.builder()
                 .nodeId(nodeId)
                 .status(ExecutionStatus.ABORTED)

@@ -9,7 +9,7 @@ import org.jboss.logging.Logger;
 import tech.kayys.wayang.domain.Workflow;
 import tech.kayys.wayang.exception.WorkflowNotFoundException;
 import tech.kayys.wayang.mapper.WorkflowMapper;
-import tech.kayys.wayang.model.PageResult;
+import tech.kayys.wayang.schema.utils.PageResult;
 import tech.kayys.wayang.repository.WorkflowRepository;
 import tech.kayys.wayang.schema.PageInfo;
 import tech.kayys.wayang.schema.PageInput;

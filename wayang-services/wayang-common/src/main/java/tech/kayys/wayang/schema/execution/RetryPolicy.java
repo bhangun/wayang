@@ -1,14 +1,19 @@
 package tech.kayys.wayang.schema.execution;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+@RegisterForReflection
 public class RetryPolicy {
     private Integer maxAttempts = 3;
     private String backoff = "exponential";
     private Integer initialDelayMs = 500;
     private Integer maxDelayMs = 30000;
     private Boolean jitter = true;
+    private List<String> retryOn = new ArrayList<>();
 
     public Integer getMaxAttempts() {
         return maxAttempts;
@@ -61,5 +66,13 @@ public class RetryPolicy {
 
     public void setJitter(Boolean jitter) {
         this.jitter = jitter;
+    }
+
+    public List<String> getRetryOn() {
+        return retryOn;
+    }
+
+    public void setRetryOn(List<String> retryOn) {
+        this.retryOn = retryOn;
     }
 }

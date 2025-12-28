@@ -7,6 +7,7 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import tech.kayys.wayang.schema.node.NodeDefinition;
 
 /**
  * NodeChange - Represents a change to a node

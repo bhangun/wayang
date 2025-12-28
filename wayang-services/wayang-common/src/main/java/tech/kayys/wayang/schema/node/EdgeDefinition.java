@@ -89,6 +89,17 @@ public class EdgeDefinition {
         this.metadata = metadata;
     }
 
+    public Builder toBuilder() {
+        return new Builder()
+                .id(this.id)
+                .from(this.from)
+                .to(this.to)
+                .fromPort(this.fromPort)
+                .toPort(this.toPort)
+                .condition(this.condition)
+                .metadata(this.metadata);
+    }
+
     public static Builder builder() {
         return new Builder();
     }

@@ -43,9 +43,9 @@ public class WorkspaceResource {
     @GET
     @Operation(summary = "List workspaces", description = "List all workspaces for current tenant")
     @APIResponse(responseCode = "200", description = "Success")
-    public Uni<Response> listWorkspaces() {
-        LOG.infof("Listing workspaces for tenant: %s", tenantContext.getTenantId());
-        return workspaceService.listWorkspaces()
+    public Uni<Response> listWorkspaces(@QueryParam("name") String name) {
+        LOG.infof("Listing workspaces for tenant: %s (name filter: %s)", tenantContext.getTenantId(), name);
+        return workspaceService.listWorkspaces(name)
                 .map(workspaces -> Response.ok(WorkspaceListResponse.fromWorkspaces(workspaces)).build());
     }
 

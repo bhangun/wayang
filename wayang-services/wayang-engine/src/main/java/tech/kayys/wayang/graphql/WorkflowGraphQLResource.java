@@ -13,8 +13,8 @@ import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import tech.kayys.wayang.dto.CreateWorkflowInput;
 import tech.kayys.wayang.model.LogicDefinition;
-import tech.kayys.wayang.model.RuntimeConfig;
-import tech.kayys.wayang.model.UIDefinition;
+import tech.kayys.wayang.schema.governance.RuntimeConfig;
+import tech.kayys.wayang.schema.workflow.UIDefinition;
 import tech.kayys.wayang.service.ValidationService;
 import tech.kayys.wayang.service.WorkflowService;
 

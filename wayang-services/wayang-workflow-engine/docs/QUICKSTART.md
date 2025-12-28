@@ -37,14 +37,21 @@ curl http://localhost:7001/q/health
 ```
 
 ### List Workflows (REST)
+Use Basic Auth for quick access:
 ```bash
-curl http://localhost:7001/api/v1/workflows
+curl -u admin:admin http://localhost:7001/api/v1/workflows
 ```
 
 ### List gRPC Services
-If you have `grpcurl` installed:
+If you have `grpcurl` installed (using `-authority` or `-rpc-header` for auth if needed, but `grpcurl` usually doesn't show auth errors on `list` unless the server enforces it for reflection):
 ```bash
 grpcurl -plaintext localhost:9090 list
+```
+
+To call a secured method:
+```bash
+# Using Basic Auth header for gRPC (Value is base64 of admin:admin)
+grpcurl -plaintext -rpc-header "Authorization: Basic YWRtaW46YWRtaW4=" localhost:9090 tech.kayys.wayang.workflow.v1.WorkflowRunService/GetActiveCount
 ```
 
 ## Next Steps

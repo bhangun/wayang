@@ -40,8 +40,9 @@ public class WorkflowRunResource {
         if (request.correlationId() != null) {
             execRequest.getContext().put("correlationId", request.correlationId());
         }
-        
-        // Pass version if possible, assume it's part of context or resolved by ID in service
+
+        // Pass version if possible, assume it's part of context or resolved by ID in
+        // service
         if (request.workflowVersion() != null) {
             execRequest.getContext().put("workflowVersion", request.workflowVersion());
         }
@@ -53,8 +54,10 @@ public class WorkflowRunResource {
     @POST
     @Path("/{runId}/start")
     public Uni<WorkflowRunResponse> startRun(@PathParam("runId") String runId) {
-        // Since triggerWorkflow starts execution, this might be a no-op or specific to restarting
-        // For now, we fetch status to confirm it exists, or maybe we re-trigger if needed.
+        // Since triggerWorkflow starts execution, this might be a no-op or specific to
+        // restarting
+        // For now, we fetch status to confirm it exists, or maybe we re-trigger if
+        // needed.
         // Given current service capabilities, we just return current status.
         return executionService.getStatus(runId, tenantContext.getTenantId())
                 .map(this::toRunResponse);
@@ -101,38 +104,47 @@ public class WorkflowRunResource {
 
     private WorkflowRunResponse toRunResponse(ExecutionStatus status) {
         RunStatus runStatus = mapStatus(status.getStatus());
-        
-        return new WorkflowRunResponse(
-            status.getId(),
-            status.getWorkflowId(),
-            "latest", // Version 
-            runStatus,
-            "Execute", // Phase
-            status.getStartedAt(), // Created at (approx)
-            status.getStartedAt(),
-            status.getCompletedAt(),
-            status.getDuration() != null ? status.getDuration().toMillis() : null,
-            status.getNodeStatuses() != null ? status.getNodeStatuses().size() : 0,
-            0, // total nodes unknown
-            1, // attempt
-            1, // max attempts
-            status.getError() != null ? status.getError().toString() : null,
-            status.getOutputs()
-        );
+
+        return WorkflowRunResponse.builder()
+                .runId(status.getId())
+                .workflowId(status.getWorkflowId())
+                .version("latest") // Version
+                .status(runStatus)
+                .phase("Execute") // Phase
+                .createdAt(status.getStartedAt()) // Created at (approx)
+                .startTime(status.getStartedAt())
+                .endTime(status.getCompletedAt())
+                .duration(status.getDuration() != null ? status.getDuration().toMillis() : null)
+                .completedNodes(status.getNodeStatuses() != null ? status.getNodeStatuses().size() : 0)
+                .totalNodes(0) // total nodes unknown
+                .attempt(1) // attempt
+                .maxAttempts(1) // max attempts
+                .error(status.getError() != null ? status.getError().toString() : null)
+                .output(status.getOutputs())
+                .build();
     }
-    
+
     private RunStatus mapStatus(tech.kayys.wayang.schema.ExecutionStatusEnum status) {
-        if (status == null) return RunStatus.PENDING;
-        
+        if (status == null)
+            return RunStatus.PENDING;
+
         switch (status) {
-            case PENDING: return RunStatus.PENDING;
-            case RUNNING: return RunStatus.RUNNING;
-            case PAUSED: return RunStatus.PAUSED;
-            case COMPLETED: return RunStatus.SUCCEEDED; // Map Engine COMPLETED to SDK SUCCEEDED
-            case FAILED: return RunStatus.FAILED;
-            case CANCELLED: return RunStatus.CANCELLED;
-            case TIMEOUT: return RunStatus.TIMED_OUT; // Map Engine TIMEOUT to SDK TIMED_OUT
-            default: return RunStatus.PENDING;
+            case PENDING:
+                return RunStatus.PENDING;
+            case RUNNING:
+                return RunStatus.RUNNING;
+            case PAUSED:
+                return RunStatus.PAUSED;
+            case COMPLETED:
+                return RunStatus.SUCCEEDED; // Map Engine COMPLETED to SDK SUCCEEDED
+            case FAILED:
+                return RunStatus.FAILED;
+            case CANCELLED:
+                return RunStatus.CANCELLED;
+            case TIMEOUT:
+                return RunStatus.TIMED_OUT; // Map Engine TIMEOUT to SDK TIMED_OUT
+            default:
+                return RunStatus.PENDING;
         }
     }
 }

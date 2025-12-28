@@ -12,6 +12,7 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import tech.kayys.wayang.common.spi.GuardrailResult;
 
 /**
  * GuardrailsClient - Client for Guardrails service
@@ -45,12 +46,6 @@ public interface GuardrailsClient {
                         String tenantId,
                         Object content,
                         List<String> policies) {
-        }
-
-        record GuardrailResult(
-                        boolean allowed,
-                        List<PolicyViolation> violations,
-                        List<String> warnings) {
         }
 
         record PolicyViolation(

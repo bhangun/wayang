@@ -3,6 +3,8 @@ package tech.kayys.wayang.schema;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import tech.kayys.wayang.schema.execution.RetryPolicy;
+import tech.kayys.wayang.schema.governance.ResourceProfile;
 
 /**
  * RuntimeConfigDTO - Runtime configuration
@@ -12,9 +14,9 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 public class RuntimeConfigDTO {
 
     private String mode = "sync"; // sync, async, stream
-    private RetryPolicyDTO retryPolicy;
+    private RetryPolicy retryPolicy;
     private Integer timeoutMs;
-    private ResourceProfileDTO resourceProfile;
+    private ResourceProfile resourceProfile;
 
     // Getters and setters...
     public String getMode() {
@@ -25,11 +27,11 @@ public class RuntimeConfigDTO {
         this.mode = mode;
     }
 
-    public RetryPolicyDTO getRetryPolicy() {
+    public RetryPolicy getRetryPolicy() {
         return retryPolicy;
     }
 
-    public void setRetryPolicy(RetryPolicyDTO retryPolicy) {
+    public void setRetryPolicy(RetryPolicy retryPolicy) {
         this.retryPolicy = retryPolicy;
     }
 
@@ -41,11 +43,11 @@ public class RuntimeConfigDTO {
         this.timeoutMs = timeoutMs;
     }
 
-    public ResourceProfileDTO getResourceProfile() {
+    public ResourceProfile getResourceProfile() {
         return resourceProfile;
     }
 
-    public void setResourceProfile(ResourceProfileDTO resourceProfile) {
+    public void setResourceProfile(ResourceProfile resourceProfile) {
         this.resourceProfile = resourceProfile;
     }
 }

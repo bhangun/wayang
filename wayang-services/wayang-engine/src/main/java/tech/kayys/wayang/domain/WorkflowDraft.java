@@ -7,7 +7,7 @@ import java.util.UUID;
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import tech.kayys.wayang.model.LogicDefinition;
-import tech.kayys.wayang.model.UIDefinition;
+import tech.kayys.wayang.schema.workflow.UIDefinition;
 
 /**
  * WorkflowDraft - Auto-saved draft snapshots

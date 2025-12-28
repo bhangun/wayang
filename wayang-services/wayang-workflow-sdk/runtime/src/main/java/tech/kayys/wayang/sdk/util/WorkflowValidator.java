@@ -85,6 +85,33 @@ public class WorkflowValidator {
     }
 
     public record ValidationResult(boolean valid, List<String> errors) {
+        public boolean isValid() {
+            return valid;
+        }
+
+        public List<String> getErrors() {
+            return errors != null ? errors : List.of();
+        }
+
+        public String getMessage() {
+            return (errors != null && !errors.isEmpty()) ? errors.get(0) : "";
+        }
+
+        public static ValidationResult success() {
+            return new ValidationResult(true, List.of());
+        }
+
+        public static ValidationResult failure(String message, List<String> errors) {
+            List<String> allErrors = new ArrayList<>();
+            if (message != null && !message.isBlank()) {
+                allErrors.add(message);
+            }
+            if (errors != null) {
+                allErrors.addAll(errors);
+            }
+            return new ValidationResult(false, allErrors);
+        }
+
         public void throwIfInvalid() {
             if (!valid) {
                 throw new IllegalArgumentException(

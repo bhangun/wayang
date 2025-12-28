@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.validation.constraints.NotBlank;
+import tech.kayys.wayang.schema.execution.ErrorHandlingConfig;
 
 /**
  * NodeDTO - Node definition
@@ -45,7 +46,7 @@ public class NodeDTO {
     private Map<String, Object> metadata = new HashMap<>();
 
     // Error handling
-    private ErrorHandlingConfigDTO errorHandling;
+    private ErrorHandlingConfig errorHandling;
 
     // Getters and setters...
     public String getId() {
@@ -128,11 +129,11 @@ public class NodeDTO {
         this.lockedAt = lockedAt;
     }
 
-    public ErrorHandlingConfigDTO getErrorHandling() {
+    public ErrorHandlingConfig getErrorHandling() {
         return errorHandling;
     }
 
-    public void setErrorHandling(ErrorHandlingConfigDTO errorHandling) {
+    public void setErrorHandling(ErrorHandlingConfig errorHandling) {
         this.errorHandling = errorHandling;
     }
 }

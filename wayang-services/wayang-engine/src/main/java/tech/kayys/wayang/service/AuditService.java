@@ -11,6 +11,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import tech.kayys.wayang.model.NodeStatus;
 import tech.kayys.wayang.schema.ExecutionStatus;
+import tech.kayys.wayang.schema.execution.ErrorPayload;
 
 /**
  * Service for audit logging and provenance tracking.

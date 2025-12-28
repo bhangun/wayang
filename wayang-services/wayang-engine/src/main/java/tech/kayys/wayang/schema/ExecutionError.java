@@ -19,7 +19,14 @@ public class ExecutionError {
     private String nodeId;
     private Map<String, Object> details = new HashMap<>();
 
-    // Getters and setters...
+    public void setDetails(Map<String, Object> details) {
+        this.details = details;
+    }
+
+    public Map<String, Object> getDetails() {
+        return this.details;
+    }
+
     public String getCode() {
         return code;
     }

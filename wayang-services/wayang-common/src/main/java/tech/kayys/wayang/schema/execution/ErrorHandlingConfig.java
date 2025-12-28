@@ -1,14 +1,19 @@
 package tech.kayys.wayang.schema.execution;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 import java.util.Arrays;
 import java.util.List;
 
+@RegisterForReflection
 public class ErrorHandlingConfig {
     private RetryPolicy retryPolicy;
-    private String fallbackNodeId;
+    private FallbackConfig fallback;
     private String humanReviewThreshold = "CRITICAL";
     private Boolean autoHealEnabled = false;
     private CircuitBreaker circuitBreaker;
+    private EscalationConfig escalation;
+    private HumanReviewConfig humanReview;
 
     public RetryPolicy getRetryPolicy() {
         return retryPolicy;
@@ -18,12 +23,12 @@ public class ErrorHandlingConfig {
         this.retryPolicy = retryPolicy;
     }
 
-    public String getFallbackNodeId() {
-        return fallbackNodeId;
+    public FallbackConfig getFallback() {
+        return fallback;
     }
 
-    public void setFallbackNodeId(String fallbackNodeId) {
-        this.fallbackNodeId = fallbackNodeId;
+    public void setFallback(FallbackConfig fallback) {
+        this.fallback = fallback;
     }
 
     public String getHumanReviewThreshold() {
@@ -52,5 +57,36 @@ public class ErrorHandlingConfig {
 
     public void setCircuitBreaker(CircuitBreaker circuitBreaker) {
         this.circuitBreaker = circuitBreaker;
+    }
+
+    public EscalationConfig getEscalation() {
+        return escalation;
+    }
+
+    public void setEscalation(EscalationConfig escalation) {
+        this.escalation = escalation;
+    }
+
+    public HumanReviewConfig getHumanReview() {
+        return humanReview;
+    }
+
+    public void setHumanReview(HumanReviewConfig humanReview) {
+        this.humanReview = humanReview;
+    }
+
+    // Deprecated field kept for backward compatibility
+    @Deprecated
+    public String getFallbackNodeId() {
+        return fallback != null ? fallback.getNodeId() : null;
+    }
+
+    @Deprecated
+    public void setFallbackNodeId(String fallbackNodeId) {
+        if (fallback == null) {
+            fallback = new FallbackConfig();
+        }
+        fallback.setNodeId(fallbackNodeId);
+        fallback.setType("node");
     }
 }

@@ -3,6 +3,7 @@ package tech.kayys.wayang.model;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import tech.kayys.wayang.schema.workflow.UIDefinition;
 
 /**
  * CanvasDiff - Canvas state changes

@@ -8,6 +8,7 @@ import java.util.Map;
 import org.eclipse.microprofile.graphql.Ignore;
 
 import tech.kayys.wayang.schema.node.NodeDefinition;
+import tech.kayys.wayang.schema.node.PortDescriptor;
 
 /**
  * LogicDefinition - Workflow logic layer (nodes + connections)

@@ -47,6 +47,7 @@ message CreateRunRequest {
   string workflow_id = 1;
   map<string, string> inputs = 2;
   string trigger_type = 3;
+  string workflow_version = 4;
 }
 
 message GetRunRequest { string run_id = 1; }

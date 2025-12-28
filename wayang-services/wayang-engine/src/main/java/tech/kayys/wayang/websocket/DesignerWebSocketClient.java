@@ -1,23 +1,17 @@
 package tech.kayys.wayang.websocket;
 
-import io.quarkus.websockets.next.WebSocketClient;
-import io.quarkus.websockets.next.OnTextMessage;
-import io.quarkus.websockets.next.OnOpen;
-import io.quarkus.websockets.next.OnClose;
-import io.quarkus.websockets.next.OnError;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import tech.kayys.wayang.schema.CollaborationMessage;
 import tech.kayys.wayang.schema.MessageType;
 import tech.kayys.wayang.schema.PointDTO;
+import tech.kayys.wayang.schema.ConnectionPayload;
 
 import org.jboss.logging.Logger;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 
 /**
  * WebSocket Client for Workflow Collaboration
@@ -28,7 +22,7 @@ public class DesignerWebSocketClient {
 
     private static final Logger LOG = Logger.getLogger(DesignerWebSocketClient.class);
 
-    // Active connections: workflowId -> WebSocketConnection
+    // Active connections: workflowId -> CollaborationConnection
     private final Map<String, CollaborationConnection> activeConnections = new ConcurrentHashMap<>();
 
     @Inject
@@ -42,17 +36,9 @@ public class DesignerWebSocketClient {
 
         LOG.infof("Designer: Connecting to collaboration WS for workflow %s", workflowId);
 
-        return Uni.createFrom().item(() -> {
-            String wsUrl = buildWebSocketUrl(workflowId);
-
-            CollaborationConnection connection = connectionFactory.create(
-                    wsUrl, userId, tenantId, handler);
-
-            activeConnections.put(workflowId, connection);
-
-            return connection;
-        })
-                .flatMap(CollaborationConnection::connect)
+        return connectionFactory.connect(buildWebSocketUrl(workflowId), userId, tenantId, handler)
+                .invoke(connection -> activeConnections.put(workflowId, connection))
+                .replaceWithVoid()
                 .invoke(v -> LOG.infof("Designer: Connected to WS for workflow %s", workflowId));
     }
 

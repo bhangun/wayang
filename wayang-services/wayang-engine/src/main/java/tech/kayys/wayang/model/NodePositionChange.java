@@ -6,6 +6,7 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import tech.kayys.wayang.schema.workflow.UIDefinition;
 
 /**
  * NodePositionChange - Node position change

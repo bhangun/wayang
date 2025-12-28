@@ -17,6 +17,12 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ExecutionStatus {
 
+    public static final ExecutionStatus SUCCESS = null;
+    public static final ExecutionStatus AWAITING_HUMAN = null;
+    public static final ExecutionStatus CANCELLED = null;
+    public static final ExecutionStatus ERROR = null;
+    public static final ExecutionStatus BLOCKED = null;
+    public static final ExecutionStatus ABORTED = null;
     private String id;
     private String workflowId;
     private ExecutionStatusEnum status;

@@ -16,8 +16,7 @@ import tech.kayys.wayang.client.SchemaRegistryClient;
 import tech.kayys.wayang.domain.Workflow;
 import tech.kayys.wayang.model.ConnectionDefinition;
 import tech.kayys.wayang.model.LogicDefinition;
-import tech.kayys.wayang.model.NodeDefinition;
-import tech.kayys.wayang.model.ValidationResult;
+import tech.kayys.wayang.sdk.util.WorkflowValidator.ValidationResult;
 
 /**
  * ValidationService - Workflow validation logic

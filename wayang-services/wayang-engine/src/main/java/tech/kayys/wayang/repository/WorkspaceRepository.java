@@ -18,12 +18,12 @@ import java.util.UUID;
 public class WorkspaceRepository implements PanacheRepositoryBase<Workspace, UUID> {
 
         /**
-         * Find all active workspaces for tenant
+         * Find all non-deleted workspaces for tenant
          */
         public Uni<List<Workspace>> findByTenant(String tenantId) {
-                return find("tenantId = :tenantId and status = :status",
+                return find("tenantId = :tenantId and status != :deleted",
                                 Parameters.with("tenantId", tenantId)
-                                                .and("status", Workspace.WorkspaceStatus.ACTIVE))
+                                                .and("deleted", Workspace.WorkspaceStatus.DELETED))
                                 .list();
         }
 
@@ -31,40 +31,29 @@ public class WorkspaceRepository implements PanacheRepositoryBase<Workspace, UUI
          * Find workspace by ID with tenant validation
          */
         public Uni<Workspace> findByIdAndTenant(UUID id, String tenantId) {
-                return find("id = :id and tenantId = :tenantId and status != :status",
-                                Parameters.with("id", id)
-                                                .and("tenantId", tenantId)
-                                                .and("status", Workspace.WorkspaceStatus.DELETED))
-                                .firstResult();
-        }
-
-        /**
-         * Soft delete workspace
-         */
-        public Uni<Boolean> softDelete(UUID id, String tenantId) {
-                return update("status = :status, updatedAt = :now where id = :id and tenantId = :tenantId",
-                                Parameters.with("status", Workspace.WorkspaceStatus.DELETED)
-                                                .and("now", Instant.now())
-                                                .and("id", id)
-                                                .and("tenantId", tenantId))
-                                .map(count -> count > 0);
-        }
-
-        /**
-         * Find workspace by ID with tenant validation
-         */
-        public Uni<Optional<Workspace>> findByIdAndTenant(UUID id, UUID tenantId) {
                 return find("id = :id and tenantId = :tenantId and status != :deleted",
                                 Parameters.with("id", id)
                                                 .and("tenantId", tenantId)
                                                 .and("deleted", Workspace.WorkspaceStatus.DELETED))
-                                .firstResultOptional();
+                                .firstResult();
         }
 
         /**
-         * List all workspaces for a tenant
+         * Find workspace by ID with tenant validation (optional version)
          */
-        public Uni<List<Workspace>> findByTenant(UUID tenantId, int page, int size) {
+        public Uni<Optional<Workspace>> findByIdAndTenantOptional(UUID id, String tenantId) {
+                return find("id = :id and tenantId = :tenantId and status != :deleted",
+                                Parameters.with("id", id)
+                                                .and("tenantId", tenantId)
+                                                .and("deleted", Workspace.WorkspaceStatus.DELETED))
+                                .firstResult()
+                                .map(Optional::ofNullable);
+        }
+
+        /**
+         * Find all workspaces for tenant with pagination
+         */
+        public Uni<List<Workspace>> findByTenantPaginated(String tenantId, int page, int size) {
                 return find("tenantId = :tenantId and status != :deleted order by updatedAt desc",
                                 Parameters.with("tenantId", tenantId)
                                                 .and("deleted", Workspace.WorkspaceStatus.DELETED))
@@ -73,9 +62,9 @@ public class WorkspaceRepository implements PanacheRepositoryBase<Workspace, UUI
         }
 
         /**
-         * Find workspaces by owner
+         * Find workspaces by owner with pagination
          */
-        public Uni<List<Workspace>> findByOwner(UUID tenantId, String ownerId, int page, int size) {
+        public Uni<List<Workspace>> findByOwner(String tenantId, String ownerId, int page, int size) {
                 return find("tenantId = :tenantId and ownerId = :ownerId and status != :deleted order by updatedAt desc",
                                 Parameters.with("tenantId", tenantId)
                                                 .and("ownerId", ownerId)
@@ -85,9 +74,9 @@ public class WorkspaceRepository implements PanacheRepositoryBase<Workspace, UUI
         }
 
         /**
-         * Search workspaces by name
+         * Search workspaces by name with pagination
          */
-        public Uni<List<Workspace>> searchByName(UUID tenantId, String namePattern, int page, int size) {
+        public Uni<List<Workspace>> searchByName(String tenantId, String namePattern, int page, int size) {
                 return find("tenantId = :tenantId and lower(name) like :pattern and status != :deleted order by name",
                                 Parameters.with("tenantId", tenantId)
                                                 .and("pattern", "%" + namePattern.toLowerCase() + "%")
@@ -99,7 +88,7 @@ public class WorkspaceRepository implements PanacheRepositoryBase<Workspace, UUI
         /**
          * Count workspaces by tenant
          */
-        public Uni<Long> countByTenant(UUID tenantId) {
+        public Uni<Long> countByTenant(String tenantId) {
                 return count("tenantId = :tenantId and status != :deleted",
                                 Parameters.with("tenantId", tenantId)
                                                 .and("deleted", Workspace.WorkspaceStatus.DELETED));
@@ -108,7 +97,7 @@ public class WorkspaceRepository implements PanacheRepositoryBase<Workspace, UUI
         /**
          * Check if workspace name exists for tenant
          */
-        public Uni<Boolean> existsByNameAndTenant(String name, UUID tenantId) {
+        public Uni<Boolean> existsByNameAndTenant(String name, String tenantId) {
                 return count("name = :name and tenantId = :tenantId and status != :deleted",
                                 Parameters.with("name", name)
                                                 .and("tenantId", tenantId)
@@ -119,27 +108,29 @@ public class WorkspaceRepository implements PanacheRepositoryBase<Workspace, UUI
         /**
          * Soft delete workspace
          */
-        public Uni<Void> softDelete(UUID id, UUID tenantId) {
-                return update("status = :deleted, updatedAt = current_timestamp where id = :id and tenantId = :tenantId",
+        public Uni<Boolean> softDelete(UUID id, String tenantId) {
+                return update("status = :deleted, updatedAt = :now where id = :id and tenantId = :tenantId",
                                 Parameters.with("deleted", Workspace.WorkspaceStatus.DELETED)
+                                                .and("now", Instant.now())
                                                 .and("id", id)
                                                 .and("tenantId", tenantId))
-                                .replaceWithVoid();
+                                .map(count -> count > 0);
         }
 
         /**
          * Find workspaces with workflow count
          */
-        public Uni<List<Object[]>> findWithWorkflowCount(UUID tenantId) {
-                return getEntityManager()
+        public Uni<List<Object[]>> findWithWorkflowCount(String tenantId) {
+                return getSession().flatMap(session -> session
                                 .createQuery(
-                                                "SELECT w, COUNT(wf) FROM Workspace w LEFT JOIN w.workflows wf " +
-                                                                "WHERE w.tenantId = :tenantId AND w.status != :deleted "
+                                                "SELECT w, (SELECT COUNT(wf) FROM Workflow wf WHERE wf.workspace.id = w.id AND wf.tenantId = :tenantId AND wf.status != :deleted) "
                                                                 +
-                                                                "GROUP BY w ORDER BY w.updatedAt DESC",
+                                                                "FROM Workspace w WHERE w.tenantId = :tenantId AND w.status != :deleted "
+                                                                +
+                                                                "ORDER BY w.updatedAt DESC",
                                                 Object[].class)
                                 .setParameter("tenantId", tenantId)
                                 .setParameter("deleted", Workspace.WorkspaceStatus.DELETED)
-                                .getResultList();
+                                .getResultList());
         }
 }

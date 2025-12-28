@@ -7,10 +7,13 @@ import jakarta.inject.Inject;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
-import tech.kayys.wayang.agent.repository.AgentDefinitionRepository;
-
+import tech.kayys.wayang.node.model.ExecutionContext;
+import tech.kayys.wayang.schema.agent.AgentDefinition;
+import tech.kayys.wayang.schema.node.EdgeDefinition;
+import tech.kayys.wayang.schema.node.NodeDefinition;
+import tech.kayys.wayang.schema.node.Position;
+import tech.kayys.wayang.schema.workflow.WorkflowDefinition;
 import tech.kayys.wayang.service.SchemaProcessor;
-import tech.kayys.wayang.workflow.model.ExecutionContext;
 import tech.kayys.wayang.workflow.model.WebSocketMessage;
 import tech.kayys.wayang.workflow.service.ExecutionContextManager;
 import tech.kayys.wayang.workflow.service.WorkflowRuntimeEngine;
@@ -33,9 +36,6 @@ public class AgentWebSocket {
 
     @Inject
     SchemaProcessor schemaProcessor;
-
-    @Inject
-    AgentDefinitionRepository agentRepository;
 
     @Inject
     WorkflowRuntimeEngine workflowEngine;
@@ -151,10 +151,9 @@ public class AgentWebSocket {
             String agentJson = objectMapper.writeValueAsString(message.getData());
 
             schemaProcessor.parseAgentDefinition(agentJson)
-                    .chain(agent -> agentRepository.saveAgent(agent))
                     .subscribe().with(
                             agent -> {
-                                // Store in session
+                                // Store in session (in-memory only)
                                 agentSessions.put(sessionId, new AgentSession(agent.getId().getValue(), agent));
 
                                 // Broadcast to all connected clients
@@ -188,18 +187,13 @@ public class AgentWebSocket {
             AgentDefinition agent = agentSession.getAgent();
             applyAgentUpdates(agent, data);
 
-            // Save to database
-            agentRepository.updateAgent(agent)
-                    .subscribe().with(
-                            updated -> {
-                                agentSession.setAgent(updated);
+            // Update in-memory session
+            agentSession.setAgent(agent);
 
-                                // Broadcast update
-                                broadcastToSession(sessionId, new WebSocketMessage(
-                                        "agentUpdated",
-                                        Map.of("agent", updated)));
-                            },
-                            error -> sendError(session, "Failed to update agent: " + error.getMessage()));
+            // Broadcast update
+            broadcastToSession(sessionId, new WebSocketMessage(
+                    "agentUpdated",
+                    Map.of("agent", agent)));
 
         } catch (Exception e) {
             sendError(session, "Failed to update agent: " + e.getMessage());
@@ -231,15 +225,10 @@ public class AgentWebSocket {
             }
             agent.getWorkflows().add(workflow);
 
-            agentRepository.updateAgent(agent)
-                    .subscribe().with(
-                            updated -> {
-                                agentSession.setAgent(updated);
-                                broadcastToSession(sessionId, new WebSocketMessage(
-                                        "workflowCreated",
-                                        Map.of("workflow", workflow)));
-                            },
-                            error -> sendError(session, "Failed to create workflow: " + error.getMessage()));
+            agentSession.setAgent(agent);
+            broadcastToSession(sessionId, new WebSocketMessage(
+                    "workflowCreated",
+                    Map.of("workflow", workflow)));
 
         } catch (Exception e) {
             sendError(session, "Failed to create workflow: " + e.getMessage());
@@ -589,14 +578,14 @@ public class AgentWebSocket {
     private void monitorExecution(String executionId, String sessionId, ExecutionContext context) {
         new Thread(() -> {
             try {
-                List<WorkflowRuntimeEngine.ExecutionTrace> lastTrace = new ArrayList<>();
+                List<ExecutionContext.ExecutionTrace> lastTrace = new ArrayList<>();
 
                 while (contextManager.getContext(executionId) != null) {
-                    List<WorkflowRuntimeEngine.ExecutionTrace> currentTrace = context.getExecutionTrace();
+                    List<ExecutionContext.ExecutionTrace> currentTrace = context.getExecutionTrace();
 
                     // Send new trace entries
                     if (currentTrace.size() > lastTrace.size()) {
-                        List<WorkflowRuntimeEngine.ExecutionTrace> newEntries = currentTrace.subList(lastTrace.size(),
+                        List<ExecutionContext.ExecutionTrace> newEntries = currentTrace.subList(lastTrace.size(),
                                 currentTrace.size());
 
                         broadcastToSession(sessionId, new WebSocketMessage(
@@ -696,10 +685,10 @@ public class AgentWebSocket {
     // Session tracking
     private static class AgentSession {
         private final String agentId;
-        private AgentDefinition agent;
+        private Object agent;
         private final Set<String> executions = ConcurrentHashMap.newKeySet();
 
-        public AgentSession(String agentId, AgentDefinition agent) {
+        public AgentSession(String agentId, Object agent) {
             this.agentId = agentId;
             this.agent = agent;
         }
@@ -708,11 +697,12 @@ public class AgentWebSocket {
             return agentId;
         }
 
-        public AgentDefinition getAgent() {
-            return agent;
+        @SuppressWarnings("unchecked")
+        public <T> T getAgent() {
+            return (T) agent;
         }
 
-        public void setAgent(AgentDefinition agent) {
+        public void setAgent(Object agent) {
             this.agent = agent;
         }
 

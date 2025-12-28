@@ -236,6 +236,31 @@ public class NodeDefinition {
         this.waitFor = waitFor;
     }
 
+    public Builder toBuilder() {
+        return new Builder()
+                .id(this.id)
+                .type(this.type)
+                .displayName(this.displayName)
+                .description(this.description)
+                .pluginRef(this.pluginRef)
+                .agentRef(this.agentRef)
+                .connectorRef(this.connectorRef)
+                .inputs(this.inputs)
+                .outputs(this.outputs)
+                .properties(this.properties)
+                .execution(this.execution)
+                .triggers(this.triggers)
+                .policy(this.policy)
+                .telemetry(this.telemetry)
+                .provenance(this.provenance)
+                .resourceProfile(this.resourceProfile)
+                .ui(this.ui)
+                .executionContext(this.executionContext)
+                .controlFlow(this.controlFlow)
+                .waitFor(this.waitFor)
+                .errorHandling(this.errorHandling);
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -275,6 +300,11 @@ public class NodeDefinition {
 
         public Builder displayName(String displayName) {
             this.displayName = displayName;
+            return this;
+        }
+
+        public Builder name(String name) {
+            this.displayName = name;
             return this;
         }
 

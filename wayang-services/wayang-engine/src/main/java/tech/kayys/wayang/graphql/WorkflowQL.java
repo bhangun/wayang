@@ -6,9 +6,9 @@ import org.eclipse.microprofile.graphql.Type;
 
 import tech.kayys.wayang.domain.Workflow;
 import tech.kayys.wayang.model.LogicDefinition;
-import tech.kayys.wayang.model.RuntimeConfig;
 import tech.kayys.wayang.model.UIDefinition;
 import tech.kayys.wayang.model.ValidationResult;
+import tech.kayys.wayang.schema.governance.RuntimeConfig;
 
 /**
  * WorkflowQL - GraphQL type for Workflow

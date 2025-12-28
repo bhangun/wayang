@@ -22,10 +22,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
-import tech.kayys.wayang.model.LogicDefinition;
-import tech.kayys.wayang.model.RuntimeConfig;
-import tech.kayys.wayang.model.UIDefinition;
-import tech.kayys.wayang.model.ValidationResult;
 
 /**
  * Workflow - Complete workflow definition with logic and UI layers.
@@ -74,33 +70,9 @@ public class Workflow extends PanacheEntityBase {
     @Enumerated(EnumType.STRING)
     public WorkflowStatus status = WorkflowStatus.DRAFT;
 
-    /**
-     * Logic layer - nodes, connections, rules (JSONB)
-     */
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
-    @Column(name = "logic_definition", columnDefinition = "jsonb", nullable = false)
-    public LogicDefinition logic;
-
-    /**
-     * UI layer - canvas state, node positions (JSONB)
-     */
-    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
-    @Column(name = "ui_definition", columnDefinition = "jsonb")
-    public UIDefinition ui;
-
-    /**
-     * Runtime configuration (JSONB)
-     */
-    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
-    @Column(name = "runtime_config", columnDefinition = "jsonb")
-    public RuntimeConfig runtime;
-
-    /**
-     * Validation results cache
-     */
-    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
-    @Column(name = "validation_result", columnDefinition = "jsonb")
-    public ValidationResult validationResult;
+    @Column(name = "definition", columnDefinition = "jsonb")
+    public tech.kayys.wayang.schema.workflow.WorkflowDefinition definition;
 
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
@@ -131,11 +103,28 @@ public class Workflow extends PanacheEntityBase {
         updatedAt = createdAt;
         if (metadata == null)
             metadata = new HashMap<>();
+
+        // Sync basic fields to definition if present
+        if (definition != null) {
+            if (definition.getId() == null)
+                definition.setId(id.toString());
+            if (definition.getName() == null)
+                definition.setName(name);
+            if (definition.getTenantId() == null)
+                definition.setTenantId(tenantId);
+            if (definition.getCreatedBy() == null)
+                definition.setCreatedBy(createdBy);
+            if (definition.getCreatedAt() == null)
+                definition.setCreatedAt(createdAt.toString());
+        }
     }
 
     @PreUpdate
     void preUpdate() {
         updatedAt = Instant.now();
+        if (definition != null) {
+            definition.setVersion(version); // Keep entity version in sync if needed
+        }
     }
 
     public enum WorkflowStatus {
@@ -150,8 +139,7 @@ public class Workflow extends PanacheEntityBase {
 
     // Domain logic
     public boolean canPublish() {
-        return status == WorkflowStatus.VALID && validationResult != null
-                && validationResult.isValid();
+        return status == WorkflowStatus.VALID;
     }
 
     public boolean isPublished() {

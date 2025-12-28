@@ -1,7 +1,8 @@
 package tech.kayys.wayang.graphql;
 
 import org.eclipse.microprofile.graphql.Type;
-import tech.kayys.wayang.model.ValidationResult;
+
+import tech.kayys.wayang.node.model.ValidationResult;
 
 import java.time.Instant;
 import java.util.List;

@@ -78,10 +78,13 @@ public class WorkspaceService {
     }
 
     /**
-     * List all workspaces for current tenant
+     * List all workspaces for current tenant with optional name filtering
      */
-    public Uni<List<Workspace>> listWorkspaces() {
+    public Uni<List<Workspace>> listWorkspaces(String nameQuery) {
         String tenantId = tenantContext.getTenantId();
+        if (nameQuery != null && !nameQuery.isBlank()) {
+            return workspaceRepository.searchByName(tenantId, nameQuery, 0, 100);
+        }
         return workspaceRepository.findByTenant(tenantId);
     }
 

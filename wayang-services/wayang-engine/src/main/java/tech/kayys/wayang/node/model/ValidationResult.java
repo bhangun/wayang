@@ -7,7 +7,7 @@ import java.util.List;
  */
 @lombok.Data
 @lombok.AllArgsConstructor
-class ValidationResult {
+public class ValidationResult {
     private boolean valid;
     private List<String> errors;
 

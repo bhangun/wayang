@@ -1,0 +1,901 @@
+package tech.kayys.wayang.api.rest;
+
+import tech.kayys.wayang.api.dto.*;
+import tech.kayys.wayang.sdk.client.WorkflowEngineClient;
+import tech.kayys.wayang.sdk.dto.*;
+import tech.kayys.wayang.sdk.dto.workflow.*;
+import tech.kayys.wayang.service.NodeTypeService;
+import tech.kayys.wayang.service.WorkflowDesignerService;
+import tech.kayys.wayang.service.WorkflowExecutionService;
+
+
+package tech.kayys.wayang.service.impl;
+
+import tech.kayys.wayang.api.dto.*;
+import tech.kayys.wayang.service.NodeTypeService;
+import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.context.ApplicationScoped;
+
+import java.util.*;
+
+/**
+ * Built-in Node Types Catalog for Wayang Workflow Platform.
+ * 
+ * Provides comprehensive set of pre-built nodes organized by category:
+ * 1. Agent Nodes - AI/LLM powered nodes
+ * 2. Integration Nodes - System connectors and data transformations
+ * 3. Control Flow Nodes - Workflow logic and routing
+ * 4. Data Nodes - Data manipulation and validation
+ * 5. Human Nodes - HITL and approval workflows
+ * 6. Utility Nodes - Common operations
+ * 7. Error Handling Nodes - Error management
+ * 
+ * Each node type includes:
+ * - Input/output port schemas
+ * - Configuration properties
+ * - Error handling specifications
+ * - UI metadata for designer
+ * 
+ * @since 1.0.0
+ */
+@ApplicationScoped
+public class BuiltInNodeTypes implements NodeTypeService {
+
+    @Override
+    public Uni<NodeTypeCatalogResponse> getNodeTypeCatalog(String tenantId) {
+        NodeTypeCatalogResponse catalog = new NodeTypeCatalogResponse();
+        
+        // Agent Nodes
+        catalog.addCategory("Agent", "AI-powered reasoning and decision making", buildAgentNodes());
+        
+        // Integration Nodes
+        catalog.addCategory("Integration", "System connectors and data flow", buildIntegrationNodes());
+        
+        // Control Flow Nodes
+        catalog.addCategory("Control Flow", "Workflow logic and routing", buildControlFlowNodes());
+        
+        // Data Nodes
+        catalog.addCategory("Data", "Data manipulation and validation", buildDataNodes());
+        
+        // Human Nodes
+        catalog.addCategory("Human", "Human-in-the-loop operations", buildHumanNodes());
+        
+        // Utility Nodes
+        catalog.addCategory("Utility", "Common utility operations", buildUtilityNodes());
+        
+        // Error Handling Nodes
+        catalog.addCategory("Error", "Error management and recovery", buildErrorNodes());
+        
+        catalog.setTotalNodes(catalog.calculateTotalNodes());
+        
+        return Uni.createFrom().item(catalog);
+    }
+
+    @Override
+    public Uni<NodeTypeDescriptor> getNodeTypeDescriptor(String nodeTypeId, String tenantId) {
+        return getNodeTypeCatalog(tenantId)
+            .map(catalog -> catalog.findNodeType(nodeTypeId)
+                .orElseThrow(() -> new NotFoundException("Node type not found: " + nodeTypeId)));
+    }
+
+    @Override
+    public Uni<List<NodeTypeDescriptor>> searchNodeTypes(
+        String query, String category, String tenantId
+    ) {
+        return getNodeTypeCatalog(tenantId)
+            .map(catalog -> catalog.search(query, category));
+    }
+
+    // ========================================================================
+    // AGENT NODES
+    // ========================================================================
+
+    private List<NodeTypeDescriptor> buildAgentNodes() {
+        List<NodeTypeDescriptor> nodes = new ArrayList<>();
+
+        // 1. LLM Completion Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.agent.llm-completion")
+            .name("LLM Completion")
+            .description("Generate text completion using language model")
+            .category("Agent")
+            .icon("brain")
+            .color("#8B5CF6")
+            .addInput(PortDescriptor.builder()
+                .name("prompt")
+                .displayName("Prompt")
+                .type("string")
+                .required(true)
+                .description("The prompt to send to the LLM")
+                .build())
+            .addInput(PortDescriptor.builder()
+                .name("systemPrompt")
+                .displayName("System Prompt")
+                .type("string")
+                .required(false)
+                .description("System prompt to set context")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("completion")
+                .type("string")
+                .description("Generated text completion")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("model", "string", "claude-sonnet-4-5", true)
+            .addProperty("temperature", "number", 0.7, false)
+            .addProperty("maxTokens", "integer", 1024, false)
+            .addProperty("topP", "number", 1.0, false)
+            .build());
+
+        // 2. Agent Executor Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.agent.executor")
+            .name("Agent Executor")
+            .description("Execute autonomous agent with tool access")
+            .category("Agent")
+            .icon("robot")
+            .color("#8B5CF6")
+            .addInput(PortDescriptor.builder()
+                .name("goal")
+                .displayName("Goal")
+                .type("string")
+                .required(true)
+                .description("Agent's objective")
+                .build())
+            .addInput(PortDescriptor.builder()
+                .name("context")
+                .displayName("Context")
+                .type("object")
+                .required(false)
+                .description("Additional context for the agent")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("result")
+                .type("object")
+                .description("Agent execution result")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("agentId", "string", null, true)
+            .addProperty("maxIterations", "integer", 10, false)
+            .addProperty("enableRAG", "boolean", false, false)
+            .addProperty("tools", "array", List.of(), false)
+            .build());
+
+        // 3. RAG Query Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.agent.rag-query")
+            .name("RAG Query")
+            .description("Retrieval-augmented generation query")
+            .category("Agent")
+            .icon("database-search")
+            .color("#8B5CF6")
+            .addInput(PortDescriptor.builder()
+                .name("query")
+                .displayName("Query")
+                .type("string")
+                .required(true)
+                .description("Search query")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("results")
+                .type("array")
+                .description("Retrieved documents with scores")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("vectorStore", "string", "default", true)
+            .addProperty("topK", "integer", 5, false)
+            .addProperty("threshold", "number", 0.7, false)
+            .build());
+
+        // 4. Agent Orchestrator Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.agent.orchestrator")
+            .name("Agent Orchestrator")
+            .description("Orchestrate multiple agents dynamically")
+            .category("Agent")
+            .icon("network")
+            .color("#8B5CF6")
+            .addInput(PortDescriptor.builder()
+                .name("task")
+                .displayName("Task")
+                .type("string")
+                .required(true)
+                .description("High-level task description")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("plan")
+                .type("object")
+                .description("Execution plan with agent assignments")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("strategy", "string", "dynamic", false)
+            .addProperty("maxConcurrency", "integer", 4, false)
+            .build());
+
+        return nodes;
+    }
+
+    // ========================================================================
+    // INTEGRATION NODES
+    // ========================================================================
+
+    private List<NodeTypeDescriptor> buildIntegrationNodes() {
+        List<NodeTypeDescriptor> nodes = new ArrayList<>();
+
+        // 1. HTTP Request Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.integration.http-request")
+            .name("HTTP Request")
+            .description("Make HTTP/REST API calls")
+            .category("Integration")
+            .icon("globe")
+            .color("#10B981")
+            .addInput(PortDescriptor.builder()
+                .name("url")
+                .displayName("URL")
+                .type("string")
+                .required(true)
+                .description("Target URL")
+                .build())
+            .addInput(PortDescriptor.builder()
+                .name("body")
+                .displayName("Body")
+                .type("object")
+                .required(false)
+                .description("Request body")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("response")
+                .type("object")
+                .description("HTTP response")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("method", "string", "GET", true)
+            .addProperty("headers", "object", Map.of(), false)
+            .addProperty("timeout", "integer", 30000, false)
+            .build());
+
+        // 2. Database Query Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.integration.database-query")
+            .name("Database Query")
+            .description("Execute SQL queries")
+            .category("Integration")
+            .icon("database")
+            .color("#10B981")
+            .addInput(PortDescriptor.builder()
+                .name("query")
+                .displayName("SQL Query")
+                .type("string")
+                .required(true)
+                .description("SQL query to execute")
+                .build())
+            .addInput(PortDescriptor.builder()
+                .name("parameters")
+                .displayName("Parameters")
+                .type("object")
+                .required(false)
+                .description("Query parameters")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("results")
+                .type("array")
+                .description("Query results")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("datasource", "string", "default", true)
+            .addProperty("transactional", "boolean", false, false)
+            .build());
+
+        // 3. GraphQL Query Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.integration.graphql-query")
+            .name("GraphQL Query")
+            .description("Execute GraphQL queries")
+            .category("Integration")
+            .icon("graph")
+            .color("#10B981")
+            .addInput(PortDescriptor.builder()
+                .name("query")
+                .displayName("GraphQL Query")
+                .type("string")
+                .required(true)
+                .description("GraphQL query or mutation")
+                .build())
+            .addInput(PortDescriptor.builder()
+                .name("variables")
+                .displayName("Variables")
+                .type("object")
+                .required(false)
+                .description("Query variables")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("data")
+                .type("object")
+                .description("GraphQL response data")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("endpoint", "string", null, true)
+            .addProperty("headers", "object", Map.of(), false)
+            .build());
+
+        // 4. Message Queue Send Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.integration.mq-send")
+            .name("Send Message")
+            .description("Send message to queue/topic")
+            .category("Integration")
+            .icon("mail")
+            .color("#10B981")
+            .addInput(PortDescriptor.builder()
+                .name("message")
+                .displayName("Message")
+                .type("object")
+                .required(true)
+                .description("Message payload")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("messageId")
+                .type("string")
+                .description("Sent message ID")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("destination", "string", null, true)
+            .addProperty("destinationType", "string", "queue", true)
+            .build());
+
+        // 5. File Reader Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.integration.file-reader")
+            .name("Read File")
+            .description("Read file from storage")
+            .category("Integration")
+            .icon("file")
+            .color("#10B981")
+            .addInput(PortDescriptor.builder()
+                .name("path")
+                .displayName("File Path")
+                .type("string")
+                .required(true)
+                .description("Path to file")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("content")
+                .type("string")
+                .description("File content")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("encoding", "string", "UTF-8", false)
+            .addProperty("storageType", "string", "local", true)
+            .build());
+
+        // 6. Email Send Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.integration.email-send")
+            .name("Send Email")
+            .description("Send email notification")
+            .category("Integration")
+            .icon("mail-send")
+            .color("#10B981")
+            .addInput(PortDescriptor.builder()
+                .name("to")
+                .displayName("To")
+                .type("string")
+                .required(true)
+                .description("Recipient email")
+                .build())
+            .addInput(PortDescriptor.builder()
+                .name("subject")
+                .displayName("Subject")
+                .type("string")
+                .required(true)
+                .description("Email subject")
+                .build())
+            .addInput(PortDescriptor.builder()
+                .name("body")
+                .displayName("Body")
+                .type("string")
+                .required(true)
+                .description("Email body (HTML supported)")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("messageId")
+                .type("string")
+                .description("Sent email ID")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("from", "string", "noreply@wayang.tech", false)
+            .addProperty("cc", "string", null, false)
+            .build());
+
+        return nodes;
+    }
+
+    // ========================================================================
+    // CONTROL FLOW NODES
+    // ========================================================================
+
+    private List<NodeTypeDescriptor> buildControlFlowNodes() {
+        List<NodeTypeDescriptor> nodes = new ArrayList<>();
+
+        // 1. Conditional Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.control.conditional")
+            .name("Conditional")
+            .description("Route based on condition")
+            .category("Control Flow")
+            .icon("git-branch")
+            .color("#F59E0B")
+            .addInput(PortDescriptor.builder()
+                .name("input")
+                .displayName("Input")
+                .type("object")
+                .required(true)
+                .description("Data to evaluate")
+                .build())
+            .addOutput("true", PortDescriptor.builder()
+                .name("true")
+                .type("object")
+                .description("Condition is true")
+                .build())
+            .addOutput("false", PortDescriptor.builder()
+                .name("false")
+                .type("object")
+                .description("Condition is false")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("condition", "string", null, true)
+            .addProperty("language", "string", "CEL", false)
+            .build());
+
+        // 2. Switch Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.control.switch")
+            .name("Switch")
+            .description("Multi-way conditional routing")
+            .category("Control Flow")
+            .icon("split")
+            .color("#F59E0B")
+            .addInput(PortDescriptor.builder()
+                .name("input")
+                .displayName("Input")
+                .type("object")
+                .required(true)
+                .description("Data to evaluate")
+                .build())
+            .addOutput("case1", PortDescriptor.builder()
+                .name("case1")
+                .type("object")
+                .description("First case")
+                .build())
+            .addOutput("case2", PortDescriptor.builder()
+                .name("case2")
+                .type("object")
+                .description("Second case")
+                .build())
+            .addOutput("default", PortDescriptor.builder()
+                .name("default")
+                .type("object")
+                .description("Default case")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("cases", "array", List.of(), true)
+            .build());
+
+        // 3. Loop Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.control.loop")
+            .name("Loop")
+            .description("Iterate over collection")
+            .category("Control Flow")
+            .icon("repeat")
+            .color("#F59E0B")
+            .addInput(PortDescriptor.builder()
+                .name("collection")
+                .displayName("Collection")
+                .type("array")
+                .required(true)
+                .description("Items to iterate")
+                .build())
+            .addOutput("item", PortDescriptor.builder()
+                .name("item")
+                .type("object")
+                .description("Current item")
+                .build())
+            .addOutput("complete", PortDescriptor.builder()
+                .name("complete")
+                .type("array")
+                .description("All processed items")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("parallel", "boolean", false, false)
+            .addProperty("maxConcurrency", "integer", 1, false)
+            .build());
+
+        // 4. Merge Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.control.merge")
+            .name("Merge")
+            .description("Merge multiple inputs")
+            .category("Control Flow")
+            .icon("merge")
+            .color("#F59E0B")
+            .addInput(PortDescriptor.builder()
+                .name("input1")
+                .displayName("Input 1")
+                .type("object")
+                .required(true)
+                .description("First input")
+                .build())
+            .addInput(PortDescriptor.builder()
+                .name("input2")
+                .displayName("Input 2")
+                .type("object")
+                .required(false)
+                .description("Second input")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("merged")
+                .type("object")
+                .description("Merged output")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("strategy", "string", "all", true)
+            .build());
+
+        // 5. Parallel Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.control.parallel")
+            .name("Parallel")
+            .description("Execute branches in parallel")
+            .category("Control Flow")
+            .icon("layers")
+            .color("#F59E0B")
+            .addInput(PortDescriptor.builder()
+                .name("input")
+                .displayName("Input")
+                .type("object")
+                .required(true)
+                .description("Data for all branches")
+                .build())
+            .addOutput("branch1", PortDescriptor.builder()
+                .name("branch1")
+                .type("object")
+                .description("First branch")
+                .build())
+            .addOutput("branch2", PortDescriptor.builder()
+                .name("branch2")
+                .type("object")
+                .description("Second branch")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("maxConcurrency", "integer", 4, false)
+            .build());
+
+        return nodes;
+    }
+
+    // ========================================================================
+    // DATA NODES
+    // ========================================================================
+
+    private List<NodeTypeDescriptor> buildDataNodes() {
+        List<NodeTypeDescriptor> nodes = new ArrayList<>();
+
+        // 1. JSON Transform Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.data.json-transform")
+            .name("Transform JSON")
+            .description("Transform JSON using JSONata")
+            .category("Data")
+            .icon("transform")
+            .color("#3B82F6")
+            .addInput(PortDescriptor.builder()
+                .name("data")
+                .displayName("Data")
+                .type("object")
+                .required(true)
+                .description("Input JSON data")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("result")
+                .type("object")
+                .description("Transformed data")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("expression", "string", null, true)
+            .build());
+
+        // 2. Validation Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.data.validate")
+            .name("Validate Data")
+            .description("Validate against JSON schema")
+            .category("Data")
+            .icon("check-circle")
+            .color("#3B82F6")
+            .addInput(PortDescriptor.builder()
+                .name("data")
+                .displayName("Data")
+                .type("object")
+                .required(true)
+                .description("Data to validate")
+                .build())
+            .addOutput("valid", PortDescriptor.builder()
+                .name("valid")
+                .type("object")
+                .description("Valid data")
+                .build())
+            .addOutput("invalid", PortDescriptor.builder()
+                .name("invalid")
+                .type("object")
+                .description("Invalid data with errors")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("schema", "object", null, true)
+            .build());
+
+        // 3. Filter Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.data.filter")
+            .name("Filter Data")
+            .description("Filter array by condition")
+            .category("Data")
+            .icon("filter")
+            .color("#3B82F6")
+            .addInput(PortDescriptor.builder()
+                .name("data")
+                .displayName("Data")
+                .type("array")
+                .required(true)
+                .description("Array to filter")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("filtered")
+                .type("array")
+                .description("Filtered data")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("condition", "string", null, true)
+            .build());
+
+        // 4. Aggregation Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.data.aggregate")
+            .name("Aggregate Data")
+            .description("Perform aggregation operations")
+            .category("Data")
+            .icon("calculator")
+            .color("#3B82F6")
+            .addInput(PortDescriptor.builder()
+                .name("data")
+                .displayName("Data")
+                .type("array")
+                .required(true)
+                .description("Data to aggregate")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("result")
+                .type("object")
+                .description("Aggregation result")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("operation", "string", "sum", true)
+            .addProperty("field", "string", null, true)
+            .build());
+
+        return nodes;
+    }
+
+    // ========================================================================
+    // HUMAN NODES
+    // ========================================================================
+
+    private List<NodeTypeDescriptor> buildHumanNodes() {
+        List<NodeTypeDescriptor> nodes = new ArrayList<>();
+
+        // 1. Approval Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.human.approval")
+            .name("Approval")
+            .description("Request human approval")
+            .category("Human")
+            .icon("user-check")
+            .color("#EC4899")
+            .addInput(PortDescriptor.builder()
+                .name("data")
+                .displayName("Data")
+                .type("object")
+                .required(true)
+                .description("Data to review")
+                .build())
+            .addOutput("approved", PortDescriptor.builder()
+                .name("approved")
+                .type("object")
+                .description("Approved data")
+                .build())
+            .addOutput("rejected", PortDescriptor.builder()
+                .name("rejected")
+                .type("object")
+                .description("Rejected data")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("assignTo", "string", null, true)
+            .addProperty("slaHours", "integer", 24, false)
+            .addProperty("form", "string", null, false)
+            .build());
+
+        // 2. Form Input Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.human.form-input")
+            .name("Form Input")
+            .description("Collect data via form")
+            .category("Human")
+            .icon("form")
+            .color("#EC4899")
+            .addInput(PortDescriptor.builder()
+                .name("context")
+                .displayName("Context")
+                .type("object")
+                .required(false)
+                .description("Initial form data")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("formData")
+                .type("object")
+                .description("Submitted form data")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("formSchema", "object", null, true)
+            .addProperty("assignTo", "string", null, true)
+            .build());
+
+        // 3. Manual Review Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.human.manual-review")
+            .name("Manual Review")
+            .description("Manual data review and correction")
+            .category("Human")
+            .icon("eye")
+            .color("#EC4899")
+            .addInput(PortDescriptor.builder()
+                .name("data")
+                .displayName("Data")
+                .type("object")
+                .required(true)
+                .description("Data to review")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("reviewed")
+                .type("object")
+                .description("Reviewed/corrected data")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("instructions", "string", null, false)
+            .addProperty("assignTo", "string", null, true)
+            .build());
+
+        return nodes;
+    }
+
+    // ========================================================================
+    // UTILITY NODES
+    // ========================================================================
+
+    private List<NodeTypeDescriptor> buildUtilityNodes() {
+        List<NodeTypeDescriptor> nodes = new ArrayList<>();
+
+        // 1. Delay Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.utility.delay")
+            .name("Delay")
+            .description("Wait for specified duration")
+            .category("Utility")
+            .icon("clock")
+            .color("#6B7280")
+            .addInput(PortDescriptor.builder()
+                .name("input")
+                .displayName("Input")
+                .type("object")
+                .required(true)
+                .description("Data to pass through")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("output")
+                .type("object")
+                .description("Passed through data")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("duration", "integer", 1000, true)
+            .build());
+
+        // 2. Log Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.utility.log")
+            .name("Log")
+            .description("Log data to console/file")
+            .category("Utility")
+            .icon("file-text")
+            .color("#6B7280")
+            .addInput(PortDescriptor.builder()
+                .name("data")
+                .displayName("Data")
+                .type("object")
+                .required(true)
+                .description("Data to log")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("output")
+                .type("object")
+                .description("Same as input")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("level", "string", "INFO", false)
+            .addProperty("message", "string", null, false)
+            .build());
+
+        // 3. Variable Set Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.utility.set-variable")
+            .name("Set Variable")
+            .description("Set workflow variable")
+            .category("Utility")
+            .icon("variable")
+            .color("#6B7280")
+            .addInput(PortDescriptor.builder()
+                .name("value")
+                .displayName("Value")
+                .type("object")
+                .required(true)
+                .description("Value to store")
+                .build())
+            .addOutput("success", PortDescriptor.builder()
+                .name("output")
+                .type("object")
+                .description("Stored value")
+                .build())
+            .addOutput("error", PortDescriptor.errorOutput())
+            .addProperty("variableName", "string", null, true)
+            .build());
+
+        return nodes;
+    }
+
+    // ========================================================================
+    // ERROR HANDLING NODES
+    // ========================================================================
+
+    private List<NodeTypeDescriptor> buildErrorNodes() {
+        List<NodeTypeDescriptor> nodes = new ArrayList<>();
+
+        // 1. Error Handler Node
+        nodes.add(NodeTypeDescriptor.builder()
+            .id("builtin.error.handler")
+            .name("Error Handler")
+            .description("Handle and route errors")
+            .category("Error")
+            .icon("alert-triangle")
+            .color("#EF4444")
+            .addInput(PortDescriptor.builder()
+                .name("error")
+                .displayName("Error")
+                .type("error_payload")
+                .required(true)
+                .description("Error to handle")
+                .build())
+            .addOutput("retry", PortDescriptor.builder()
+                .name("retry")
+                .type("object")
+                .description("Retry operation")
+                .build())
+            .addOutput("fallback", PortDescriptor.builder()
+                .name("fallback")
+                .type("object")
+                .description("Fallback path")
+                .build())
+            .addOutput("escalate", PortDescriptor.builder()
+                .name("escalate")
+                .type("error_payload")
+                .description("Escalate to human")
+                .build())
+            .addProperty("retryable", "boolean", true, false

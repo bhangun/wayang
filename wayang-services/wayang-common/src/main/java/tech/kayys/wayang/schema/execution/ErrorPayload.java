@@ -268,6 +268,8 @@ public class ErrorPayload {
         TIMEOUT,
         RESOURCE_EXHAUSTED,
         POLICY_VIOLATION,
+        EXECUTION_ERROR,
+        SYSTEM_ERROR,
         UNKNOWN_ERROR
     }
 

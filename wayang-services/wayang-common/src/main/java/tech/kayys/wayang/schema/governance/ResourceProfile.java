@@ -1,5 +1,8 @@
 package tech.kayys.wayang.schema.governance;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public class ResourceProfile {
     private String cpu = "100m";
     private String memory = "128Mi";

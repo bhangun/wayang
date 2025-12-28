@@ -14,7 +14,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import tech.kayys.wayang.model.ValidationResult.ValidationError;
+import tech.kayys.wayang.schema.execution.ValidationResult.ValidationError;
 
 /**
  * WorkflowDTO - Primary workflow data transfer object

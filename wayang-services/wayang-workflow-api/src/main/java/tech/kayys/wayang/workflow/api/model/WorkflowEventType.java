@@ -9,5 +9,6 @@ public enum WorkflowEventType {
     NODE_EXECUTED,
     STATE_UPDATED,
     RESUMED,
-    CANCELLED
+    CANCELLED,
+    COMPLETED
 }

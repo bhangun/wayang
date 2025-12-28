@@ -10,6 +10,21 @@ The application uses Quarkus profiles to manage environments.
   - Redis: `localhost:6380`
 - **Authentication**: Uses credentials `quarkus`/`quarkus`.
 
+### Security & Authentication
+The application supports two modes of authentication:
+
+1.  **OIDC (Keycloak)**:
+    *   **Primary method** for production.
+    *   Enabled via `Authorization: Bearer <token>`.
+    *   Development: Keycloak is auto-started by Dev Services.
+
+2.  **Basic Authentication** (Dev/Test):
+    *   **Enabled for easier testing.**
+    *   Credentials:
+        *   User: `admin` / Password: `admin` (Roles: `admin`, `user`)
+        *   User: `user` / Password: `user` (Roles: `user`)
+    *   Usage: `curl -u admin:admin ...`
+
 ### 2. Testing (`test`)
 - **Activation**: Automated during `mvn test`.
 - **Database**: Uses **Quarkus Dev Services**.

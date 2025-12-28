@@ -1,7 +1,10 @@
 package tech.kayys.wayang.node.registry;
 
+import org.jboss.logging.Logger;
+
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
+import tech.kayys.wayang.common.spi.Node;
 
 /**
  * Plugin loader for dynamic loading.

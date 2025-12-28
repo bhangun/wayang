@@ -6,15 +6,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import tech.kayys.wayang.schema.node.*;
 import tech.kayys.wayang.common.spi.Node;
-import tech.kayys.wayang.schema.node.NodeUI;
-import tech.kayys.wayang.schema.node.Outputs;
-import tech.kayys.wayang.schema.node.PortDescriptor;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Data Transfer Object for Node
@@ -46,10 +45,14 @@ public class NodeDTO {
     private Map<String, Object> properties;
     private PositionDTO position;
     private UIMetadataDTO uiMetadata;
-    private Node.NodeStatus status;
+    private NodeStatus status;
     private Instant createdAt;
     private Instant updatedAt;
     private Long version;
+
+    public enum NodeStatus {
+        ACTIVE, INACTIVE, DELETED
+    }
 
     @Data
     @NoArgsConstructor
@@ -112,46 +115,45 @@ public class NodeDTO {
                 .properties(node.getProperties())
                 .position(positionDTO)
                 .uiMetadata(uiMetadataDTO)
-                .status(node.getStatus())
+                .status(NodeStatus.ACTIVE)
                 .createdAt(node.getCreatedAt())
                 .updatedAt(node.getUpdatedAt())
                 .version(node.getVersion())
                 .build();
     }
 
-    public Node toEntity() {
-        Node.NodePosition entityPosition = null;
-        if (this.position != null) {
-            entityPosition = new Node.NodePosition();
-            entityPosition.setX(this.position.getX());
-            entityPosition.setY(this.position.getY());
-            entityPosition.setWidth(this.position.getWidth());
-            entityPosition.setHeight(this.position.getHeight());
+    public static NodeDTO from(NodeDefinition node) {
+        if (node == null)
+            return null;
+
+        PositionDTO positionDTO = null;
+        if (node.getUi() != null && node.getUi().getPosition() != null) {
+            positionDTO = PositionDTO.builder()
+                    .x(node.getUi().getPosition().getX())
+                    .y(node.getUi().getPosition().getY())
+                    .build();
         }
 
-        Node.NodeUIMetadata entityUIMetadata = null;
-        if (this.uiMetadata != null) {
-            entityUIMetadata = new Node.NodeUIMetadata();
-            entityUIMetadata.setIcon(this.uiMetadata.getIcon());
-            entityUIMetadata.setColor(this.uiMetadata.getColor());
-            entityUIMetadata.setCollapsed(this.uiMetadata.getCollapsed());
-            entityUIMetadata.setLayer(this.uiMetadata.getLayer());
+        Map<String, Object> configMap = new java.util.HashMap<>();
+        if (node.getProperties() != null) {
+            for (Object p : node.getProperties()) {
+                try {
+                    String pName = (String) p.getClass().getMethod("name").invoke(p);
+                    Object pValue = p.getClass().getMethod("defaultValue").invoke(p);
+                    configMap.put(pName, pValue != null ? pValue : "");
+                } catch (Exception e) {
+                    // Ignore elements that don't match the pattern
+                }
+            }
         }
 
-        return Node.builder()
-                .id(this.id)
-                .nodeId(this.nodeId)
-                .name(this.name)
-                .description(this.description)
-                .nodeType(this.nodeType)
-                .nodeDescriptorVersion(this.nodeDescriptorVersion)
-                .config(this.config)
-                .inputs(this.inputs)
-                .outputs(this.outputs)
-                .properties(this.properties)
-                .position(entityPosition)
-                .uiMetadata(entityUIMetadata)
-                .status(this.status != null ? this.status : Node.NodeStatus.ACTIVE)
+        return NodeDTO.builder()
+                .nodeId(node.getId())
+                .name(node.getDisplayName())
+                .nodeType(node.getType()) // It's a String
+                .config(configMap)
+                .position(positionDTO)
+                .status(NodeStatus.ACTIVE)
                 .build();
     }
 }

@@ -11,6 +11,7 @@ import io.quarkus.websockets.next.OnTextMessage;
 import io.quarkus.websockets.next.WebSocketClient;
 import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
+import jakarta.inject.Inject;
 import tech.kayys.wayang.schema.CollaborationEvent;
 import tech.kayys.wayang.schema.CollaborationMessage;
 import tech.kayys.wayang.schema.EventType;
@@ -18,39 +19,56 @@ import tech.kayys.wayang.utils.JsonUtils;
 
 /**
  * CollaborationConnection - Represents an active WebSocket connection
+ * Handlers are retrieved from CollaborationHandlerRegistry using 'handlerId'
+ * query param
  */
 @WebSocketClient(path = "/ws/workflows/{workflowId}")
 public class CollaborationConnection {
 
     private static final Logger LOG = Logger.getLogger(CollaborationConnection.class);
 
-    private final String workflowId;
-    private final String userId;
-    private final String tenantId;
-    private final CollaborationHandler handler;
+    @Inject
+    CollaborationHandlerRegistry registry;
+
+    private String workflowId;
+    private String userId;
+    private String tenantId;
+    private CollaborationHandler handler;
 
     private WebSocketConnection connection;
     private boolean connected = false;
 
-    public CollaborationConnection(String workflowId, String userId,
-            String tenantId, CollaborationHandler handler) {
-        this.workflowId = workflowId;
-        this.userId = userId;
-        this.tenantId = tenantId;
-        this.handler = handler;
+    public CollaborationConnection() {
     }
 
     @OnOpen
     public void onOpen(WebSocketConnection connection) {
         this.connection = connection;
         this.connected = true;
-        LOG.infof("WS connected: workflow=%s, user=%s", workflowId, userId);
-        handler.onConnected(workflowId);
+
+        this.workflowId = connection.pathParam("workflowId");
+        String handlerId = connection.handshakeRequest().queryParam("handlerId");
+        this.userId = connection.handshakeRequest().queryParam("userId");
+        this.tenantId = connection.handshakeRequest().queryParam("tenantId");
+
+        if (handlerId != null) {
+            this.handler = registry.get(handlerId);
+        }
+
+        LOG.infof("WS connected: workflow=%s, user=%s, handler=%s",
+                workflowId, userId, (handler != null ? "found" : "not found"));
+
+        if (handler != null) {
+            handler.onConnected(workflowId);
+        }
     }
 
     @OnTextMessage
     public void onMessage(String message) {
         LOG.debugf("WS message received: workflow=%s", workflowId);
+
+        if (handler == null)
+            return;
 
         try {
             CollaborationEvent event = JsonUtils.fromJson(message,
@@ -82,21 +100,17 @@ public class CollaborationConnection {
     public void onClose() {
         this.connected = false;
         LOG.infof("WS disconnected: workflow=%s", workflowId);
-        handler.onDisconnected(workflowId);
+        if (handler != null) {
+            handler.onDisconnected(workflowId);
+        }
     }
 
     @OnError
     public void onError(Throwable error) {
         LOG.errorf(error, "WS error: workflow=%s", workflowId);
-        handler.onError(buildErrorEvent(error));
-    }
-
-    /**
-     * Connect to WebSocket
-     */
-    public Uni<Void> connect() {
-        // Connection is handled by @OnOpen
-        return Uni.createFrom().voidItem();
+        if (handler != null) {
+            handler.onError(buildErrorEvent(error));
+        }
     }
 
     /**

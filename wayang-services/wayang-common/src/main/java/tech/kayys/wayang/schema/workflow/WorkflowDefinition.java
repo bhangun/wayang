@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import tech.kayys.wayang.schema.execution.ExecutionConfig;
 import tech.kayys.wayang.schema.execution.ValidationResult;
 import tech.kayys.wayang.schema.governance.DataContract;
 import tech.kayys.wayang.schema.governance.Identifier;
@@ -14,6 +15,7 @@ import tech.kayys.wayang.schema.governance.TelemetryConfig;
 import tech.kayys.wayang.schema.node.EdgeDefinition;
 import tech.kayys.wayang.schema.node.NodeDefinition;
 import tech.kayys.wayang.schema.utils.SchemaValidator;
+import tech.kayys.wayang.schema.workflow.UIDefinition;
 
 public class WorkflowDefinition {
     private Identifier id;
@@ -26,6 +28,8 @@ public class WorkflowDefinition {
     private String environment = "dev";
     private List<NodeDefinition> nodes;
     private List<EdgeDefinition> edges;
+    private UIDefinition ui;
+    private ExecutionConfig execution;
     private List<Trigger> triggers;
     private WorkflowState state;
     private List<DataContract> dataContracts;
@@ -152,6 +156,26 @@ public class WorkflowDefinition {
         this.edges = edges;
     }
 
+    public UIDefinition getUi() {
+        return ui;
+    }
+
+    public void setUi(UIDefinition ui) {
+        this.ui = ui;
+    }
+
+    public Map<String, Object> getParameters() {
+        return metadata != null ? metadata : Map.of();
+    }
+
+    public ExecutionConfig getExecution() {
+        return execution;
+    }
+
+    public void setExecution(ExecutionConfig execution) {
+        this.execution = execution;
+    }
+
     public List<Trigger> getTriggers() {
         return triggers;
     }
@@ -241,6 +265,8 @@ public class WorkflowDefinition {
         private String environment = "dev";
         private List<NodeDefinition> nodes;
         private List<EdgeDefinition> edges;
+        private UIDefinition ui;
+        private ExecutionConfig execution;
         private List<Trigger> triggers;
         private WorkflowState state;
         private List<DataContract> dataContracts;
@@ -306,6 +332,24 @@ public class WorkflowDefinition {
             return this;
         }
 
+        public Builder addEdge(EdgeDefinition edge) {
+            if (this.edges == null) {
+                this.edges = new java.util.ArrayList<>();
+            }
+            this.edges.add(edge);
+            return this;
+        }
+
+        public Builder ui(UIDefinition ui) {
+            this.ui = ui;
+            return this;
+        }
+
+        public Builder execution(ExecutionConfig execution) {
+            this.execution = execution;
+            return this;
+        }
+
         public Builder triggers(List<Trigger> triggers) {
             this.triggers = triggers;
             return this;
@@ -363,6 +407,8 @@ public class WorkflowDefinition {
             workflow.setEnvironment(environment);
             workflow.setNodes(nodes);
             workflow.setEdges(edges);
+            workflow.setUi(ui);
+            workflow.setExecution(execution);
             workflow.setTriggers(triggers);
             workflow.setState(state);
             workflow.setDataContracts(dataContracts);

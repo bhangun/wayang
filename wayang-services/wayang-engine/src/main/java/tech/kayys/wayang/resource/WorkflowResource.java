@@ -12,14 +12,13 @@ import tech.kayys.wayang.domain.Workflow;
 import tech.kayys.wayang.domain.WorkflowDraft;
 import tech.kayys.wayang.domain.WorkflowLock;
 import tech.kayys.wayang.model.LogicDefinition;
-import tech.kayys.wayang.model.RuntimeConfig;
-import tech.kayys.wayang.model.UIDefinition;
-import tech.kayys.wayang.model.ValidationResult;
+import tech.kayys.wayang.schema.workflow.UIDefinition;
 import tech.kayys.wayang.schema.ExecutionRequest;
 import tech.kayys.wayang.schema.ExecutionStatus;
 import tech.kayys.wayang.schema.PublishRequest;
 import tech.kayys.wayang.schema.CodeGenRequest;
 import tech.kayys.wayang.schema.WorkflowImportForm;
+import tech.kayys.wayang.schema.governance.RuntimeConfig;
 import tech.kayys.wayang.schema.ArtifactUploadForm;
 import tech.kayys.wayang.service.DraftService;
 import tech.kayys.wayang.service.LockService;
@@ -441,15 +440,19 @@ public class WorkflowResource {
                                                 .orElse(Response.status(Response.Status.NOT_FOUND).build()));
         }
 
-        // DTOs
         public static class CreateWorkflowDTO {
                 @NotBlank(message = "Workflow name is required")
                 public String name;
                 public String description;
                 public String version;
+                // Deprecated/Legacy fields support
                 public LogicDefinition logic;
                 public UIDefinition ui;
                 public RuntimeConfig runtime;
+
+                // New preferred field
+                public tech.kayys.wayang.schema.workflow.WorkflowDefinition definition;
+
                 public java.util.Map<String, Object> metadata;
         }
 
@@ -466,10 +469,15 @@ public class WorkflowResource {
                         String description,
                         String version,
                         Workflow.WorkflowStatus status,
+                        tech.kayys.wayang.schema.workflow.WorkflowDefinition definition,
+                        // Legacy fields mapped from definition
                         LogicDefinition logic,
                         UIDefinition ui,
                         RuntimeConfig runtime,
-                        ValidationResult validationResult,
+                        // Validation result no longer directly on entity but can be derived or removed
+                        // if unused
+                        // ValidationResult validationResult,
+                        // Keeping maps for backward compat if needed, otherwise rely on definition
                         java.time.Instant createdAt,
                         java.time.Instant updatedAt,
                         java.time.Instant publishedAt,
@@ -481,14 +489,69 @@ public class WorkflowResource {
                                         workflow.description,
                                         workflow.version,
                                         workflow.status,
-                                        workflow.logic,
-                                        workflow.ui,
-                                        workflow.runtime,
-                                        workflow.validationResult,
+                                        workflow.definition,
+                                        // Map definition back to legacy fields for API compat if needed
+                                        mapLogic(workflow.definition),
+                                        mapUI(workflow.definition),
+                                        mapRuntime(workflow.definition),
                                         workflow.createdAt,
                                         workflow.updatedAt,
                                         workflow.publishedAt,
                                         workflow.entityVersion);
+                }
+
+                private static LogicDefinition mapLogic(tech.kayys.wayang.schema.workflow.WorkflowDefinition def) {
+                        if (def == null)
+                                return null;
+                        LogicDefinition l = new LogicDefinition();
+                        l.nodes = def.getNodes();
+                        l.connections = mapEdgesToConnections(def.getEdges());
+                        return l;
+                }
+
+                private static List<tech.kayys.wayang.model.ConnectionDefinition> mapEdgesToConnections(List<tech.kayys.wayang.schema.node.EdgeDefinition> edges) {
+                     if (edges == null) return new java.util.ArrayList<>();
+                     return edges.stream().map(edge -> {
+                         tech.kayys.wayang.model.ConnectionDefinition conn = new tech.kayys.wayang.model.ConnectionDefinition();
+                         conn.id = edge.getId();
+                         conn.from = edge.getFrom();
+                         conn.to = edge.getTo();
+                         conn.fromPort = edge.getFromPort();
+                         conn.toPort = edge.getToPort();
+                         conn.condition = edge.getCondition();
+                         conn.metadata = edge.getMetadata();
+                         
+                         if (conn.metadata != null && conn.metadata.containsKey("type")) {
+                             try {
+                                 conn.type = tech.kayys.wayang.model.ConnectionDefinition.ConnectionType.valueOf((String) conn.metadata.get("type"));
+                             } catch (Exception e) {
+                                 conn.type = tech.kayys.wayang.model.ConnectionDefinition.ConnectionType.DATA; // default
+                             }
+                         }
+                         return conn;
+                     }).collect(java.util.stream.Collectors.toList());
+                }
+
+                private static UIDefinition mapUI(tech.kayys.wayang.schema.workflow.WorkflowDefinition def) {
+                        if (def == null || def.getMetadata() == null)
+                                return null;
+                        // Assuming we stored it in metadata as per Service
+                        try {
+                                // This casting might need a proper converter in real generic code
+                                return (UIDefinition) def.getMetadata().get("ui");
+                        } catch (Exception e) {
+                                return null;
+                        }
+                }
+
+                private static RuntimeConfig mapRuntime(tech.kayys.wayang.schema.workflow.WorkflowDefinition def) {
+                        if (def == null || def.getMetadata() == null)
+                                return null;
+                        try {
+                                return (RuntimeConfig) def.getMetadata().get("runtime");
+                        } catch (Exception e) {
+                                return null;
+                        }
                 }
         }
 

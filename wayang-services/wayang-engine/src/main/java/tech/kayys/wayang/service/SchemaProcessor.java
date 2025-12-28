@@ -7,9 +7,9 @@ import com.fasterxml.jackson.databind.jsonschema.JsonSchema;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import tech.kayys.wayang.schema.AgentDefinition;
-import tech.kayys.wayang.schema.ModelSpec;
-import tech.kayys.wayang.schema.ToolDefinition;
+import tech.kayys.wayang.schema.agent.AgentDefinition;
+import tech.kayys.wayang.schema.llm.ModelSpec;
+import tech.kayys.wayang.schema.llm.ToolDefinition;
 
 import org.jboss.logging.Logger;
 

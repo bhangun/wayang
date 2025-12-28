@@ -3,6 +3,9 @@ package tech.kayys.wayang.model;
 import java.util.ArrayList;
 import java.util.List;
 
+import tech.kayys.wayang.schema.governance.RuntimeConfig;
+import tech.kayys.wayang.schema.workflow.UIDefinition;
+
 public class MergeResult {
     public LogicDefinition merged;
     public UIDefinition mergedUI;

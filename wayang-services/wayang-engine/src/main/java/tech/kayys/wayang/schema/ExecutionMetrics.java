@@ -17,6 +17,14 @@ public class ExecutionMetrics {
     private long tokensUsed;
     private double costUsd;
 
+    public int getNodesFailed() {
+        return nodesFailed;
+    }
+
+    public void setNodesFailed(int nodesFailed) {
+        this.nodesFailed = nodesFailed;
+    }
+
     public long getDurationMs() {
         return durationMs;
     }

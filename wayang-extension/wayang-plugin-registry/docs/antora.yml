@@ -1,5 +1,0 @@
-name: quarkus-custom
-title: Custom
-version: dev
-nav:
-  - modules/ROOT/nav.adoc

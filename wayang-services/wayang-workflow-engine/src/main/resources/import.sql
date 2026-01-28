@@ -1,2 +1,0 @@
--- This file can contain SQL statements to initialize the database
--- For now, it's empty but can be used for development data initialization

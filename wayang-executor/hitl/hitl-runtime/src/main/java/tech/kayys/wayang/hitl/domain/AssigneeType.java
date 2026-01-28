@@ -1,7 +1,0 @@
-package tech.kayys.wayang.hitl.domain;
-
-enum AssigneeType {
-    USER,       // Specific user
-    GROUP,      // User group
-    ROLE        // User role
-}

@@ -1,9 +1,0 @@
-public enum SuggestionType {
-    REMOVE_NODE,
-    MERGE_NODES,
-    PARALLELIZE,
-    CHANGE_MODEL,
-    ADD_CACHE,
-    SIMPLIFY_LOGIC,
-    ADD_ERROR_HANDLING
-}

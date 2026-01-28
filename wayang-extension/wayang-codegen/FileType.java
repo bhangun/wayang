@@ -1,9 +1,0 @@
-public enum FileType {
-    JAVA_SOURCE,
-    PYTHON_SOURCE,
-    YAML_CONFIG,
-    PROPERTIES,
-    DOCKERFILE,
-    SHELL_SCRIPT,
-    MARKDOWN
-}

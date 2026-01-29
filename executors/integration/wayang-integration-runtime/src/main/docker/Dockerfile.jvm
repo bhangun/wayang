@@ -1,0 +1,24 @@
+# Use Red Hat Universal Base Image Minimal as the base image
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+
+# Install Java 11
+RUN microdnf install java-11-openjdk-headless ca-certificates-mozilla curl tar gzip \
+    && microdnf clean all
+
+# Create a non-root user
+RUN useradd -u 1001 -m -s /bin/bash quarkus
+
+# Set the working directory
+WORKDIR /deployments
+
+# Copy the application JAR file
+COPY target/*runner.jar ./application.jar
+
+# Make the application runnable by the quarkus user
+RUN chown -R quarkus:root /deployments && chmod -R 775 /deployments
+
+# Switch to the non-root user
+USER 1001
+
+# Set the entrypoint
+ENTRYPOINT ["java", "-Dquarkus.http.host=0.0.0.0", "-Djava.util.logging.manager=org.jboss.logmanager.LogManager", "-jar", "./application.jar"]

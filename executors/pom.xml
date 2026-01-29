@@ -5,8 +5,10 @@
         <artifactId>wayang</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
-    <artifactId>wayang-executor</artifactId>
+    <artifactId>wayang-executor-parent</artifactId>
+    <packaging>pom</packaging>
     <modules>
+        <module>integration</module>
         <module>agent</module>
     </modules>
 </project>

@@ -1,0 +1,3118 @@
+package tech.kayys.silat.executor.nlp.gliner;
+
+import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tech.kayys.silat.core.domain.ErrorInfo;
+import tech.kayys.silat.core.engine.NodeExecutionResult;
+import tech.kayys.silat.core.engine.NodeExecutionTask;
+import tech.kayys.silat.executor.AbstractWorkflowExecutor;
+import tech.kayys.silat.executor.Executor;
+import tech.kayys.silat.executor.nlp.gliner.client.*;
+import tech.kayys.silat.executor.nlp.gliner.domain.*;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * ============================================================================
+ * GLiNER STRUCTURED DATA EXTRACTION EXECUTOR
+ * ============================================================================
+ * 
+ * Extract structured data from unstructured text using schema definitions.
+ * 
+ * Features:
+ * - Schema-driven extraction
+ * - Type validation and conversion
+ * - Required field enforcement
+ * - Multi-value field support
+ * - Nested object extraction
+ * 
+ * Configuration Parameters:
+ * - schemaId: Schema identifier (required)
+ * - schema: Inline schema definition
+ * - strictMode: Fail on missing required fields (default: true)
+ * - threshold: Confidence threshold (default: 0.5)
+ */
+@Executor(
+    executorType = "gliner-extraction-executor",
+    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
+    maxConcurrentTasks = 50,
+    supportedNodeTypes = {"TASK"},
+    version = "1.0.0"
+)
+@ApplicationScoped
+public class GLiNERExtractionExecutor extends AbstractWorkflowExecutor {
+    
+    private static final Logger LOG = LoggerFactory.getLogger(GLiNERExtractionExecutor.class);
+    
+    @Inject
+    GLiNERClient glinerClient;
+    
+    @Inject
+    ExtractionSchemaRegistry schemaRegistry;
+    
+    @Inject
+    DataValidator dataValidator;
+    
+    @Override
+    public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
+        Instant startTime = Instant.now();
+        
+        return parseConfiguration(task)
+            .flatMap(config -> loadSchema(config, task))
+            .flatMap(config -> performExtraction(config, task))
+            .flatMap(result -> validateExtractedData(result, task))
+            .map(result -> buildSuccessResult(task, result, startTime))
+            .onFailure().recoverWithItem(error -> 
+                buildErrorResult(task, error, startTime)
+            );
+    }
+    
+    private Uni<ExtractionConfig> parseConfiguration(NodeExecutionTask task) {
+        return Uni.createFrom().item(() -> {
+            Map<String, Object> context = task.context();
+            
+            String inputText = extractInputText(context);
+            if (inputText == null || inputText.isBlank()) {
+                throw new IllegalArgumentException("Input text is required");
+            }
+            
+            String schemaId = (String) context.get("schemaId");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> inlineSchema = (Map<String, Object>) context.get("schema");
+            
+            if (schemaId == null && inlineSchema == null) {
+                throw new IllegalArgumentException("Schema ID or inline schema is required");
+            }
+            
+            boolean strictMode = getBooleanConfig(context, "strictMode", true);
+            double threshold = getDoubleConfig(context, "threshold", 0.5);
+            String modelId = (String) context.get("modelId");
+            
+            return new ExtractionConfig(
+                inputText,
+                schemaId,
+                inlineSchema,
+                null, // will be loaded
+                strictMode,
+                threshold,
+                modelId,
+                extractTenantId(task)
+            );
+        });
+    }
+    
+    private Uni<ExtractionConfig> loadSchema(ExtractionConfig config, NodeExecutionTask task) {
+        if (config.inlineSchema() != null) {
+            // Parse inline schema
+            ExtractionSchema schema = parseInlineSchema(config.inlineSchema());
+            return Uni.createFrom().item(config.withSchema(schema));
+        }
+        
+        return schemaRegistry.getSchema(config.schemaId(), config.tenantId())
+            .map(schema -> {
+                if (schema == null) {
+                    throw new IllegalArgumentException("Schema not found: " + config.schemaId());
+                }
+                return config.withSchema(schema);
+            });
+    }
+    
+    private Uni<ExtractionResult> performExtraction(
+            ExtractionConfig config,
+            NodeExecutionTask task) {
+        
+        LOG.info("Processing extraction: run={}, schema={}", 
+            task.runId().value(),
+            config.schema().schemaName());
+        
+        GLiNERExtractionRequest request = new GLiNERExtractionRequest(
+            config.inputText(),
+            config.schema(),
+            config.modelId(),
+            config.threshold()
+        );
+        
+        return glinerClient.processExtraction(request)
+            .map(response -> {
+                LOG.info("Extraction completed: {} fields extracted, {} errors", 
+                    response.extractedData().size(),
+                    response.errors().size());
+                
+                return new ExtractionResult(
+                    task.runId().value(),
+                    config.inputText(),
+                    response.extractedData(),
+                    response.errors(),
+                    response.isComplete(),
+                    Instant.now(),
+                    response.processingTimeMs(),
+                    Map.of()
+                );
+            });
+    }
+    
+    private Uni<ExtractionResult> validateExtractedData(
+            ExtractionResult result,
+            NodeExecutionTask task) {
+        
+        Map<String, Object> context = task.context();
+        boolean strictMode = getBooleanConfig(context, "strictMode", true);
+        
+        if (!strictMode || result.isComplete()) {
+            return Uni.createFrom().item(result);
+        }
+        
+        // In strict mode, fail if there are errors
+        if (result.hasErrors()) {
+            String errorMsg = "Extraction failed with errors: " + 
+                result.errors().stream()
+                    .map(ExtractionError::message)
+                    .collect(Collectors.joining(", "));
+            
+            return Uni.createFrom().failure(new IllegalStateException(errorMsg));
+        }
+        
+        return Uni.createFrom().item(result);
+    }
+    
+    private NodeExecutionResult buildSuccessResult(
+            NodeExecutionTask task,
+            ExtractionResult result,
+            Instant startTime) {
+        
+        long totalDuration = Duration.between(startTime, Instant.now()).toMillis();
+        
+        Map<String, Object> output = new HashMap<>();
+        output.put("extractedData", result.extractedData());
+        output.put("errors", serializeErrors(result.errors()));
+        output.put("isComplete", result.isComplete());
+        output.put("fieldCount", result.extractedData().size());
+        output.put("errorCount", result.errors().size());
+        output.put("processingTimeMs", totalDuration);
+        output.put("metadata", result.metadata());
+        
+        LOG.info("Extraction execution completed: run={}, fields={}, duration={}ms",
+            task.runId().value(),
+            result.extractedData().size(),
+            totalDuration);
+        
+        return NodeExecutionResult.success(
+            task.runId(),
+            task.nodeId(),
+            task.attempt(),
+            output,
+            task.token()
+        );
+    }
+    
+    private NodeExecutionResult buildErrorResult(
+            NodeExecutionTask task,
+            Throwable error,
+            Instant startTime) {
+        
+        long duration = Duration.between(startTime, Instant.now()).toMillis();
+        
+        LOG.error("Extraction execution failed: run={}, error={}",
+            task.runId().value(),
+            error.getMessage(),
+            error);
+        
+        return NodeExecutionResult.failure(
+            task.runId(),
+            task.nodeId(),
+            task.attempt(),
+            new ErrorInfo(
+                "EXTRACTION_FAILED",
+                "Failed to execute extraction: " + error.getMessage(),
+                getStackTrace(error),
+                Map.of("processingTimeMs", duration)
+            ),
+            task.token()
+        );
+    }
+    
+    private ExtractionSchema parseInlineSchema(Map<String, Object> schemaMap) {
+        // Parse inline schema from map
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> fieldsMap = (List<Map<String, Object>>) schemaMap.get("fields");
+        
+        List<FieldDefinition> fields = fieldsMap.stream()
+            .map(this::parseFieldDefinition)
+            .collect(Collectors.toList());
+        
+        return new ExtractionSchema(
+            (String) schemaMap.get("schemaName"),
+            (String) schemaMap.getOrDefault("version", "1.0.0"),
+            fields,
+            List.of(),
+            Map.of()
+        );
+    }
+    
+    @SuppressWarnings("unchecked")
+    private FieldDefinition parseFieldDefinition(Map<String, Object> fieldMap) {
+        return new FieldDefinition(
+            (String) fieldMap.get("fieldName"),
+            FieldType.valueOf((String) fieldMap.getOrDefault("fieldType", "STRING")),
+            (Boolean) fieldMap.getOrDefault("required", false),
+            (Boolean) fieldMap.getOrDefault("multiple", false),
+            (String) fieldMap.get("description"),
+            (List<String>) fieldMap.getOrDefault("expectedFormats", List.of()),
+            (List<String>) fieldMap.getOrDefault("validationPatterns", List.of()),
+            fieldMap.get("defaultValue"),
+            (Map<String, String>) fieldMap.getOrDefault("metadata", Map.of())
+        );
+    }
+    
+    private List<Map<String, Object>> serializeErrors(List<ExtractionError> errors) {
+        return errors.stream()
+            .map(error -> Map.<String, Object>of(
+                "fieldName", error.fieldName(),
+                "errorType", error.errorType(),
+                "message", error.message()
+            ))
+            .collect(Collectors.toList());
+    }
+    
+    private String extractInputText(Map<String, Object> config) {
+        Object text = config.get("inputText");
+        if (text == null) text = config.get("text");
+        return text != null ? text.toString() : null;
+    }
+    
+    private double getDoubleConfig(Map<String, Object> config, String key, double defaultValue) {
+        Object value = config.get(key);
+        return value instanceof Number ? ((Number) value).doubleValue() : defaultValue;
+    }
+    
+    private boolean getBooleanConfig(Map<String, Object> config, String key, boolean defaultValue) {
+        Object value = config.get(key);
+        return value instanceof Boolean ? (Boolean) value : defaultValue;
+    }
+    
+    private String extractTenantId(NodeExecutionTask task) {
+        return task.context().getOrDefault("tenantId", "default").toString();
+    }
+    
+    private String getStackTrace(Throwable error) {
+        java.io.StringWriter sw = new java.io.StringWriter();
+        error.printStackTrace(new java.io.PrintWriter(sw));
+        return sw.toString();
+    }
+}
+
+/**
+ * ============================================================================
+ * GLiNER RELATION EXTRACTION EXECUTOR
+ * ============================================================================
+ * 
+ * Extract relations between entities in text.
+ * 
+ * Features:
+ * - Automatic entity detection
+ * - Relation type matching
+ * - Distance-based filtering
+ * - Relation graph construction
+ * - Bidirectional relation support
+ * 
+ * Configuration Parameters:
+ * - entityTypes: Entity types to identify
+ * - relationTypes: Relation types to extract
+ * - maxDistance: Maximum token distance (default: 50)
+ * - threshold: Confidence threshold (default: 0.5)
+ */
+@Executor(
+    executorType = "gliner-relation-executor",
+    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
+    maxConcurrentTasks = 30,
+    supportedNodeTypes = {"TASK"},
+    version = "1.0.0"
+)
+@ApplicationScoped
+public class GLiNERRelationExecutor extends AbstractWorkflowExecutor {
+    
+    private static final Logger LOG = LoggerFactory.getLogger(GLiNERRelationExecutor.class);
+    
+    @Inject
+    GLiNERClient glinerClient;
+    
+    @Inject
+    RelationSchemaRegistry relationSchemaRegistry;
+    
+    @Override
+    public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
+        Instant startTime = Instant.now();
+        
+        return parseConfiguration(task)
+            .flatMap(config -> loadRelationTypes(config, task))
+            .flatMap(config -> performRelationExtraction(config, task))
+            .map(result -> buildSuccessResult(task, result, startTime))
+            .onFailure().recoverWithItem(error -> 
+                buildErrorResult(task, error, startTime)
+            );
+    }
+    
+    private Uni<RelationConfig> parseConfiguration(NodeExecutionTask task) {
+        return Uni.createFrom().item(() -> {
+            Map<String, Object> context = task.context();
+            
+            String inputText = extractInputText(context);
+            if (inputText == null || inputText.isBlank()) {
+                throw new IllegalArgumentException("Input text is required");
+            }
+            
+            List<String> entityTypes = extractEntityTypes(context);
+            if (entityTypes.isEmpty()) {
+                throw new IllegalArgumentException("Entity types are required");
+            }
+            
+            String schemaId = (String) context.get("schemaId");
+            double threshold = getDoubleConfig(context, "threshold", 0.5);
+            int maxDistance = getIntConfig(context, "maxDistance", 50);
+            String modelId = (String) context.get("modelId");
+            
+            return new RelationConfig(
+                inputText,
+                entityTypes,
+                List.of(), // will be loaded
+                schemaId,
+                threshold,
+                maxDistance,
+                modelId,
+                extractTenantId(task)
+            );
+        });
+    }
+    
+    private Uni<RelationConfig> loadRelationTypes(RelationConfig config, NodeExecutionTask task) {
+        if (config.schemaId() == null) {
+            // Extract from context
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> relationTypesMap = 
+                (List<Map<String, Object>>) task.context().get("relationTypes");
+            
+            if (relationTypesMap != null && !relationTypesMap.isEmpty()) {
+                List<RelationType> types = relationTypesMap.stream()
+                    .map(this::parseRelationType)
+                    .collect(Collectors.toList());
+                
+                return Uni.createFrom().item(config.withRelationTypes(types));
+            }
+            
+            throw new IllegalArgumentException("Relation types or schema ID is required");
+        }
+        
+        return relationSchemaRegistry.getSchema(config.schemaId(), config.tenantId())
+            .map(schema -> {
+                if (schema == null) {
+                    throw new IllegalArgumentException("Schema not found: " + config.schemaId());
+                }
+                return config.withRelationTypes(schema.relationTypes());
+            });
+    }
+    
+    private Uni<RelationResult> performRelationExtraction(
+            RelationConfig config,
+            NodeExecutionTask task) {
+        
+        LOG.info("Processing relation extraction: run={}, entityTypes={}, relationTypes={}", 
+            task.runId().value(),
+            config.entityTypes().size(),
+            config.relationTypes().size());
+        
+        GLiNERRelationRequest request = new GLiNERRelationRequest(
+            config.inputText(),
+            config.entityTypes(),
+            config.relationTypes(),
+            config.modelId(),
+            config.threshold(),
+            config.maxDistance()
+        );
+        
+        return glinerClient.processRelation(request)
+            .map(response -> {
+                LOG.info("Relation extraction completed: {} entities, {} relations", 
+                    response.entities().size(),
+                    response.relations().size());
+                
+                return new RelationResult(
+                    task.runId().value(),
+                    config.inputText(),
+                    response.relations(),
+                    response.entities(),
+                    Instant.now(),
+                    response.processingTimeMs(),
+                    buildMetadata(config, response)
+                );
+            });
+    }
+    
+    private NodeExecutionResult buildSuccessResult(
+            NodeExecutionTask task,
+            RelationResult result,
+            Instant startTime) {
+        
+        long totalDuration = Duration.between(startTime, Instant.now()).toMillis();
+        
+        // Group relations by type
+        Map<String, Long> relationCounts = result.relations().stream()
+            .collect(Collectors.groupingBy(
+                ExtractedRelation::relationType,
+                Collectors.counting()
+            ));
+        
+        Map<String, Object> output = new HashMap<>();
+        output.put("relations", serializeRelations(result.relations()));
+        output.put("entities", serializeEntities(result.entities()));
+        output.put("totalRelations", result.relations().size());
+        output.put("totalEntities", result.entities().size());
+        output.put("relationCounts", relationCounts);
+        output.put("processingTimeMs", totalDuration);
+        output.put("metadata", result.metadata());
+        
+        LOG.info("Relation execution completed: run={}, relations={}, duration={}ms",
+            task.runId().value(),
+            result.relations().size(),
+            totalDuration);
+        
+        return NodeExecutionResult.success(
+            task.runId(),
+            task.nodeId(),
+            task.attempt(),
+            output,
+            task.token()
+        );
+    }
+    
+    private NodeExecutionResult buildErrorResult(
+            NodeExecutionTask task,
+            Throwable error,
+            Instant startTime) {
+        
+        long duration = Duration.between(startTime, Instant.now()).toMillis();
+        
+        LOG.error("Relation extraction failed: run={}, error={}",
+            task.runId().value(),
+            error.getMessage(),
+            error);
+        
+        return NodeExecutionResult.failure(
+            task.runId(),
+            task.nodeId(),
+            task.attempt(),
+            new ErrorInfo(
+                "RELATION_EXTRACTION_FAILED",
+                "Failed to execute relation extraction: " + error.getMessage(),
+                getStackTrace(error),
+                Map.of("processingTimeMs", duration)
+            ),
+            task.token()
+        );
+    }
+    
+    @SuppressWarnings("unchecked")
+    private RelationType parseRelationType(Map<String, Object> typeMap) {
+        return new RelationType(
+            (String) typeMap.get("relationId"),
+            (String) typeMap.get("relationName"),
+            (String) typeMap.get("description"),
+            (String) typeMap.get("sourceEntityType"),
+            (String) typeMap.get("targetEntityType"),
+            (Boolean) typeMap.getOrDefault("bidirectional", false),
+            (List<String>) typeMap.getOrDefault("triggers", List.of()),
+            (Map<String, String>) typeMap.getOrDefault("attributes", Map.of())
+        );
+    }
+    
+    private Map<String, Object> buildMetadata(
+            RelationConfig config,
+            GLiNERRelationResponse response) {
+        
+        return Map.of(
+            "modelId", config.modelId() != null ? config.modelId() : "default",
+            "maxDistance", config.maxDistance(),
+            "threshold", config.threshold()
+        );
+    }
+    
+    private List<Map<String, Object>> serializeRelations(List<ExtractedRelation> relations) {
+        return relations.stream()
+            .map(rel -> Map.<String, Object>of(
+                "relationId", rel.relationId(),
+                "relationType", rel.relationType(),
+                "sourceEntity", serializeEntity(rel.sourceEntity()),
+                "targetEntity", serializeEntity(rel.targetEntity()),
+                "confidence", rel.confidence(),
+                "attributes", rel.attributes()
+            ))
+            .collect(Collectors.toList());
+    }
+    
+    private List<Map<String, Object>> serializeEntities(List<ExtractedEntity> entities) {
+        return entities.stream()
+            .map(this::serializeEntity)
+            .collect(Collectors.toList());
+    }
+    
+    private Map<String, Object> serializeEntity(ExtractedEntity entity) {
+        return Map.of(
+            "text", entity.text(),
+            "entityType", entity.entityType(),
+            "startOffset", entity.startOffset(),
+            "endOffset", entity.endOffset(),
+            "confidence", entity.confidence()
+        );
+    }
+    
+    private String extractInputText(Map<String, Object> config) {
+        Object text = config.get("inputText");
+        if (text == null) text = config.get("text");
+        return text != null ? text.toString() : null;
+    }
+    
+    @SuppressWarnings("unchecked")
+    private List<String> extractEntityTypes(Map<String, Object> config) {
+        Object types = config.get("entityTypes");
+        if (types instanceof List) {
+            return ((List<?>) types).stream()
+                .map(Object::toString)
+                .collect(Collectors.toList());
+        }
+        return List.of();
+    }
+    
+    private double getDoubleConfig(Map<String, Object> config, String key, double defaultValue) {
+        Object value = config.get(key);
+        return value instanceof Number ? ((Number) value).doubleValue() : defaultValue;
+    }
+    
+    private int getIntConfig(Map<String, Object> config, String key, int defaultValue) {
+        Object value = config.get(key);
+        return value instanceof Number ? ((Number) value).intValue() : defaultValue;
+    }
+    
+    private String extractTenantId(NodeExecutionTask task) {
+        return task.context().getOrDefault("tenantId", "default").toString();
+    }
+    
+    private String getStackTrace(Throwable error) {
+        java.io.StringWriter sw = new java.io.StringWriter();
+        error.printStackTrace(new java.io.PrintWriter(sw));
+        return sw.toString();
+    }
+}
+
+// ==================== CONFIGURATION RECORDS ====================
+
+record ExtractionConfig(
+    String inputText,
+    String schemaId,
+    Map<String, Object> inlineSchema,
+    ExtractionSchema schema,
+    boolean strictMode,
+    double threshold,
+    String modelId,
+    String tenantId
+) {
+    public ExtractionConfig withSchema(ExtractionSchema newSchema) {
+        return new ExtractionConfig(
+            inputText,
+            schemaId,
+            inlineSchema,
+            newSchema,
+            strictMode,
+            threshold,
+            modelId,
+            tenantId
+        );
+    }
+}
+
+record RelationConfig(
+    String inputText,
+    List<String> entityTypes,
+    List<RelationType> relationTypes,
+    String schemaId,
+    double threshold,
+    int maxDistance,
+    String modelId,
+    String tenantId
+) {
+    public RelationConfig withRelationTypes(List<RelationType> types) {
+        return new RelationConfig(
+            inputText,
+            entityTypes,
+            types,
+            schemaId,
+            threshold,
+            maxDistance,
+            modelId,
+            tenantId
+        );
+    }
+}
+
+// ==================== SCHEMA REGISTRIES ====================
+
+@ApplicationScoped
+class ExtractionSchemaRegistry {
+    
+    private static final Logger LOG = LoggerFactory.getLogger(ExtractionSchemaRegistry.class);
+    
+    public Uni<ExtractionSchema> getSchema(String schemaId, String tenantId) {
+        return Uni.createFrom().item(() -> {
+            LOG.debug("Fetching extraction schema: {} for tenant: {}", schemaId, tenantId);
+            // In production, fetch from database
+            return null;
+        });
+    }
+}
+
+@ApplicationScoped
+class RelationSchemaRegistry {
+    
+    private static final Logger LOG = LoggerFactory.getLogger(RelationSchemaRegistry.class);
+    
+    public Uni<RelationTaskDefinition> getSchema(String schemaId, String tenantId) {
+        return Uni.createFrom().item(() -> {
+            LOG.debug("Fetching relation schema: {} for tenant: {}", schemaId, tenantId);
+            // In production, fetch from database
+            return null;
+        });
+    }
+}
+
+@ApplicationScoped
+class DataValidator {
+    // Future: implement data validation logic
+}
+
+package tech.kayys.silat.executor.nlp.gliner.client;
+
+import io.smallrye.mutiny.Uni;
+import io.vertx.mutiny.core.Vertx;
+import io.vertx.mutiny.ext.web.client.WebClient;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.JsonArray;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tech.kayys.silat.executor.nlp.gliner.domain.*;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * ============================================================================
+ * GLiNER CLIENT SERVICE
+ * ============================================================================
+ * 
+ * Client for communicating with GLiNER Python bridge service.
+ * Supports REST and gRPC transports with automatic failover.
+ * 
+ * Features:
+ * - Connection pooling
+ * - Request batching
+ * - Retry logic with exponential backoff
+ * - Circuit breaker pattern
+ * - Health monitoring
+ * - Metrics collection
+ */
+@ApplicationScoped
+public class GLiNERClient {
+    
+    private static final Logger LOG = LoggerFactory.getLogger(GLiNERClient.class);
+    
+    @ConfigProperty(name = "silat.gliner.endpoint", defaultValue = "http://localhost:8000")
+    String glinerEndpoint;
+    
+    @ConfigProperty(name = "silat.gliner.timeout-seconds", defaultValue = "30")
+    int timeoutSeconds;
+    
+    @ConfigProperty(name = "silat.gliner.max-retries", defaultValue = "3")
+    int maxRetries;
+    
+    @ConfigProperty(name = "silat.gliner.circuit-breaker-threshold", defaultValue = "5")
+    int circuitBreakerThreshold;
+    
+    @Inject
+    Vertx vertx;
+    
+    private WebClient webClient;
+    private CircuitBreaker circuitBreaker;
+    private GLiNERClientMetrics metrics;
+    
+    @jakarta.annotation.PostConstruct
+    void init() {
+        this.webClient = WebClient.create(vertx);
+        this.circuitBreaker = new CircuitBreaker(circuitBreakerThreshold);
+        this.metrics = new GLiNERClientMetrics();
+        
+        LOG.info("GLiNER client initialized: endpoint={}, timeout={}s", 
+            glinerEndpoint, timeoutSeconds);
+    }
+    
+    // ==================== NER ====================
+    
+    /**
+     * Process NER request
+     */
+    public Uni<GLiNERNERResponse> processNER(GLiNERNERRequest request) {
+        return executeWithCircuitBreaker(() -> processNERInternal(request));
+    }
+    
+    private Uni<GLiNERNERResponse> processNERInternal(GLiNERNERRequest request) {
+        Instant startTime = Instant.now();
+        
+        JsonObject requestBody = new JsonObject()
+            .put("text", request.text())
+            .put("entityTypes", new JsonArray(request.entityTypes()))
+            .put("threshold", request.threshold())
+            .put("flatNer", request.flatNer())
+            .put("multiLabel", request.multiLabel());
+        
+        if (request.modelId() != null) {
+            requestBody.put("modelId", request.modelId());
+        }
+        
+        return webClient.post(glinerEndpoint + "/api/v1/ner")
+            .timeout(Duration.ofSeconds(timeoutSeconds).toMillis())
+            .sendJson(requestBody)
+            .map(response -> {
+                long duration = Duration.between(startTime, Instant.now()).toMillis();
+                metrics.recordNERRequest(duration);
+                
+                JsonObject body = response.bodyAsJsonObject();
+                List<ExtractedEntity> entities = parseEntities(body.getJsonArray("entities"));
+                
+                return new GLiNERNERResponse(
+                    entities,
+                    body.getLong("processingTimeMs", duration)
+                );
+            })
+            .onFailure().retry().withBackOff(Duration.ofMillis(100))
+                .atMost(maxRetries)
+            .onFailure().invoke(error -> {
+                LOG.error("NER request failed", error);
+                metrics.recordNERError();
+            });
+    }
+    
+    /**
+     * Process batch NER request
+     */
+    public Uni<List<GLiNERNERResponse>> processBatchNER(List<GLiNERNERRequest> requests) {
+        return Uni.join().all(
+            requests.stream()
+                .map(this::processNER)
+                .collect(Collectors.toList())
+        ).andFailFast();
+    }
+    
+    // ==================== CLASSIFICATION ====================
+    
+    /**
+     * Process classification request
+     */
+    public Uni<GLiNERClassificationResponse> processClassification(
+            GLiNERClassificationRequest request) {
+        return executeWithCircuitBreaker(() -> processClassificationInternal(request));
+    }
+    
+    private Uni<GLiNERClassificationResponse> processClassificationInternal(
+            GLiNERClassificationRequest request) {
+        Instant startTime = Instant.now();
+        
+        JsonObject requestBody = new JsonObject()
+            .put("text", request.text())
+            .put("labels", new JsonArray(request.labels()))
+            .put("threshold", request.threshold())
+            .put("topK", request.topK());
+        
+        if (request.modelId() != null) {
+            requestBody.put("modelId", request.modelId());
+        }
+        
+        return webClient.post(glinerEndpoint + "/api/v1/classification")
+            .timeout(Duration.ofSeconds(timeoutSeconds).toMillis())
+            .sendJson(requestBody)
+            .map(response -> {
+                long duration = Duration.between(startTime, Instant.now()).toMillis();
+                metrics.recordClassificationRequest(duration);
+                
+                JsonObject body = response.bodyAsJsonObject();
+                List<PredictedLabel> predictions = parsePredictions(
+                    body.getJsonArray("predictions")
+                );
+                
+                return new GLiNERClassificationResponse(
+                    predictions,
+                    body.getLong("processingTimeMs", duration)
+                );
+            })
+            .onFailure().retry().withBackOff(Duration.ofMillis(100))
+                .atMost(maxRetries)
+            .onFailure().invoke(error -> {
+                LOG.error("Classification request failed", error);
+                metrics.recordClassificationError();
+            });
+    }
+    
+    // ==================== EXTRACTION ====================
+    
+    /**
+     * Process structured extraction request
+     */
+    public Uni<GLiNERExtractionResponse> processExtraction(
+            GLiNERExtractionRequest request) {
+        return executeWithCircuitBreaker(() -> processExtractionInternal(request));
+    }
+    
+    private Uni<GLiNERExtractionResponse> processExtractionInternal(
+            GLiNERExtractionRequest request) {
+        Instant startTime = Instant.now();
+        
+        JsonObject schema = JsonObject.mapFrom(request.schema());
+        
+        JsonObject requestBody = new JsonObject()
+            .put("text", request.text())
+            .put("schema", schema)
+            .put("threshold", request.threshold());
+        
+        if (request.modelId() != null) {
+            requestBody.put("modelId", request.modelId());
+        }
+        
+        return webClient.post(glinerEndpoint + "/api/v1/extraction")
+            .timeout(Duration.ofSeconds(timeoutSeconds).toMillis())
+            .sendJson(requestBody)
+            .map(response -> {
+                long duration = Duration.between(startTime, Instant.now()).toMillis();
+                metrics.recordExtractionRequest(duration);
+                
+                JsonObject body = response.bodyAsJsonObject();
+                
+                return new GLiNERExtractionResponse(
+                    body.getJsonObject("extractedData").getMap(),
+                    parseExtractionErrors(body.getJsonArray("errors")),
+                    body.getBoolean("isComplete", true),
+                    body.getLong("processingTimeMs", duration)
+                );
+            })
+            .onFailure().retry().withBackOff(Duration.ofMillis(100))
+                .atMost(maxRetries)
+            .onFailure().invoke(error -> {
+                LOG.error("Extraction request failed", error);
+                metrics.recordExtractionError();
+            });
+    }
+    
+    // ==================== RELATION EXTRACTION ====================
+    
+    /**
+     * Process relation extraction request
+     */
+    public Uni<GLiNERRelationResponse> processRelation(
+            GLiNERRelationRequest request) {
+        return executeWithCircuitBreaker(() -> processRelationInternal(request));
+    }
+    
+    private Uni<GLiNERRelationResponse> processRelationInternal(
+            GLiNERRelationRequest request) {
+        Instant startTime = Instant.now();
+        
+        JsonObject requestBody = new JsonObject()
+            .put("text", request.text())
+            .put("entityTypes", new JsonArray(request.entityTypes()))
+            .put("relationTypes", new JsonArray(
+                request.relationTypes().stream()
+                    .map(JsonObject::mapFrom)
+                    .collect(Collectors.toList())
+            ))
+            .put("threshold", request.threshold())
+            .put("maxDistance", request.maxDistance());
+        
+        if (request.modelId() != null) {
+            requestBody.put("modelId", request.modelId());
+        }
+        
+        return webClient.post(glinerEndpoint + "/api/v1/relation")
+            .timeout(Duration.ofSeconds(timeoutSeconds).toMillis())
+            .sendJson(requestBody)
+            .map(response -> {
+                long duration = Duration.between(startTime, Instant.now()).toMillis();
+                metrics.recordRelationRequest(duration);
+                
+                JsonObject body = response.bodyAsJsonObject();
+                
+                List<ExtractedEntity> entities = parseEntities(
+                    body.getJsonArray("entities")
+                );
+                
+                List<ExtractedRelation> relations = parseRelations(
+                    body.getJsonArray("relations"),
+                    entities
+                );
+                
+                return new GLiNERRelationResponse(
+                    entities,
+                    relations,
+                    body.getLong("processingTimeMs", duration)
+                );
+            })
+            .onFailure().retry().withBackOff(Duration.ofMillis(100))
+                .atMost(maxRetries)
+            .onFailure().invoke(error -> {
+                LOG.error("Relation extraction request failed", error);
+                metrics.recordRelationError();
+            });
+    }
+    
+    // ==================== HEALTH CHECK ====================
+    
+    /**
+     * Check GLiNER service health
+     */
+    public Uni<GLiNERHealthResponse> checkHealth() {
+        return webClient.get(glinerEndpoint + "/health")
+            .timeout(Duration.ofSeconds(5).toMillis())
+            .send()
+            .map(response -> {
+                JsonObject body = response.bodyAsJsonObject();
+                return new GLiNERHealthResponse(
+                    body.getString("status"),
+                    body.getJsonObject("stats").getMap()
+                );
+            })
+            .onFailure().recoverWithItem(error -> 
+                new GLiNERHealthResponse("unhealthy", Map.of("error", error.getMessage()))
+            );
+    }
+    
+    // ==================== CIRCUIT BREAKER ====================
+    
+    private <T> Uni<T> executeWithCircuitBreaker(java.util.function.Supplier<Uni<T>> operation) {
+        if (circuitBreaker.isOpen()) {
+            return Uni.createFrom().failure(
+                new CircuitBreakerOpenException("GLiNER circuit breaker is open")
+            );
+        }
+        
+        return operation.get()
+            .invoke(result -> circuitBreaker.recordSuccess())
+            .onFailure().invoke(error -> circuitBreaker.recordFailure());
+    }
+    
+    // ==================== PARSING HELPERS ====================
+    
+    private List<ExtractedEntity> parseEntities(JsonArray entitiesArray) {
+        List<ExtractedEntity> entities = new ArrayList<>();
+        
+        if (entitiesArray != null) {
+            for (int i = 0; i < entitiesArray.size(); i++) {
+                JsonObject entityObj = entitiesArray.getJsonObject(i);
+                
+                List<ExtractedEntity> nested = List.of();
+                if (entityObj.containsKey("nestedEntities")) {
+                    nested = parseEntities(entityObj.getJsonArray("nestedEntities"));
+                }
+                
+                entities.add(new ExtractedEntity(
+                    entityObj.getString("text"),
+                    entityObj.getString("entityType"),
+                    entityObj.getInteger("startOffset"),
+                    entityObj.getInteger("endOffset"),
+                    entityObj.getDouble("confidence"),
+                    entityObj.getJsonObject("attributes", new JsonObject()).getMap()
+                        .entrySet().stream()
+                        .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> e.getValue().toString()
+                        )),
+                    nested
+                ));
+            }
+        }
+        
+        return entities;
+    }
+    
+    private List<PredictedLabel> parsePredictions(JsonArray predictionsArray) {
+        List<PredictedLabel> predictions = new ArrayList<>();
+        
+        if (predictionsArray != null) {
+            for (int i = 0; i < predictionsArray.size(); i++) {
+                JsonObject predObj = predictionsArray.getJsonObject(i);
+                
+                predictions.add(new PredictedLabel(
+                    predObj.getString("labelId"),
+                    predObj.getString("labelName"),
+                    predObj.getDouble("confidence"),
+                    predObj.getJsonObject("details", new JsonObject()).getMap()
+                ));
+            }
+        }
+        
+        return predictions;
+    }
+    
+    private List<ExtractionError> parseExtractionErrors(JsonArray errorsArray) {
+        List<ExtractionError> errors = new ArrayList<>();
+        
+        if (errorsArray != null) {
+            for (int i = 0; i < errorsArray.size(); i++) {
+                JsonObject errorObj = errorsArray.getJsonObject(i);
+                
+                errors.add(new ExtractionError(
+                    errorObj.getString("fieldName"),
+                    errorObj.getString("errorType"),
+                    errorObj.getString("message")
+                ));
+            }
+        }
+        
+        return errors;
+    }
+    
+    private List<ExtractedRelation> parseRelations(
+            JsonArray relationsArray,
+            List<ExtractedEntity> allEntities) {
+        
+        List<ExtractedRelation> relations = new ArrayList<>();
+        
+        if (relationsArray != null) {
+            for (int i = 0; i < relationsArray.size(); i++) {
+                JsonObject relObj = relationsArray.getJsonObject(i);
+                
+                // Find source and target entities by reconstructing
+                ExtractedEntity source = parseEntity(relObj.getJsonObject("sourceEntity"));
+                ExtractedEntity target = parseEntity(relObj.getJsonObject("targetEntity"));
+                
+                relations.add(new ExtractedRelation(
+                    relObj.getString("relationId"),
+                    relObj.getString("relationType"),
+                    source,
+                    target,
+                    relObj.getDouble("confidence"),
+                    relObj.getJsonObject("attributes", new JsonObject()).getMap()
+                        .entrySet().stream()
+                        .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> e.getValue().toString()
+                        ))
+                ));
+            }
+        }
+        
+        return relations;
+    }
+    
+    private ExtractedEntity parseEntity(JsonObject entityObj) {
+        return new ExtractedEntity(
+            entityObj.getString("text"),
+            entityObj.getString("entityType"),
+            entityObj.getInteger("startOffset"),
+            entityObj.getInteger("endOffset"),
+            entityObj.getDouble("confidence"),
+            Map.of(),
+            List.of()
+        );
+    }
+    
+    /**
+     * Get client metrics
+     */
+    public Map<String, Object> getMetrics() {
+        return metrics.getMetrics();
+    }
+}
+
+// ==================== REQUEST/RESPONSE MODELS ====================
+
+record GLiNERNERRequest(
+    String text,
+    List<String> entityTypes,
+    String modelId,
+    double threshold,
+    boolean flatNer,
+    boolean multiLabel
+) {
+    public static Builder builder() {
+        return new Builder();
+    }
+    
+    public static class Builder {
+        private String text;
+        private List<String> entityTypes = List.of();
+        private String modelId;
+        private double threshold = 0.5;
+        private boolean flatNer = true;
+        private boolean multiLabel = false;
+        
+        public Builder text(String text) {
+            this.text = text;
+            return this;
+        }
+        
+        public Builder entityTypes(List<String> entityTypes) {
+            this.entityTypes = entityTypes;
+            return this;
+        }
+        
+        public Builder modelId(String modelId) {
+            this.modelId = modelId;
+            return this;
+        }
+        
+        public Builder threshold(double threshold) {
+            this.threshold = threshold;
+            return this;
+        }
+        
+        public Builder flatNer(boolean flatNer) {
+            this.flatNer = flatNer;
+            return this;
+        }
+        
+        public Builder multiLabel(boolean multiLabel) {
+            this.multiLabel = multiLabel;
+            return this;
+        }
+        
+        public GLiNERNERRequest build() {
+            return new GLiNERNERRequest(text, entityTypes, modelId, threshold, flatNer, multiLabel);
+        }
+    }
+}
+
+record GLiNERNERResponse(
+    List<ExtractedEntity> entities,
+    long processingTimeMs
+) {}
+
+record GLiNERClassificationRequest(
+    String text,
+    List<String> labels,
+    String modelId,
+    double threshold,
+    int topK
+) {
+    public static Builder builder() {
+        return new Builder();
+    }
+    
+    public static class Builder {
+        private String text;
+        private List<String> labels = List.of();
+        private String modelId;
+        private double threshold = 0.3;
+        private int topK = 3;
+        
+        public Builder text(String text) {
+            this.text = text;
+            return this;
+        }
+        
+        public Builder labels(List<String> labels) {
+            this.labels = labels;
+            return this;
+        }
+        
+        public Builder modelId(String modelId) {
+            this.modelId = modelId;
+            return this;
+        }
+        
+        public Builder threshold(double threshold) {
+            this.threshold = threshold;
+            return this;
+        }
+        
+        public Builder topK(int topK) {
+            this.topK = topK;
+            return this;
+        }
+        
+        public GLiNERClassificationRequest build() {
+            return new GLiNERClassificationRequest(text, labels, modelId, threshold, topK);
+        }
+    }
+}
+
+record GLiNERClassificationResponse(
+    List<PredictedLabel> predictions,
+    long processingTimeMs
+) {}
+
+record GLiNERExtractionRequest(
+    String text,
+    ExtractionSchema schema,
+    String modelId,
+    double threshold
+) {}
+
+record GLiNERExtractionResponse(
+    Map<String, Object> extractedData,
+    List<ExtractionError> errors,
+    boolean isComplete,
+    long processingTimeMs
+) {}
+
+record GLiNERRelationRequest(
+    String text,
+    List<String> entityTypes,
+    List<RelationType> relationTypes,
+    String modelId,
+    double threshold,
+    int maxDistance
+) {}
+
+record GLiNERRelationResponse(
+    List<ExtractedEntity> entities,
+    List<ExtractedRelation> relations,
+    long processingTimeMs
+) {}
+
+record GLiNERHealthResponse(
+    String status,
+    Map<String, Object> stats
+) {}
+
+// ==================== CIRCUIT BREAKER ====================
+
+class CircuitBreaker {
+    private volatile boolean open = false;
+    private final int threshold;
+    private int failureCount = 0;
+    private Instant lastFailureTime;
+    
+    public CircuitBreaker(int threshold) {
+        this.threshold = threshold;
+    }
+    
+    public synchronized boolean isOpen() {
+        if (open && lastFailureTime != null) {
+            // Auto-reset after 60 seconds
+            if (Duration.between(lastFailureTime, Instant.now()).getSeconds() > 60) {
+                open = false;
+                failureCount = 0;
+            }
+        }
+        return open;
+    }
+    
+    public synchronized void recordSuccess() {
+        failureCount = 0;
+        open = false;
+    }
+    
+    public synchronized void recordFailure() {
+        failureCount++;
+        lastFailureTime = Instant.now();
+        if (failureCount >= threshold) {
+            open = true;
+        }
+    }
+}
+
+class CircuitBreakerOpenException extends RuntimeException {
+    public CircuitBreakerOpenException(String message) {
+        super(message);
+    }
+}
+
+// ==================== METRICS ====================
+
+class GLiNERClientMetrics {
+    private final Map<String, Long> requestCounts = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, Long> errorCounts = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, List<Long>> durations = new java.util.concurrent.ConcurrentHashMap<>();
+    
+    public void recordNERRequest(long durationMs) {
+        recordRequest("ner", durationMs);
+    }
+    
+    public void recordNERError() {
+        recordError("ner");
+    }
+    
+    public void recordClassificationRequest(long durationMs) {
+        recordRequest("classification", durationMs);
+    }
+    
+    public void recordClassificationError() {
+        recordError("classification");
+    }
+    
+    public void recordExtractionRequest(long durationMs) {
+        recordRequest("extraction", durationMs);
+    }
+    
+    public void recordExtractionError() {
+        recordError("extraction");
+    }
+    
+    public void recordRelationRequest(long durationMs) {
+        recordRequest("relation", durationMs);
+    }
+    
+    public void recordRelationError() {
+        recordError("relation");
+    }
+    
+    private void recordRequest(String type, long durationMs) {
+        requestCounts.merge(type, 1L, Long::sum);
+        durations.computeIfAbsent(type, k -> new java.util.concurrent.CopyOnWriteArrayList<>())
+            .add(durationMs);
+    }
+    
+    private void recordError(String type) {
+        errorCounts.merge(type, 1L, Long::sum);
+    }
+    
+    public Map<String, Object> getMetrics() {
+        Map<String, Object> metrics = new HashMap<>();
+        
+        requestCounts.forEach((type, count) -> {
+            long errors = errorCounts.getOrDefault(type, 0L);
+            List<Long> typeDurations = durations.getOrDefault(type, List.of());
+            long avgDuration = typeDurations.isEmpty() ? 0 :
+                typeDurations.stream().mapToLong(Long::longValue).sum() / typeDurations.size();
+            
+            metrics.put(type, Map.of(
+                "requests", count,
+                "errors", errors,
+                "avgDurationMs", avgDuration,
+                "errorRate", count > 0 ? (double) errors / count : 0.0
+            ));
+        });
+        
+        return metrics;
+    }
+}
+
+package tech.kayys.silat.executor.nlp.gliner.classification;
+
+import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tech.kayys.silat.core.domain.ErrorInfo;
+import tech.kayys.silat.core.engine.NodeExecutionResult;
+import tech.kayys.silat.core.engine.NodeExecutionTask;
+import tech.kayys.silat.executor.AbstractWorkflowExecutor;
+import tech.kayys.silat.executor.Executor;
+import tech.kayys.silat.executor.nlp.gliner.client.GLiNERClient;
+import tech.kayys.silat.executor.nlp.gliner.domain.*;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * ============================================================================
+ * GLiNER TEXT CLASSIFICATION EXECUTOR
+ * ============================================================================
+ * 
+ * Zero-shot text classification using GLiNER2.
+ * 
+ * Features:
+ * - Single-label and multi-label classification
+ * - Hierarchical classification support
+ * - Dynamic label sets from schema
+ * - Confidence-based filtering
+ * - Top-K predictions
+ * 
+ * Configuration Parameters:
+ * - labels: List of classification labels
+ * - schemaId: Optional schema ID for label configuration
+ * - mode: SINGLE_LABEL, MULTI_LABEL, or HIERARCHICAL
+ * - topK: Number of top predictions (default: 3)
+ * - confidenceThreshold: Minimum confidence (default: 0.3)
+ * - enableMultiLabel: Enable multi-label mode (default: false)
+ */
+@Executor(
+    executorType = "gliner-classification-executor",
+    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
+    maxConcurrentTasks = 100,
+    supportedNodeTypes = {"TASK", "DECISION"},
+    version = "1.0.0"
+)
+@ApplicationScoped
+public class GLiNERClassificationExecutor extends AbstractWorkflowExecutor {
+    
+    private static final Logger LOG = LoggerFactory.getLogger(GLiNERClassificationExecutor.class);
+    
+    @Inject
+    GLiNERClient glinerClient;
+    
+    @Inject
+    ClassificationSchemaRegistry schemaRegistry;
+    
+    @Inject
+    LabelResolver labelResolver;
+    
+    @Override
+    public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
+        Instant startTime = Instant.now();
+        
+        return parseConfiguration(task)
+            .flatMap(config -> resolveLabels(config, task))
+            .flatMap(config -> performClassification(config, task))
+            .map(result -> buildSuccessResult(task, result, startTime))
+            .onFailure().recoverWithItem(error -> 
+                buildErrorResult(task, error, startTime)
+            );
+    }
+    
+    /**
+     * Parse task configuration
+     */
+    private Uni<ClassificationConfig> parseConfiguration(NodeExecutionTask task) {
+        return Uni.createFrom().item(() -> {
+            Map<String, Object> context = task.context();
+            
+            // Extract input text
+            String inputText = extractInputText(context);
+            if (inputText == null || inputText.isBlank()) {
+                throw new IllegalArgumentException("Input text is required");
+            }
+            
+            // Extract labels
+            List<String> labels = extractLabels(context);
+            if (labels.isEmpty()) {
+                throw new IllegalArgumentException("Classification labels are required");
+            }
+            
+            // Extract configuration
+            String schemaId = (String) context.get("schemaId");
+            ClassificationMode mode = extractMode(context);
+            int topK = getIntConfig(context, "topK", 3);
+            double threshold = getDoubleConfig(context, "confidenceThreshold", 0.3);
+            boolean multiLabel = getBooleanConfig(context, "enableMultiLabel", false);
+            String modelId = (String) context.get("modelId");
+            
+            return new ClassificationConfig(
+                inputText,
+                labels,
+                schemaId,
+                mode,
+                topK,
+                threshold,
+                multiLabel,
+                modelId,
+                extractTenantId(task)
+            );
+        });
+    }
+    
+    /**
+     * Resolve labels from schema if provided
+     */
+    private Uni<ClassificationConfig> resolveLabels(
+            ClassificationConfig config,
+            NodeExecutionTask task) {
+        
+        if (config.schemaId() == null) {
+            return Uni.createFrom().item(config);
+        }
+        
+        return schemaRegistry.getSchema(config.schemaId(), config.tenantId())
+            .map(schema -> {
+                if (schema == null) {
+                    LOG.warn("Schema not found: {}, using provided labels", 
+                        config.schemaId());
+                    return config;
+                }
+                
+                // Resolve labels
+                List<String> resolvedLabels = labelResolver.resolve(
+                    config.labels(),
+                    schema.labels()
+                );
+                
+                return config.withLabels(resolvedLabels);
+            });
+    }
+    
+    /**
+     * Perform classification
+     */
+    private Uni<ClassificationResult> performClassification(
+            ClassificationConfig config,
+            NodeExecutionTask task) {
+        
+        LOG.info("Processing classification: run={}, labels={}, mode={}", 
+            task.runId().value(),
+            config.labels().size(),
+            config.mode());
+        
+        Instant classificationStartTime = Instant.now();
+        
+        // Build request
+        GLiNERClassificationRequest request = GLiNERClassificationRequest.builder()
+            .text(config.inputText())
+            .labels(config.labels())
+            .modelId(config.modelId())
+            .threshold(config.threshold())
+            .topK(config.topK())
+            .build();
+        
+        return glinerClient.processClassification(request)
+            .map(response -> {
+                long duration = Duration.between(classificationStartTime, Instant.now()).toMillis();
+                
+                LOG.info("Classification completed: {} predictions in {}ms", 
+                    response.predictions().size(), duration);
+                
+                // Filter predictions
+                List<PredictedLabel> filtered = filterPredictions(
+                    response.predictions(),
+                    config
+                );
+                
+                return new ClassificationResult(
+                    task.runId().value(),
+                    config.inputText(),
+                    filtered,
+                    Instant.now(),
+                    duration,
+                    buildMetadata(config, response)
+                );
+            });
+    }
+    
+    /**
+     * Filter and process predictions
+     */
+    private List<PredictedLabel> filterPredictions(
+            List<PredictedLabel> predictions,
+            ClassificationConfig config) {
+        
+        var stream = predictions.stream()
+            .filter(p -> p.confidence() >= config.threshold());
+        
+        // Apply mode-specific filtering
+        if (config.mode() == ClassificationMode.SINGLE_LABEL && !config.multiLabel()) {
+            // Return only top prediction
+            return stream
+                .sorted((a, b) -> Double.compare(b.confidence(), a.confidence()))
+                .limit(1)
+                .collect(Collectors.toList());
+        } else {
+            // Return top K
+            return stream
+                .sorted((a, b) -> Double.compare(b.confidence(), a.confidence()))
+                .limit(config.topK())
+                .collect(Collectors.toList());
+        }
+    }
+    
+    /**
+     * Build success result
+     */
+    private NodeExecutionResult buildSuccessResult(
+            NodeExecutionTask task,
+            ClassificationResult result,
+            Instant startTime) {
+        
+        long totalDuration = Duration.between(startTime, Instant.now()).toMillis();
+        
+        // Get top prediction
+        Optional<PredictedLabel> topPrediction = result.getTopPrediction();
+        
+        // Build output
+        Map<String, Object> output = new HashMap<>();
+        output.put("predictions", serializePredictions(result.predictions()));
+        output.put("totalPredictions", result.predictions().size());
+        output.put("inputText", result.inputText());
+        output.put("processingTimeMs", totalDuration);
+        output.put("metadata", result.metadata());
+        
+        // Add top prediction for easy access
+        topPrediction.ifPresent(top -> {
+            output.put("topLabel", top.labelName());
+            output.put("topConfidence", top.confidence());
+        });
+        
+        LOG.info("Classification execution completed: run={}, predictions={}, duration={}ms",
+            task.runId().value(),
+            result.predictions().size(),
+            totalDuration);
+        
+        return NodeExecutionResult.success(
+            task.runId(),
+            task.nodeId(),
+            task.attempt(),
+            output,
+            task.token()
+        );
+    }
+    
+    /**
+     * Build error result
+     */
+    private NodeExecutionResult buildErrorResult(
+            NodeExecutionTask task,
+            Throwable error,
+            Instant startTime) {
+        
+        long duration = Duration.between(startTime, Instant.now()).toMillis();
+        
+        LOG.error("Classification execution failed: run={}, duration={}ms, error={}",
+            task.runId().value(),
+            duration,
+            error.getMessage(),
+            error);
+        
+        return NodeExecutionResult.failure(
+            task.runId(),
+            task.nodeId(),
+            task.attempt(),
+            new ErrorInfo(
+                "CLASSIFICATION_FAILED",
+                "Failed to execute classification: " + error.getMessage(),
+                getStackTrace(error),
+                Map.of(
+                    "processingTimeMs", duration,
+                    "errorType", error.getClass().getSimpleName()
+                )
+            ),
+            task.token()
+        );
+    }
+    
+    // ==================== HELPER METHODS ====================
+    
+    private String extractInputText(Map<String, Object> context) {
+        Object text = context.get("inputText");
+        if (text == null) text = context.get("text");
+        return text != null ? text.toString() : null;
+    }
+    
+    @SuppressWarnings("unchecked")
+    private List<String> extractLabels(Map<String, Object> context) {
+        Object labels = context.get("labels");
+        if (labels instanceof List) {
+            return ((List<?>) labels).stream()
+                .map(Object::toString)
+                .collect(Collectors.toList());
+        } else if (labels instanceof String) {
+            return Arrays.asList(((String) labels).split(","))
+                .stream()
+                .map(String::trim)
+                .collect(Collectors.toList());
+        }
+        return List.of();
+    }
+    
+    private ClassificationMode extractMode(Map<String, Object> context) {
+        String mode = (String) context.getOrDefault("mode", "SINGLE_LABEL");
+        try {
+            return ClassificationMode.valueOf(mode);
+        } catch (IllegalArgumentException e) {
+            return ClassificationMode.SINGLE_LABEL;
+        }
+    }
+    
+    private int getIntConfig(Map<String, Object> config, String key, int defaultValue) {
+        Object value = config.get(key);
+        return value instanceof Number ? ((Number) value).intValue() : defaultValue;
+    }
+    
+    private double getDoubleConfig(Map<String, Object> config, String key, double defaultValue) {
+        Object value = config.get(key);
+        return value instanceof Number ? ((Number) value).doubleValue() : defaultValue;
+    }
+    
+    private boolean getBooleanConfig(Map<String, Object> config, String key, boolean defaultValue) {
+        Object value = config.get(key);
+        return value instanceof Boolean ? (Boolean) value : defaultValue;
+    }
+    
+    private String extractTenantId(NodeExecutionTask task) {
+        return task.context().getOrDefault("tenantId", "default").toString();
+    }
+    
+    private Map<String, Object> buildMetadata(
+            ClassificationConfig config,
+            GLiNERClassificationResponse response) {
+        
+        return Map.of(
+            "modelId", config.modelId() != null ? config.modelId() : "default",
+            "mode", config.mode().name(),
+            "topK", config.topK(),
+            "threshold", config.threshold()
+        );
+    }
+    
+    private List<Map<String, Object>> serializePredictions(List<PredictedLabel> predictions) {
+        return predictions.stream()
+            .map(pred -> Map.<String, Object>of(
+                "labelId", pred.labelId(),
+                "labelName", pred.labelName(),
+                "confidence", pred.confidence(),
+                "details", pred.details()
+            ))
+            .collect(Collectors.toList());
+    }
+    
+    private String getStackTrace(Throwable error) {
+        java.io.StringWriter sw = new java.io.StringWriter();
+        error.printStackTrace(new java.io.PrintWriter(sw));
+        return sw.toString();
+    }
+}
+
+// ==================== CONFIGURATION ====================
+
+record ClassificationConfig(
+    String inputText,
+    List<String> labels,
+    String schemaId,
+    ClassificationMode mode,
+    int topK,
+    double threshold,
+    boolean multiLabel,
+    String modelId,
+    String tenantId
+) {
+    public ClassificationConfig withLabels(List<String> newLabels) {
+        return new ClassificationConfig(
+            inputText,
+            newLabels,
+            schemaId,
+            mode,
+            topK,
+            threshold,
+            multiLabel,
+            modelId,
+            tenantId
+        );
+    }
+}
+
+// ==================== SCHEMA REGISTRY ====================
+
+@ApplicationScoped
+class ClassificationSchemaRegistry {
+    
+    private static final Logger LOG = LoggerFactory.getLogger(ClassificationSchemaRegistry.class);
+    
+    public Uni<ClassificationTaskDefinition> getSchema(String schemaId, String tenantId) {
+        return Uni.createFrom().item(() -> {
+            LOG.debug("Fetching classification schema: {} for tenant: {}", 
+                schemaId, tenantId);
+            // In production, fetch from database
+            return null;
+        });
+    }
+}
+
+// ==================== LABEL RESOLVER ====================
+
+@ApplicationScoped
+class LabelResolver {
+    
+    public List<String> resolve(
+            List<String> requestedLabels,
+            List<ClassLabel> schemaLabels) {
+        
+        if (schemaLabels == null || schemaLabels.isEmpty()) {
+            return requestedLabels;
+        }
+        
+        Map<String, ClassLabel> labelMap = schemaLabels.stream()
+            .collect(Collectors.toMap(
+                ClassLabel::labelName,
+                l -> l
+            ));
+        
+        Set<String> resolved = new LinkedHashSet<>();
+        for (String requested : requestedLabels) {
+            ClassLabel labelDef = labelMap.get(requested);
+            if (labelDef != null) {
+                resolved.add(labelDef.labelName());
+                // Add keywords as additional signals
+                resolved.addAll(labelDef.keywords());
+            } else {
+                resolved.add(requested);
+            }
+        }
+        
+        return new ArrayList<>(resolved);
+    }
+}
+
+package tech.kayys.silat.executor.nlp.gliner.ner;
+
+import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tech.kayys.silat.core.domain.*;
+import tech.kayys.silat.core.engine.NodeExecutionResult;
+import tech.kayys.silat.core.engine.NodeExecutionTask;
+import tech.kayys.silat.executor.AbstractWorkflowExecutor;
+import tech.kayys.silat.executor.Executor;
+import tech.kayys.silat.executor.nlp.gliner.client.GLiNERClient;
+import tech.kayys.silat.executor.nlp.gliner.domain.*;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * ============================================================================
+ * GLiNER NAMED ENTITY RECOGNITION EXECUTOR
+ * ============================================================================
+ * 
+ * Production-ready executor for Named Entity Recognition using GLiNER2.
+ * 
+ * Features:
+ * - Multi-tenant entity type management
+ * - Dynamic schema-based extraction
+ * - Confidence filtering and post-processing
+ * - Nested entity support
+ * - Batch processing optimization
+ * 
+ * Configuration Parameters:
+ * - entityTypes: List of entity types to extract
+ * - schemaId: Optional schema ID for tenant-specific configuration
+ * - confidenceThreshold: Minimum confidence (default: 0.5)
+ * - enableNestedEntities: Extract nested entities (default: false)
+ * - extractionMode: FLAT, NESTED, or HIERARCHICAL
+ * - modelId: GLiNER model identifier
+ * - postProcessing: Enable post-processing rules
+ */
+@Executor(
+    executorType = "gliner-ner-executor",
+    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
+    maxConcurrentTasks = 50,
+    supportedNodeTypes = {"TASK"},
+    version = "1.0.0"
+)
+@ApplicationScoped
+public class GLiNERNERExecutor extends AbstractWorkflowExecutor {
+    
+    private static final Logger LOG = LoggerFactory.getLogger(GLiNERNERExecutor.class);
+    
+    @Inject
+    GLiNERClient glinerClient;
+    
+    @Inject
+    NERSchemaRegistry schemaRegistry;
+    
+    @Inject
+    NERPostProcessor postProcessor;
+    
+    @Inject
+    EntityTypeResolver entityTypeResolver;
+    
+    @Override
+    public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
+        Instant startTime = Instant.now();
+        
+        return parseTaskConfiguration(task)
+            .flatMap(config -> resolveEntityTypes(config, task))
+            .flatMap(config -> performNER(config, task))
+            .flatMap(result -> applyPostProcessing(result, task))
+            .map(result -> buildSuccessResult(task, result, startTime))
+            .onFailure().recoverWithItem(error -> 
+                buildErrorResult(task, error, startTime)
+            );
+    }
+    
+    /**
+     * Parse task configuration from context
+     */
+    private Uni<NERTaskConfig> parseTaskConfiguration(NodeExecutionTask task) {
+        return Uni.createFrom().item(() -> {
+            Map<String, Object> config = task.context();
+            
+            // Extract text to process
+            String inputText = extractInputText(config);
+            if (inputText == null || inputText.isBlank()) {
+                throw new IllegalArgumentException("Input text is required");
+            }
+            
+            // Extract entity types
+            List<String> entityTypes = extractEntityTypes(config);
+            if (entityTypes.isEmpty()) {
+                throw new IllegalArgumentException("Entity types are required");
+            }
+            
+            // Extract configuration parameters
+            String schemaId = (String) config.get("schemaId");
+            double confidenceThreshold = getDoubleConfig(config, "confidenceThreshold", 0.5);
+            boolean enableNestedEntities = getBooleanConfig(config, "enableNestedEntities", false);
+            String extractionMode = (String) config.getOrDefault("extractionMode", "FLAT");
+            String modelId = (String) config.get("modelId");
+            boolean enablePostProcessing = getBooleanConfig(config, "postProcessing", true);
+            int maxEntities = getIntConfig(config, "maxEntities", 1000);
+            
+            return new NERTaskConfig(
+                inputText,
+                entityTypes,
+                schemaId,
+                confidenceThreshold,
+                enableNestedEntities,
+                NERExtractionMode.valueOf(extractionMode),
+                modelId,
+                enablePostProcessing,
+                maxEntities,
+                task.runId().value(),
+                extractTenantId(task)
+            );
+        });
+    }
+    
+    /**
+     * Resolve entity types from schema if provided
+     */
+    private Uni<NERTaskConfig> resolveEntityTypes(
+            NERTaskConfig config,
+            NodeExecutionTask task) {
+        
+        if (config.schemaId() == null) {
+            return Uni.createFrom().item(config);
+        }
+        
+        return schemaRegistry.getSchema(config.schemaId(), config.tenantId())
+            .map(schema -> {
+                if (schema == null) {
+                    LOG.warn("Schema not found: {}, using default entity types", 
+                        config.schemaId());
+                    return config;
+                }
+                
+                // Merge entity types from schema
+                List<String> resolvedTypes = entityTypeResolver.resolve(
+                    config.entityTypes(),
+                    schema.entityTypes()
+                );
+                
+                return config.withEntityTypes(resolvedTypes);
+            });
+    }
+    
+    /**
+     * Perform NER using GLiNER client
+     */
+    private Uni<NERProcessingResult> performNER(
+            NERTaskConfig config,
+            NodeExecutionTask task) {
+        
+        LOG.info("Processing NER: run={}, entityTypes={}, mode={}", 
+            task.runId().value(),
+            config.entityTypes().size(),
+            config.extractionMode());
+        
+        Instant nerStartTime = Instant.now();
+        
+        // Build GLiNER request
+        GLiNERNERRequest request = GLiNERNERRequest.builder()
+            .text(config.inputText())
+            .entityTypes(config.entityTypes())
+            .modelId(config.modelId())
+            .threshold(config.confidenceThreshold())
+            .flatNer(config.extractionMode() == NERExtractionMode.FLAT)
+            .multiLabel(false)
+            .build();
+        
+        return glinerClient.processNER(request)
+            .map(response -> {
+                long nerDuration = Duration.between(nerStartTime, Instant.now()).toMillis();
+                
+                LOG.info("NER completed: {} entities extracted in {}ms", 
+                    response.entities().size(), nerDuration);
+                
+                // Filter by confidence threshold
+                List<ExtractedEntity> filteredEntities = response.entities().stream()
+                    .filter(e -> e.confidence() >= config.confidenceThreshold())
+                    .limit(config.maxEntities())
+                    .collect(Collectors.toList());
+                
+                return new NERProcessingResult(
+                    filteredEntities,
+                    config.inputText(),
+                    nerDuration,
+                    buildMetadata(config, response)
+                );
+            });
+    }
+    
+    /**
+     * Apply post-processing rules
+     */
+    private Uni<NERProcessingResult> applyPostProcessing(
+            NERProcessingResult result,
+            NodeExecutionTask task) {
+        
+        Map<String, Object> config = task.context();
+        boolean enablePostProcessing = getBooleanConfig(config, "postProcessing", true);
+        
+        if (!enablePostProcessing) {
+            return Uni.createFrom().item(result);
+        }
+        
+        return Uni.createFrom().item(() -> {
+            List<ExtractedEntity> processed = postProcessor.process(
+                result.entities(),
+                result.inputText()
+            );
+            
+            return result.withEntities(processed);
+        });
+    }
+    
+    /**
+     * Build success result
+     */
+    private NodeExecutionResult buildSuccessResult(
+            NodeExecutionTask task,
+            NERProcessingResult result,
+            Instant startTime) {
+        
+        long totalDuration = Duration.between(startTime, Instant.now()).toMillis();
+        
+        // Group entities by type
+        Map<String, Long> entityCounts = result.entities().stream()
+            .collect(Collectors.groupingBy(
+                ExtractedEntity::entityType,
+                Collectors.counting()
+            ));
+        
+        // Build output
+        Map<String, Object> output = new HashMap<>();
+        output.put("entities", serializeEntities(result.entities()));
+        output.put("totalEntities", result.entities().size());
+        output.put("entityCounts", entityCounts);
+        output.put("inputText", result.inputText());
+        output.put("processingTimeMs", totalDuration);
+        output.put("nerTimeMs", result.nerDurationMs());
+        output.put("metadata", result.metadata());
+        
+        LOG.info("NER execution completed: run={}, entities={}, duration={}ms",
+            task.runId().value(),
+            result.entities().size(),
+            totalDuration);
+        
+        return NodeExecutionResult.success(
+            task.runId(),
+            task.nodeId(),
+            task.attempt(),
+            output,
+            task.token()
+        );
+    }
+    
+    /**
+     * Build error result
+     */
+    private NodeExecutionResult buildErrorResult(
+            NodeExecutionTask task,
+            Throwable error,
+            Instant startTime) {
+        
+        long duration = Duration.between(startTime, Instant.now()).toMillis();
+        
+        LOG.error("NER execution failed: run={}, duration={}ms, error={}",
+            task.runId().value(),
+            duration,
+            error.getMessage(),
+            error);
+        
+        return NodeExecutionResult.failure(
+            task.runId(),
+            task.nodeId(),
+            task.attempt(),
+            new ErrorInfo(
+                "NER_EXECUTION_FAILED",
+                "Failed to execute NER: " + error.getMessage(),
+                getStackTrace(error),
+                Map.of(
+                    "processingTimeMs", duration,
+                    "errorType", error.getClass().getSimpleName()
+                )
+            ),
+            task.token()
+        );
+    }
+    
+    // ==================== HELPER METHODS ====================
+    
+    private String extractInputText(Map<String, Object> config) {
+        Object text = config.get("inputText");
+        if (text == null) {
+            text = config.get("text");
+        }
+        return text != null ? text.toString() : null;
+    }
+    
+    @SuppressWarnings("unchecked")
+    private List<String> extractEntityTypes(Map<String, Object> config) {
+        Object types = config.get("entityTypes");
+        if (types instanceof List) {
+            return ((List<?>) types).stream()
+                .map(Object::toString)
+                .collect(Collectors.toList());
+        } else if (types instanceof String) {
+            return Arrays.asList(((String) types).split(","))
+                .stream()
+                .map(String::trim)
+                .collect(Collectors.toList());
+        }
+        return List.of();
+    }
+    
+    private double getDoubleConfig(Map<String, Object> config, String key, double defaultValue) {
+        Object value = config.get(key);
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+        return defaultValue;
+    }
+    
+    private boolean getBooleanConfig(Map<String, Object> config, String key, boolean defaultValue) {
+        Object value = config.get(key);
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+        return defaultValue;
+    }
+    
+    private int getIntConfig(Map<String, Object> config, String key, int defaultValue) {
+        Object value = config.get(key);
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        return defaultValue;
+    }
+    
+    private String extractTenantId(NodeExecutionTask task) {
+        return task.context().getOrDefault("tenantId", "default").toString();
+    }
+    
+    private Map<String, Object> buildMetadata(
+            NERTaskConfig config,
+            GLiNERNERResponse response) {
+        
+        return Map.of(
+            "modelId", config.modelId() != null ? config.modelId() : "default",
+            "extractionMode", config.extractionMode().name(),
+            "confidenceThreshold", config.confidenceThreshold(),
+            "schemaId", config.schemaId() != null ? config.schemaId() : "none"
+        );
+    }
+    
+    private List<Map<String, Object>> serializeEntities(List<ExtractedEntity> entities) {
+        return entities.stream()
+            .map(entity -> Map.<String, Object>of(
+                "text", entity.text(),
+                "entityType", entity.entityType(),
+                "startOffset", entity.startOffset(),
+                "endOffset", entity.endOffset(),
+                "confidence", entity.confidence(),
+                "attributes", entity.attributes(),
+                "nestedEntities", serializeEntities(entity.nestedEntities())
+            ))
+            .collect(Collectors.toList());
+    }
+    
+    private String getStackTrace(Throwable error) {
+        java.io.StringWriter sw = new java.io.StringWriter();
+        error.printStackTrace(new java.io.PrintWriter(sw));
+        return sw.toString();
+    }
+}
+
+// ==================== CONFIGURATION RECORD ====================
+
+/**
+ * NER task configuration
+ */
+record NERTaskConfig(
+    String inputText,
+    List<String> entityTypes,
+    String schemaId,
+    double confidenceThreshold,
+    boolean enableNestedEntities,
+    NERExtractionMode extractionMode,
+    String modelId,
+    boolean enablePostProcessing,
+    int maxEntities,
+    String runId,
+    String tenantId
+) {
+    public NERTaskConfig withEntityTypes(List<String> newTypes) {
+        return new NERTaskConfig(
+            inputText,
+            newTypes,
+            schemaId,
+            confidenceThreshold,
+            enableNestedEntities,
+            extractionMode,
+            modelId,
+            enablePostProcessing,
+            maxEntities,
+            runId,
+            tenantId
+        );
+    }
+}
+
+/**
+ * NER processing result
+ */
+record NERProcessingResult(
+    List<ExtractedEntity> entities,
+    String inputText,
+    long nerDurationMs,
+    Map<String, Object> metadata
+) {
+    public NERProcessingResult withEntities(List<ExtractedEntity> newEntities) {
+        return new NERProcessingResult(
+            newEntities,
+            inputText,
+            nerDurationMs,
+            metadata
+        );
+    }
+}
+
+// ==================== SCHEMA REGISTRY ====================
+
+/**
+ * Registry for NER schemas
+ */
+@ApplicationScoped
+class NERSchemaRegistry {
+    
+    private static final Logger LOG = LoggerFactory.getLogger(NERSchemaRegistry.class);
+    
+    @Inject
+    io.quarkus.cache.Cache cache;
+    
+    public Uni<NERTaskDefinition> getSchema(String schemaId, String tenantId) {
+        String cacheKey = tenantId + ":" + schemaId;
+        
+        // Try cache first
+        return Uni.createFrom().item(() -> {
+            // In production, fetch from database
+            // For now, return null to use default configuration
+            LOG.debug("Fetching schema: {} for tenant: {}", schemaId, tenantId);
+            return null;
+        });
+    }
+}
+
+// ==================== ENTITY TYPE RESOLVER ====================
+
+/**
+ * Resolves and merges entity types from multiple sources
+ */
+@ApplicationScoped
+class EntityTypeResolver {
+    
+    public List<String> resolve(
+            List<String> requestedTypes,
+            List<EntityTypeDefinition> schemaTypes) {
+        
+        if (schemaTypes == null || schemaTypes.isEmpty()) {
+            return requestedTypes;
+        }
+        
+        // Create a map of schema types
+        Map<String, EntityTypeDefinition> typeMap = schemaTypes.stream()
+            .collect(Collectors.toMap(
+                EntityTypeDefinition::entityType,
+                t -> t
+            ));
+        
+        // Resolve each requested type
+        Set<String> resolved = new LinkedHashSet<>();
+        for (String requestedType : requestedTypes) {
+            EntityTypeDefinition typeDef = typeMap.get(requestedType);
+            if (typeDef != null) {
+                // Add the type
+                resolved.add(typeDef.entityType());
+                
+                // Add aliases
+                resolved.addAll(typeDef.aliases());
+            } else {
+                // Add as-is if not in schema
+                resolved.add(requestedType);
+            }
+        }
+        
+        return new ArrayList<>(resolved);
+    }
+}
+
+// ==================== POST PROCESSOR ====================
+
+/**
+ * Post-processes extracted entities
+ */
+@ApplicationScoped
+class NERPostProcessor {
+    
+    private static final Logger LOG = LoggerFactory.getLogger(NERPostProcessor.class);
+    
+    public List<ExtractedEntity> process(
+            List<ExtractedEntity> entities,
+            String inputText) {
+        
+        List<ExtractedEntity> processed = new ArrayList<>(entities);
+        
+        // Remove duplicates
+        processed = removeDuplicates(processed);
+        
+        // Resolve overlaps
+        processed = resolveOverlaps(processed);
+        
+        // Sort by position
+        processed.sort(Comparator.comparingInt(ExtractedEntity::startOffset));
+        
+        LOG.debug("Post-processing: {} -> {} entities", 
+            entities.size(), processed.size());
+        
+        return processed;
+    }
+    
+    private List<ExtractedEntity> removeDuplicates(List<ExtractedEntity> entities) {
+        Map<String, ExtractedEntity> uniqueMap = new LinkedHashMap<>();
+        
+        for (ExtractedEntity entity : entities) {
+            String key = entity.startOffset() + ":" + entity.endOffset() + ":" + entity.entityType();
+            
+            if (!uniqueMap.containsKey(key) || 
+                entity.confidence() > uniqueMap.get(key).confidence()) {
+                uniqueMap.put(key, entity);
+            }
+        }
+        
+        return new ArrayList<>(uniqueMap.values());
+    }
+    
+    private List<ExtractedEntity> resolveOverlaps(List<ExtractedEntity> entities) {
+        List<ExtractedEntity> resolved = new ArrayList<>();
+        
+        for (ExtractedEntity entity : entities) {
+            boolean overlaps = false;
+            
+            for (ExtractedEntity existing : resolved) {
+                if (hasOverlap(entity, existing)) {
+                    overlaps = true;
+                    // Keep entity with higher confidence
+                    if (entity.confidence() > existing.confidence()) {
+                        resolved.remove(existing);
+                        resolved.add(entity);
+                    }
+                    break;
+                }
+            }
+            
+            if (!overlaps) {
+                resolved.add(entity);
+            }
+        }
+        
+        return resolved;
+    }
+    
+    private boolean hasOverlap(ExtractedEntity e1, ExtractedEntity e2) {
+        return !(e1.endOffset() <= e2.startOffset() || 
+                 e2.endOffset() <= e1.startOffset());
+    }
+}
+
+package tech.kayys.silat.executor.nlp.gliner.domain;
+
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+import java.time.Instant;
+import java.util.*;
+
+/**
+ * ============================================================================
+ * GLiNER2 NLP DOMAIN MODEL
+ * ============================================================================
+ * 
+ * Domain model for GLiNER2-based NLP tasks supporting:
+ * - Named Entity Recognition (NER)
+ * - Text Classification
+ * - Structured Data Extraction
+ * - Relation Extraction
+ * 
+ * Architecture:
+ * - Use-case agnostic schema system
+ * - Polymorphic task definitions
+ * - Versioned model support
+ * - Multi-tenant entity types
+ */
+
+// ==================== TASK DEFINITION BASE ====================
+
+/**
+ * Base interface for all GLiNER2 task definitions
+ */
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.PROPERTY,
+    property = "taskType"
+)
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = NERTaskDefinition.class, name = "NER"),
+    @JsonSubTypes.Type(value = ClassificationTaskDefinition.class, name = "CLASSIFICATION"),
+    @JsonSubTypes.Type(value = ExtractionTaskDefinition.class, name = "EXTRACTION"),
+    @JsonSubTypes.Type(value = RelationTaskDefinition.class, name = "RELATION")
+})
+public sealed interface GLiNERTaskDefinition permits 
+    NERTaskDefinition, 
+    ClassificationTaskDefinition, 
+    ExtractionTaskDefinition, 
+    RelationTaskDefinition {
+    
+    String taskId();
+    GLiNERTaskType taskType();
+    String schemaId();
+    GLiNERModelConfig modelConfig();
+    Map<String, Object> parameters();
+    
+    /**
+     * Validate task definition
+     */
+    ValidationResult validate();
+}
+
+/**
+ * Task types supported by GLiNER2
+ */
+public enum GLiNERTaskType {
+    NER,                // Named Entity Recognition
+    CLASSIFICATION,     // Text Classification
+    EXTRACTION,         // Structured Data Extraction
+    RELATION           // Relation Extraction
+}
+
+// ==================== NAMED ENTITY RECOGNITION ====================
+
+/**
+ * NER task definition with dynamic entity types
+ */
+public record NERTaskDefinition(
+    String taskId,
+    String schemaId,
+    GLiNERModelConfig modelConfig,
+    List<EntityTypeDefinition> entityTypes,
+    NERExtractionMode extractionMode,
+    boolean enableNestedEntities,
+    double confidenceThreshold,
+    Map<String, Object> parameters
+) implements GLiNERTaskDefinition {
+    
+    @Override
+    public GLiNERTaskType taskType() {
+        return GLiNERTaskType.NER;
+    }
+    
+    @Override
+    public ValidationResult validate() {
+        List<String> errors = new ArrayList<>();
+        
+        if (entityTypes == null || entityTypes.isEmpty()) {
+            errors.add("Entity types cannot be empty");
+        }
+        
+        if (confidenceThreshold < 0 || confidenceThreshold > 1) {
+            errors.add("Confidence threshold must be between 0 and 1");
+        }
+        
+        if (modelConfig == null) {
+            errors.add("Model configuration is required");
+        }
+        
+        return errors.isEmpty() ? 
+            ValidationResult.valid() : 
+            ValidationResult.invalid(errors);
+    }
+}
+
+/**
+ * Entity type definition with hierarchical support
+ */
+public record EntityTypeDefinition(
+    String entityType,
+    String displayName,
+    String description,
+    List<String> aliases,
+    List<String> examples,
+    EntityTypeCategory category,
+    Map<String, String> attributes,
+    String parentType,  // For hierarchical entity types
+    double minConfidence
+) {
+    public EntityTypeDefinition {
+        aliases = aliases != null ? aliases : List.of();
+        examples = examples != null ? examples : List.of();
+        attributes = attributes != null ? attributes : Map.of();
+    }
+}
+
+/**
+ * Entity type categories for organization
+ */
+public enum EntityTypeCategory {
+    PERSON,
+    ORGANIZATION,
+    LOCATION,
+    DATE_TIME,
+    NUMERIC,
+    PRODUCT,
+    EVENT,
+    CUSTOM
+}
+
+/**
+ * NER extraction modes
+ */
+public enum NERExtractionMode {
+    FLAT,           // Extract flat entities
+    NESTED,         // Extract nested entities
+    HIERARCHICAL    // Extract with hierarchy preservation
+}
+
+// ==================== TEXT CLASSIFICATION ====================
+
+/**
+ * Classification task definition
+ */
+public record ClassificationTaskDefinition(
+    String taskId,
+    String schemaId,
+    GLiNERModelConfig modelConfig,
+    List<ClassLabel> labels,
+    ClassificationMode mode,
+    int topK,
+    double confidenceThreshold,
+    boolean enableMultiLabel,
+    Map<String, Object> parameters
+) implements GLiNERTaskDefinition {
+    
+    @Override
+    public GLiNERTaskType taskType() {
+        return GLiNERTaskType.CLASSIFICATION;
+    }
+    
+    @Override
+    public ValidationResult validate() {
+        List<String> errors = new ArrayList<>();
+        
+        if (labels == null || labels.isEmpty()) {
+            errors.add("Classification labels cannot be empty");
+        }
+        
+        if (topK < 1) {
+            errors.add("topK must be at least 1");
+        }
+        
+        return errors.isEmpty() ? 
+            ValidationResult.valid() : 
+            ValidationResult.invalid(errors);
+    }
+}
+
+/**
+ * Classification label definition
+ */
+public record ClassLabel(
+    String labelId,
+    String labelName,
+    String description,
+    List<String> keywords,
+    List<String> examples,
+    String category,
+    Map<String, String> metadata
+) {}
+
+/**
+ * Classification modes
+ */
+public enum ClassificationMode {
+    SINGLE_LABEL,       // Single class per text
+    MULTI_LABEL,        // Multiple classes per text
+    HIERARCHICAL        // Hierarchical classification
+}
+
+// ==================== STRUCTURED DATA EXTRACTION ====================
+
+/**
+ * Structured data extraction task definition
+ */
+public record ExtractionTaskDefinition(
+    String taskId,
+    String schemaId,
+    GLiNERModelConfig modelConfig,
+    ExtractionSchema schema,
+    ExtractionStrategy strategy,
+    boolean strictMode,
+    Map<String, Object> parameters
+) implements GLiNERTaskDefinition {
+    
+    @Override
+    public GLiNERTaskType taskType() {
+        return GLiNERTaskType.EXTRACTION;
+    }
+    
+    @Override
+    public ValidationResult validate() {
+        List<String> errors = new ArrayList<>();
+        
+        if (schema == null) {
+            errors.add("Extraction schema is required");
+        } else {
+            ValidationResult schemaValidation = schema.validate();
+            if (!schemaValidation.isValid()) {
+                errors.addAll(schemaValidation.errors());
+            }
+        }
+        
+        return errors.isEmpty() ? 
+            ValidationResult.valid() : 
+            ValidationResult.invalid(errors);
+    }
+}
+
+/**
+ * Extraction schema defining the structure to extract
+ */
+public record ExtractionSchema(
+    String schemaName,
+    String version,
+    List<FieldDefinition> fields,
+    List<SchemaConstraint> constraints,
+    Map<String, Object> metadata
+) {
+    
+    public ValidationResult validate() {
+        List<String> errors = new ArrayList<>();
+        
+        if (fields == null || fields.isEmpty()) {
+            errors.add("Schema must have at least one field");
+        }
+        
+        // Check for duplicate field names
+        if (fields != null) {
+            Set<String> fieldNames = new HashSet<>();
+            for (FieldDefinition field : fields) {
+                if (!fieldNames.add(field.fieldName())) {
+                    errors.add("Duplicate field name: " + field.fieldName());
+                }
+            }
+        }
+        
+        return errors.isEmpty() ? 
+            ValidationResult.valid() : 
+            ValidationResult.invalid(errors);
+    }
+}
+
+/**
+ * Field definition in extraction schema
+ */
+public record FieldDefinition(
+    String fieldName,
+    FieldType fieldType,
+    boolean required,
+    boolean multiple,  // Can extract multiple values
+    String description,
+    List<String> expectedFormats,
+    List<String> validationPatterns,
+    Object defaultValue,
+    Map<String, String> metadata
+) {}
+
+/**
+ * Field types for extraction
+ */
+public enum FieldType {
+    STRING,
+    NUMBER,
+    DATE,
+    BOOLEAN,
+    ENTITY,      // Reference to NER entity
+    OBJECT,      // Nested object
+    ARRAY        // Array of values
+}
+
+/**
+ * Schema-level constraints
+ */
+public record SchemaConstraint(
+    String constraintType,
+    List<String> fields,
+    String expression,
+    String errorMessage
+) {}
+
+/**
+ * Extraction strategies
+ */
+public enum ExtractionStrategy {
+    TEMPLATE_BASED,     // Use predefined templates
+    CONTEXT_AWARE,      // Context-aware extraction
+    HYBRID              // Combination of strategies
+}
+
+// ==================== RELATION EXTRACTION ====================
+
+/**
+ * Relation extraction task definition
+ */
+public record RelationTaskDefinition(
+    String taskId,
+    String schemaId,
+    GLiNERModelConfig modelConfig,
+    List<RelationType> relationTypes,
+    List<EntityTypeDefinition> entityTypes,
+    RelationExtractionMode mode,
+    double confidenceThreshold,
+    int maxDistance,  // Max token distance between entities
+    Map<String, Object> parameters
+) implements GLiNERTaskDefinition {
+    
+    @Override
+    public GLiNERTaskType taskType() {
+        return GLiNERTaskType.RELATION;
+    }
+    
+    @Override
+    public ValidationResult validate() {
+        List<String> errors = new ArrayList<>();
+        
+        if (relationTypes == null || relationTypes.isEmpty()) {
+            errors.add("Relation types cannot be empty");
+        }
+        
+        if (entityTypes == null || entityTypes.isEmpty()) {
+            errors.add("Entity types required for relation extraction");
+        }
+        
+        return errors.isEmpty() ? 
+            ValidationResult.valid() : 
+            ValidationResult.invalid(errors);
+    }
+}
+
+/**
+ * Relation type definition
+ */
+public record RelationType(
+    String relationId,
+    String relationName,
+    String description,
+    String sourceEntityType,
+    String targetEntityType,
+    boolean bidirectional,
+    List<String> triggers,  // Trigger words/patterns
+    Map<String, String> attributes
+) {}
+
+/**
+ * Relation extraction modes
+ */
+public enum RelationExtractionMode {
+    PAIRWISE,       // Extract relations between entity pairs
+    N_ARY,          // Extract n-ary relations
+    GRAPH           // Build complete relation graph
+}
+
+// ==================== MODEL CONFIGURATION ====================
+
+/**
+ * GLiNER model configuration
+ */
+public record GLiNERModelConfig(
+    String modelId,
+    String modelVersion,
+    ModelSource modelSource,
+    String modelPath,
+    DeviceConfig deviceConfig,
+    InferenceConfig inferenceConfig,
+    Map<String, Object> customConfig
+) {
+    
+    public GLiNERModelConfig {
+        if (deviceConfig == null) {
+            deviceConfig = DeviceConfig.cpu();
+        }
+        if (inferenceConfig == null) {
+            inferenceConfig = InferenceConfig.defaults();
+        }
+        customConfig = customConfig != null ? customConfig : Map.of();
+    }
+}
+
+/**
+ * Model source types
+ */
+public enum ModelSource {
+    HUGGINGFACE,    // HuggingFace model hub
+    LOCAL_PATH,     // Local file system
+    S3,             // S3 bucket
+    CUSTOM_REGISTRY // Custom model registry
+}
+
+/**
+ * Device configuration for inference
+ */
+public record DeviceConfig(
+    DeviceType deviceType,
+    int deviceId,
+    int maxMemoryMB,
+    boolean fp16Enabled
+) {
+    public static DeviceConfig cpu() {
+        return new DeviceConfig(DeviceType.CPU, -1, 4096, false);
+    }
+    
+    public static DeviceConfig cuda(int deviceId) {
+        return new DeviceConfig(DeviceType.CUDA, deviceId, 8192, true);
+    }
+}
+
+/**
+ * Device types
+ */
+public enum DeviceType {
+    CPU,
+    CUDA,
+    MPS,  // Apple Metal
+    ROCM  // AMD ROCm
+}
+
+/**
+ * Inference configuration
+ */
+public record InferenceConfig(
+    int batchSize,
+    int maxLength,
+    boolean enableCaching,
+    int numWorkers,
+    boolean lowMemoryMode,
+    Map<String, Object> optimizations
+) {
+    public static InferenceConfig defaults() {
+        return new InferenceConfig(
+            8,      // batchSize
+            512,    // maxLength
+            true,   // enableCaching
+            4,      // numWorkers
+            false,  // lowMemoryMode
+            Map.of()
+        );
+    }
+}
+
+// ==================== RESULTS ====================
+
+/**
+ * Base result interface
+ */
+public sealed interface GLiNERResult permits 
+    NERResult, 
+    ClassificationResult, 
+    ExtractionResult, 
+    RelationResult {
+    
+    String taskId();
+    String inputText();
+    Instant processedAt();
+    long processingTimeMs();
+    Map<String, Object> metadata();
+}
+
+/**
+ * NER result with extracted entities
+ */
+public record NERResult(
+    String taskId,
+    String inputText,
+    List<ExtractedEntity> entities,
+    Instant processedAt,
+    long processingTimeMs,
+    Map<String, Object> metadata
+) implements GLiNERResult {
+    
+    public List<ExtractedEntity> getEntitiesByType(String entityType) {
+        return entities.stream()
+            .filter(e -> e.entityType().equals(entityType))
+            .toList();
+    }
+    
+    public int getEntityCount() {
+        return entities.size();
+    }
+}
+
+/**
+ * Extracted entity with span information
+ */
+public record ExtractedEntity(
+    String text,
+    String entityType,
+    int startOffset,
+    int endOffset,
+    double confidence,
+    Map<String, String> attributes,
+    List<ExtractedEntity> nestedEntities
+) {
+    public ExtractedEntity {
+        attributes = attributes != null ? attributes : Map.of();
+        nestedEntities = nestedEntities != null ? nestedEntities : List.of();
+    }
+}
+
+/**
+ * Classification result
+ */
+public record ClassificationResult(
+    String taskId,
+    String inputText,
+    List<PredictedLabel> predictions,
+    Instant processedAt,
+    long processingTimeMs,
+    Map<String, Object> metadata
+) implements GLiNERResult {
+    
+    public Optional<PredictedLabel> getTopPrediction() {
+        return predictions.isEmpty() ? 
+            Optional.empty() : 
+            Optional.of(predictions.get(0));
+    }
+}
+
+/**
+ * Predicted label with confidence
+ */
+public record PredictedLabel(
+    String labelId,
+    String labelName,
+    double confidence,
+    Map<String, Object> details
+) {}
+
+/**
+ * Extraction result with structured data
+ */
+public record ExtractionResult(
+    String taskId,
+    String inputText,
+    Map<String, Object> extractedData,
+    List<ExtractionError> errors,
+    boolean isComplete,
+    Instant processedAt,
+    long processingTimeMs,
+    Map<String, Object> metadata
+) implements GLiNERResult {
+    
+    public boolean hasErrors() {
+        return errors != null && !errors.isEmpty();
+    }
+}
+
+/**
+ * Extraction error
+ */
+public record ExtractionError(
+    String fieldName,
+    String errorType,
+    String message
+) {}
+
+/**
+ * Relation extraction result
+ */
+public record RelationResult(
+    String taskId,
+    String inputText,
+    List<ExtractedRelation> relations,
+    List<ExtractedEntity> entities,
+    Instant processedAt,
+    long processingTimeMs,
+    Map<String, Object> metadata
+) implements GLiNERResult {
+    
+    public List<ExtractedRelation> getRelationsByType(String relationType) {
+        return relations.stream()
+            .filter(r -> r.relationType().equals(relationType))
+            .toList();
+    }
+}
+
+/**
+ * Extracted relation between entities
+ */
+public record ExtractedRelation(
+    String relationId,
+    String relationType,
+    ExtractedEntity sourceEntity,
+    ExtractedEntity targetEntity,
+    double confidence,
+    Map<String, String> attributes
+) {}
+
+// ==================== SCHEMA REGISTRY ====================
+
+/**
+ * Schema metadata for versioning and management
+ */
+public record SchemaMetadata(
+    String schemaId,
+    String schemaName,
+    String version,
+    GLiNERTaskType taskType,
+    String tenantId,
+    String description,
+    String createdBy,
+    Instant createdAt,
+    Instant updatedAt,
+    boolean isActive,
+    Map<String, String> tags
+) {}
+
+// ==================== VALIDATION ====================
+
+/**
+ * Validation result
+ */
+public record ValidationResult(
+    boolean isValid,
+    List<String> errors
+) {
+    public static ValidationResult valid() {
+        return new ValidationResult(true, List.of());
+    }
+    
+    public static ValidationResult invalid(List<String> errors) {
+        return new ValidationResult(false, errors);
+    }
+}
+

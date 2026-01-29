@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.wayang</groupId>
+        <artifactId>wayang-executors-integration</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>wayang-executors-integration-modules</artifactId>
+    <packaging>pom</packaging>
+    <name>Wayang :: Executors :: Integration :: Modules</name>
+
+    <modules>
+        <module>aws</module>
+        <module>salesforce</module>
+        <module>azure</module>
+        <module>gcp</module>
+        <module>kafka</module>
+        <module>mongodb</module>
+        <module>postgresql</module>
+        <module>redis</module>
+    </modules>
+
+    <properties>
+        <quarkus.version>3.2.0.Final</quarkus.version>
+        <camel.quarkus.version>3.0.0</camel.quarkus.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-bom</artifactId>
+                <version>${quarkus.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.camel.quarkus</groupId>
+                <artifactId>camel-quarkus-bom</artifactId>
+                <version>${camel.quarkus.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

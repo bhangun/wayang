@@ -17,6 +17,8 @@
     <module>wayang-studio-core</module>
     <module>wayang-plugin-registry</module>
     <module>wayang-plugin-spi</module>
+    <module>wayang-security</module>
+    <module>wayang-engine</module>
   </modules>
 
 

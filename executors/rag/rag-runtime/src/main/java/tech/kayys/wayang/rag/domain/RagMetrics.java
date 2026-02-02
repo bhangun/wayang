@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.rag.domain;
+package tech.kayys.gamelan.executor.rag.domain;
 
 public class RagMetrics {
     private final long totalDurationMs;
@@ -9,9 +9,9 @@ public class RagMetrics {
     private final int hallucinationScore;
     private final boolean groundingVerified;
 
-    public RagMetrics(long totalDurationMs, int documentsRetrieved, int tokensGenerated, 
-                     float averageSimilarityScore, int rerankedResults, int hallucinationScore, 
-                     boolean groundingVerified) {
+    public RagMetrics(long totalDurationMs, int documentsRetrieved, int tokensGenerated,
+            float averageSimilarityScore, int rerankedResults, int hallucinationScore,
+            boolean groundingVerified) {
         this.totalDurationMs = totalDurationMs;
         this.documentsRetrieved = documentsRetrieved;
         this.tokensGenerated = tokensGenerated;
@@ -22,11 +22,31 @@ public class RagMetrics {
     }
 
     // Getters
-    public long totalDurationMs() { return totalDurationMs; }
-    public int documentsRetrieved() { return documentsRetrieved; }
-    public int tokensGenerated() { return tokensGenerated; }
-    public float averageSimilarityScore() { return averageSimilarityScore; }
-    public int rerankedResults() { return rerankedResults; }
-    public int hallucinationScore() { return hallucinationScore; }
-    public boolean groundingVerified() { return groundingVerified; }
+    public long totalDurationMs() {
+        return totalDurationMs;
+    }
+
+    public int documentsRetrieved() {
+        return documentsRetrieved;
+    }
+
+    public int tokensGenerated() {
+        return tokensGenerated;
+    }
+
+    public float averageSimilarityScore() {
+        return averageSimilarityScore;
+    }
+
+    public int rerankedResults() {
+        return rerankedResults;
+    }
+
+    public int hallucinationScore() {
+        return hallucinationScore;
+    }
+
+    public boolean groundingVerified() {
+        return groundingVerified;
+    }
 }

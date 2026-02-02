@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.rag.examples;
+package tech.kayys.gamelan.executor.rag.examples;
 
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentSplitter;
@@ -15,9 +15,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.client.SilatClient;
-import tech.kayys.silat.executor.rag.domain.*;
-import tech.kayys.silat.executor.rag.langchain.*;
+import tech.kayys.gamelan.client.GamelanClient;
+import tech.kayys.gamelan.executor.rag.domain.*;
+import tech.kayys.gamelan.executor.rag.langchain.*;
 
 import java.nio.file.Path;
 import java.util.*;
@@ -70,8 +70,8 @@ public class DocumentIngestionService {
 
             // 2. Split documents into chunks
             DocumentSplitter splitter = DocumentSplitters.recursive(
-                512,  // maxChunkSize
-                50    // maxOverlapSize
+                    512, // maxChunkSize
+                    50 // maxOverlapSize
             );
 
             List<TextSegment> segments = new ArrayList<>();
@@ -82,17 +82,15 @@ public class DocumentIngestionService {
             LOG.info("Split {} documents into {} segments", documents.size(), segments.size());
 
             // 3. Get embedding store and model
-            EmbeddingStore<TextSegment> embeddingStore =
-                storeFactory.getStore(tenantId, RetrievalConfig.defaults());
+            EmbeddingStore<TextSegment> embeddingStore = storeFactory.getStore(tenantId, RetrievalConfig.defaults());
 
-            EmbeddingModel embeddingModel =
-                modelFactory.createEmbeddingModel(tenantId, "text-embedding-3-small");
+            EmbeddingModel embeddingModel = modelFactory.createEmbeddingModel(tenantId, "text-embedding-3-small");
 
             // 4. Ingest segments
             EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
-                .embeddingStore(embeddingStore)
-                .embeddingModel(embeddingModel)
-                .build();
+                    .embeddingStore(embeddingStore)
+                    .embeddingModel(embeddingModel)
+                    .build();
 
             ingestor.ingest(segments);
 
@@ -101,12 +99,11 @@ public class DocumentIngestionService {
             LOG.info("Successfully ingested {} segments in {}ms", segments.size(), duration);
 
             return new IngestResult(
-                true,
-                documents.size(),
-                segments.size(),
-                duration,
-                "Successfully ingested documents"
-            );
+                    true,
+                    documents.size(),
+                    segments.size(),
+                    duration,
+                    "Successfully ingested documents");
         });
     }
 
@@ -126,13 +123,13 @@ public class DocumentIngestionService {
 
             // 1. Create documents
             List<Document> documents = texts.stream()
-                .map(text -> {
-                    Document doc = Document.from(text);
-                    doc.metadata().put("tenantId", tenantId);
-                    metadata.forEach((k, v) -> doc.metadata().put(k, v));
-                    return doc;
-                })
-                .toList();
+                    .map(text -> {
+                        Document doc = Document.from(text);
+                        doc.metadata().put("tenantId", tenantId);
+                        metadata.forEach((k, v) -> doc.metadata().put(k, v));
+                        return doc;
+                    })
+                    .toList();
 
             // 2. Create splitter based on strategy
             DocumentSplitter splitter = createSplitter(chunkingConfig);
@@ -143,28 +140,25 @@ public class DocumentIngestionService {
             }
 
             // 3. Ingest
-            EmbeddingStore<TextSegment> embeddingStore =
-                storeFactory.getStore(tenantId, RetrievalConfig.defaults());
+            EmbeddingStore<TextSegment> embeddingStore = storeFactory.getStore(tenantId, RetrievalConfig.defaults());
 
-            EmbeddingModel embeddingModel =
-                modelFactory.createEmbeddingModel(tenantId, "text-embedding-3-small");
+            EmbeddingModel embeddingModel = modelFactory.createEmbeddingModel(tenantId, "text-embedding-3-small");
 
             EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
-                .embeddingStore(embeddingStore)
-                .embeddingModel(embeddingModel)
-                .build();
+                    .embeddingStore(embeddingStore)
+                    .embeddingModel(embeddingModel)
+                    .build();
 
             ingestor.ingest(segments);
 
             long duration = System.currentTimeMillis() - startTime;
 
             return new IngestResult(
-                true,
-                documents.size(),
-                segments.size(),
-                duration,
-                "Successfully ingested text documents"
-            );
+                    true,
+                    documents.size(),
+                    segments.size(),
+                    duration,
+                    "Successfully ingested text documents");
         });
     }
 
@@ -178,23 +172,21 @@ public class DocumentIngestionService {
         LOG.info("Batch ingesting {} sources for tenant: {}", sources.size(), tenantId);
 
         List<Uni<IngestResult>> unis = sources.stream()
-            .map(source -> {
-                return switch (source.type()) {
-                    case PDF -> ingestPdfDocuments(
-                        tenantId,
-                        List.of(Path.of(source.path())),
-                        source.metadata()
-                    );
-                    case TEXT -> ingestTextDocuments(
-                        tenantId,
-                        List.of(source.content()),
-                        source.metadata(),
-                        ChunkingConfig.defaults()
-                    );
-                    case URL -> ingestFromUrl(tenantId, source.path(), source.metadata());
-                };
-            })
-            .toList();
+                .map(source -> {
+                    return switch (source.type()) {
+                        case PDF -> ingestPdfDocuments(
+                                tenantId,
+                                List.of(Path.of(source.path())),
+                                source.metadata());
+                        case TEXT -> ingestTextDocuments(
+                                tenantId,
+                                List.of(source.content()),
+                                source.metadata(),
+                                ChunkingConfig.defaults());
+                        case URL -> ingestFromUrl(tenantId, source.path(), source.metadata());
+                    };
+                })
+                .toList();
 
         return Uni.combine().all().unis(unis).combinedWith(results -> {
             int totalDocs = 0;
@@ -209,12 +201,11 @@ public class DocumentIngestionService {
             }
 
             return new IngestResult(
-                true,
-                totalDocs,
-                totalSegments,
-                totalDuration,
-                "Batch ingestion completed"
-            );
+                    true,
+                    totalDocs,
+                    totalSegments,
+                    totalDuration,
+                    "Batch ingestion completed");
         });
     }
 
@@ -225,25 +216,21 @@ public class DocumentIngestionService {
 
         // TODO: Implement URL scraping and ingestion
         return Uni.createFrom().item(new IngestResult(
-            true, 0, 0, 0, "URL ingestion not implemented yet"
-        ));
+                true, 0, 0, 0, "URL ingestion not implemented yet"));
     }
 
     private DocumentSplitter createSplitter(ChunkingConfig config) {
         return switch (config.strategy()) {
             case RECURSIVE -> DocumentSplitters.recursive(
-                config.chunkSize(),
-                config.chunkOverlap()
-            );
+                    config.chunkSize(),
+                    config.chunkOverlap());
             case SENTENCE -> DocumentSplitters.recursive(
-                config.chunkSize(),
-                config.chunkOverlap(),
-                new dev.langchain4j.model.chat.ChatLanguageModel[0]
-            );
+                    config.chunkSize(),
+                    config.chunkOverlap(),
+                    new dev.langchain4j.model.chat.ChatLanguageModel[0]);
             default -> DocumentSplitters.recursive(
-                config.chunkSize(),
-                config.chunkOverlap()
-            );
+                    config.chunkSize(),
+                    config.chunkOverlap());
         };
     }
 }

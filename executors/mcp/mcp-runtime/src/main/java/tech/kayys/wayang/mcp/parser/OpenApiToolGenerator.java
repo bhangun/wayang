@@ -413,7 +413,7 @@ public class OpenApiToolGenerator {
 
         // Headers
         Map<String, String> headers = new HashMap<>();
-        headers.put("User-Agent", "Silat-MCP/1.0");
+        headers.put("User-Agent", "Gamelan-MCP/1.0");
         config.setHeaders(headers);
 
         // Content type

@@ -30,12 +30,12 @@
         </dependency>
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-security</artifactId>
+            <artifactId>wayang-vault-manager</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-studio-core</artifactId>
+            <artifactId>wayang-control-plane-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -80,20 +80,20 @@ public class OpenAIEmbeddingService implements EmbeddingService {
     
     private static final Logger LOG = LoggerFactory.getLogger(OpenAIEmbeddingService.class);
     
-    @ConfigProperty(name = "silat.embedding.openai.api-key")
+    @ConfigProperty(name = "gamelan.embedding.openai.api-key")
     Optional<String> apiKey;
     
-    @ConfigProperty(name = "silat.embedding.openai.model", defaultValue = "text-embedding-3-small")
+    @ConfigProperty(name = "gamelan.embedding.openai.model", defaultValue = "text-embedding-3-small")
     String model;
     
-    @ConfigProperty(name = "silat.embedding.openai.endpoint", 
+    @ConfigProperty(name = "gamelan.embedding.openai.endpoint", 
                     defaultValue = "https://api.openai.com/v1/embeddings")
     String endpoint;
     
-    @ConfigProperty(name = "silat.embedding.cache.enabled", defaultValue = "true")
+    @ConfigProperty(name = "gamelan.embedding.cache.enabled", defaultValue = "true")
     boolean cacheEnabled;
     
-    @ConfigProperty(name = "silat.embedding.cache.max-size", defaultValue = "10000")
+    @ConfigProperty(name = "gamelan.embedding.cache.max-size", defaultValue = "10000")
     int cacheMaxSize;
     
     // Cache: text hash -> embedding
@@ -404,7 +404,7 @@ public class EmbeddingServiceFactory {
     
     private static final Logger LOG = LoggerFactory.getLogger(EmbeddingServiceFactory.class);
     
-    @ConfigProperty(name = "silat.embedding.provider", defaultValue = "local")
+    @ConfigProperty(name = "gamelan.embedding.provider", defaultValue = "local")
     String provider;
     
     @Inject
@@ -519,10 +519,10 @@ public class TextChunker {
     
     private static final Logger LOG = LoggerFactory.getLogger(TextChunker.class);
     
-    @ConfigProperty(name = "silat.embedding.chunk.size", defaultValue = "512")
+    @ConfigProperty(name = "gamelan.embedding.chunk.size", defaultValue = "512")
     int chunkSize;
     
-    @ConfigProperty(name = "silat.embedding.chunk.overlap", defaultValue = "50")
+    @ConfigProperty(name = "gamelan.embedding.chunk.overlap", defaultValue = "50")
     int chunkOverlap;
     
     /**
@@ -590,7 +590,7 @@ public class TextChunker {
     }
 }
 
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -628,19 +628,19 @@ public class ContextEngineeringService {
     
     private static final Logger LOG = LoggerFactory.getLogger(ContextEngineeringService.class);
     
-    @ConfigProperty(name = "silat.context.max-tokens", defaultValue = "8000")
+    @ConfigProperty(name = "gamelan.context.max-tokens", defaultValue = "8000")
     int maxContextTokens;
     
-    @ConfigProperty(name = "silat.context.decay-rate", defaultValue = "0.001")
+    @ConfigProperty(name = "gamelan.context.decay-rate", defaultValue = "0.001")
     double temporalDecayRate;
     
-    @ConfigProperty(name = "silat.context.recency-weight", defaultValue = "0.3")
+    @ConfigProperty(name = "gamelan.context.recency-weight", defaultValue = "0.3")
     double recencyWeight;
     
-    @ConfigProperty(name = "silat.context.importance-weight", defaultValue = "0.4")
+    @ConfigProperty(name = "gamelan.context.importance-weight", defaultValue = "0.4")
     double importanceWeight;
     
-    @ConfigProperty(name = "silat.context.similarity-weight", defaultValue = "0.3")
+    @ConfigProperty(name = "gamelan.context.similarity-weight", defaultValue = "0.3")
     double similarityWeight;
     
     @Inject
@@ -1288,18 +1288,18 @@ public class PromptTemplate {
     public List<String> getRequiredVariables() { return requiredVariables; }
 }
 
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.core.domain.*;
-import tech.kayys.silat.core.engine.NodeExecutionResult;
-import tech.kayys.silat.core.engine.NodeExecutionTask;
-import tech.kayys.silat.executor.AbstractWorkflowExecutor;
-import tech.kayys.silat.executor.Executor;
+import tech.kayys.gamelan.core.domain.*;
+import tech.kayys.gamelan.core.engine.NodeExecutionResult;
+import tech.kayys.gamelan.core.engine.NodeExecutionTask;
+import tech.kayys.gamelan.executor.AbstractWorkflowExecutor;
+import tech.kayys.gamelan.executor.Executor;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -1323,7 +1323,7 @@ import java.util.*;
 
 @Executor(
     executorType = "memory-aware-executor",
-    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
+    communicationType = tech.kayys.gamelan.core.scheduler.CommunicationType.GRPC,
     maxConcurrentTasks = 10
 )
 @ApplicationScoped
@@ -1548,7 +1548,7 @@ public class MemoryAwareExecutor extends AbstractWorkflowExecutor {
 
 @Executor(
     executorType = "memory-consolidation",
-    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
+    communicationType = tech.kayys.gamelan.core.scheduler.CommunicationType.GRPC,
     maxConcurrentTasks = 1
 )
 @ApplicationScoped
@@ -1642,7 +1642,7 @@ public class MemoryConsolidationExecutor extends AbstractWorkflowExecutor {
 
 @Executor(
     executorType = "memory-cleanup",
-    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
+    communicationType = tech.kayys.gamelan.core.scheduler.CommunicationType.GRPC,
     maxConcurrentTasks = 1
 )
 @ApplicationScoped
@@ -1732,7 +1732,7 @@ public class MemoryCleanupExecutor extends AbstractWorkflowExecutor {
 
 @Executor(
     executorType = "memory-query",
-    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
+    communicationType = tech.kayys.gamelan.core.scheduler.CommunicationType.GRPC,
     maxConcurrentTasks = 20
 )
 @ApplicationScoped
@@ -1796,7 +1796,7 @@ public class MemoryQueryExecutor extends AbstractWorkflowExecutor {
     }
 }
 
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import io.quarkus.hibernate.reactive.panache.Panache;
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
@@ -1844,10 +1844,10 @@ public class PostgresVectorStore implements VectorMemoryStore {
     @Inject
     PgPool pgPool;
     
-    @ConfigProperty(name = "silat.memory.vector.dimension", defaultValue = "1536")
+    @ConfigProperty(name = "gamelan.memory.vector.dimension", defaultValue = "1536")
     int vectorDimension;
     
-    @ConfigProperty(name = "silat.memory.index.type", defaultValue = "hnsw")
+    @ConfigProperty(name = "gamelan.memory.index.type", defaultValue = "hnsw")
     String indexType; // hnsw or ivfflat
     
     /**
@@ -1857,7 +1857,7 @@ public class PostgresVectorStore implements VectorMemoryStore {
         LOG.info("Initializing PostgreSQL vector store");
         
         String createTableSql = """
-            CREATE TABLE IF NOT EXISTS silat_memories (
+            CREATE TABLE IF NOT EXISTS gamelan_memories (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 namespace VARCHAR(255) NOT NULL,
                 content TEXT NOT NULL,
@@ -1873,17 +1873,17 @@ public class PostgresVectorStore implements VectorMemoryStore {
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
             
-            CREATE INDEX IF NOT EXISTS idx_memories_namespace ON silat_memories(namespace);
-            CREATE INDEX IF NOT EXISTS idx_memories_tenant ON silat_memories(tenant_id);
-            CREATE INDEX IF NOT EXISTS idx_memories_type ON silat_memories(type);
-            CREATE INDEX IF NOT EXISTS idx_memories_timestamp ON silat_memories(timestamp DESC);
-            CREATE INDEX IF NOT EXISTS idx_memories_importance ON silat_memories(importance DESC);
-            CREATE INDEX IF NOT EXISTS idx_memories_content_fts ON silat_memories USING GIN(content_tsvector);
-            CREATE INDEX IF NOT EXISTS idx_memories_metadata ON silat_memories USING GIN(metadata);
+            CREATE INDEX IF NOT EXISTS idx_memories_namespace ON gamelan_memories(namespace);
+            CREATE INDEX IF NOT EXISTS idx_memories_tenant ON gamelan_memories(tenant_id);
+            CREATE INDEX IF NOT EXISTS idx_memories_type ON gamelan_memories(type);
+            CREATE INDEX IF NOT EXISTS idx_memories_timestamp ON gamelan_memories(timestamp DESC);
+            CREATE INDEX IF NOT EXISTS idx_memories_importance ON gamelan_memories(importance DESC);
+            CREATE INDEX IF NOT EXISTS idx_memories_content_fts ON gamelan_memories USING GIN(content_tsvector);
+            CREATE INDEX IF NOT EXISTS idx_memories_metadata ON gamelan_memories USING GIN(metadata);
             
             -- Vector similarity index (HNSW for better performance)
             CREATE INDEX IF NOT EXISTS idx_memories_embedding_hnsw 
-                ON silat_memories USING hnsw (embedding vector_cosine_ops)
+                ON gamelan_memories USING hnsw (embedding vector_cosine_ops)
                 WITH (m = 16, ef_construction = 64);
             """.formatted(vectorDimension);
         
@@ -1898,7 +1898,7 @@ public class PostgresVectorStore implements VectorMemoryStore {
         LOG.debug("Storing memory: {}", memory.getId());
         
         String sql = """
-            INSERT INTO silat_memories (
+            INSERT INTO gamelan_memories (
                 id, namespace, content, embedding, type, metadata,
                 timestamp, expires_at, importance, tenant_id
             ) VALUES ($1, $2, $3, $4::vector, $5, $6::jsonb, $7, $8, $9, $10)
@@ -1960,7 +1960,7 @@ public class PostgresVectorStore implements VectorMemoryStore {
                 id, namespace, content, embedding::text, type, 
                 metadata, timestamp, expires_at, importance,
                 1 - (embedding <=> $1::vector) as similarity
-            FROM silat_memories
+            FROM gamelan_memories
             WHERE 1=1
             """);
         
@@ -2035,7 +2035,7 @@ public class PostgresVectorStore implements VectorMemoryStore {
                     id, namespace, content, embedding::text, type,
                     metadata, timestamp, expires_at, importance,
                     1 - (embedding <=> $1::vector) as semantic_score
-                FROM silat_memories
+                FROM gamelan_memories
                 WHERE (expires_at IS NULL OR expires_at > NOW())
                     AND namespace = $2
             ),
@@ -2043,7 +2043,7 @@ public class PostgresVectorStore implements VectorMemoryStore {
                 SELECT 
                     id,
                     ts_rank(content_tsvector, to_tsquery('english', $3)) as keyword_score
-                FROM silat_memories
+                FROM gamelan_memories
                 WHERE content_tsvector @@ to_tsquery('english', $3)
                     AND (expires_at IS NULL OR expires_at > NOW())
                     AND namespace = $2
@@ -2100,7 +2100,7 @@ public class PostgresVectorStore implements VectorMemoryStore {
         String sql = """
             SELECT id, namespace, content, embedding::text, type,
                    metadata, timestamp, expires_at, importance
-            FROM silat_memories
+            FROM gamelan_memories
             WHERE id = $1
                 AND (expires_at IS NULL OR expires_at > NOW())
             """;
@@ -2122,7 +2122,7 @@ public class PostgresVectorStore implements VectorMemoryStore {
         String sql = """
             SELECT id, namespace, content, embedding::text, type,
                    metadata, timestamp, expires_at, importance
-            FROM silat_memories
+            FROM gamelan_memories
             WHERE id = ANY($1)
                 AND (expires_at IS NULL OR expires_at > NOW())
             """;
@@ -2147,7 +2147,7 @@ public class PostgresVectorStore implements VectorMemoryStore {
         LOG.debug("Updating metadata for memory: {}", memoryId);
         
         String sql = """
-            UPDATE silat_memories
+            UPDATE gamelan_memories
             SET metadata = metadata || $1::jsonb,
                 updated_at = NOW()
             WHERE id = $2
@@ -2169,7 +2169,7 @@ public class PostgresVectorStore implements VectorMemoryStore {
     public Uni<Boolean> delete(String memoryId) {
         LOG.debug("Deleting memory: {}", memoryId);
         
-        String sql = "DELETE FROM silat_memories WHERE id = $1";
+        String sql = "DELETE FROM gamelan_memories WHERE id = $1";
         
         return pgPool.preparedQuery(sql)
             .execute(Tuple.of(UUID.fromString(memoryId)))
@@ -2180,7 +2180,7 @@ public class PostgresVectorStore implements VectorMemoryStore {
     public Uni<Long> deleteNamespace(String namespace) {
         LOG.info("Deleting all memories in namespace: {}", namespace);
         
-        String sql = "DELETE FROM silat_memories WHERE namespace = $1";
+        String sql = "DELETE FROM gamelan_memories WHERE namespace = $1";
         
         return pgPool.preparedQuery(sql)
             .execute(Tuple.of(namespace))
@@ -2201,7 +2201,7 @@ public class PostgresVectorStore implements VectorMemoryStore {
                 AVG(importance) as avg_importance,
                 MIN(timestamp) as oldest,
                 MAX(timestamp) as newest
-            FROM silat_memories
+            FROM gamelan_memories
             WHERE namespace = $1
                 AND (expires_at IS NULL OR expires_at > NOW())
             """;
@@ -2330,7 +2330,7 @@ public class VectorStoreFactory {
     
     private static final Logger LOG = LoggerFactory.getLogger(VectorStoreFactory.class);
     
-    @ConfigProperty(name = "silat.memory.store.type", defaultValue = "inmemory")
+    @ConfigProperty(name = "gamelan.memory.store.type", defaultValue = "inmemory")
     String storeType;
     
     @Inject
@@ -2377,15 +2377,15 @@ public class VectorStoreFactory {
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>tech.kayys.silat</groupId>
-    <artifactId>silat-memory-executor</artifactId>
+    <groupId>tech.kayys.gamelan</groupId>
+    <artifactId>gamelan-memory-executor</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>Silat Memory Executor</name>
+    <name>Gamelan Memory Executor</name>
     <description>
         Memory-aware workflow executor with vector embeddings and context engineering
-        for the Silat Workflow Engine
+        for the Gamelan Workflow Engine
     </description>
 
     <properties>
@@ -2505,16 +2505,16 @@ public class VectorStoreFactory {
             <artifactId>postgresql</artifactId>
         </dependency>
 
-        <!-- Silat Core (this would be defined in parent POM) -->
+        <!-- Gamelan Core (this would be defined in parent POM) -->
         <dependency>
-            <groupId>tech.kayys.silat</groupId>
-            <artifactId>silat-core</artifactId>
+            <groupId>tech.kayys.gamelan</groupId>
+            <artifactId>gamelan-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         
         <dependency>
-            <groupId>tech.kayys.silat</groupId>
-            <artifactId>silat-executor-sdk</artifactId>
+            <groupId>tech.kayys.gamelan</groupId>
+            <artifactId>gamelan-executor-sdk</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -2622,11 +2622,11 @@ public class VectorStoreFactory {
 
 
 # ============================================================================
-# SILAT MEMORY EXECUTOR CONFIGURATION
+# GAMELAN MEMORY EXECUTOR CONFIGURATION
 # ============================================================================
 
 # Application Info
-quarkus.application.name=silat-memory-executor
+quarkus.application.name=gamelan-memory-executor
 quarkus.application.version=1.0.0
 
 # HTTP Configuration
@@ -2640,9 +2640,9 @@ quarkus.http.cors=true
 
 # PostgreSQL with pgvector
 quarkus.datasource.db-kind=postgresql
-quarkus.datasource.username=${DB_USER:silat}
-quarkus.datasource.password=${DB_PASSWORD:silat}
-quarkus.datasource.reactive.url=postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:silat_memory}
+quarkus.datasource.username=${DB_USER:gamelan}
+quarkus.datasource.password=${DB_PASSWORD:gamelan}
+quarkus.datasource.reactive.url=postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:gamelan_memory}
 
 # Connection Pool
 quarkus.datasource.reactive.max-size=20
@@ -2658,67 +2658,67 @@ quarkus.hibernate-orm.sql-load-script=no-file
 # ============================================================================
 
 # Store Type: inmemory, postgres, pinecone, weaviate
-silat.memory.store.type=${MEMORY_STORE_TYPE:inmemory}
+gamelan.memory.store.type=${MEMORY_STORE_TYPE:inmemory}
 
 # Vector Configuration
-silat.memory.vector.dimension=${VECTOR_DIMENSION:1536}
-silat.memory.index.type=${VECTOR_INDEX_TYPE:hnsw}
+gamelan.memory.vector.dimension=${VECTOR_DIMENSION:1536}
+gamelan.memory.index.type=${VECTOR_INDEX_TYPE:hnsw}
 
 # ============================================================================
 # EMBEDDING SERVICE CONFIGURATION
 # ============================================================================
 
 # Provider: openai, cohere, local
-silat.embedding.provider=${EMBEDDING_PROVIDER:local}
+gamelan.embedding.provider=${EMBEDDING_PROVIDER:local}
 
 # OpenAI Configuration
-silat.embedding.openai.api-key=${OPENAI_API_KEY:}
-silat.embedding.openai.model=${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
-silat.embedding.openai.endpoint=https://api.openai.com/v1/embeddings
+gamelan.embedding.openai.api-key=${OPENAI_API_KEY:}
+gamelan.embedding.openai.model=${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+gamelan.embedding.openai.endpoint=https://api.openai.com/v1/embeddings
 
 # Cache Configuration
-silat.embedding.cache.enabled=${EMBEDDING_CACHE_ENABLED:true}
-silat.embedding.cache.max-size=${EMBEDDING_CACHE_SIZE:10000}
+gamelan.embedding.cache.enabled=${EMBEDDING_CACHE_ENABLED:true}
+gamelan.embedding.cache.max-size=${EMBEDDING_CACHE_SIZE:10000}
 
 # Text Chunking
-silat.embedding.chunk.size=${CHUNK_SIZE:512}
-silat.embedding.chunk.overlap=${CHUNK_OVERLAP:50}
+gamelan.embedding.chunk.size=${CHUNK_SIZE:512}
+gamelan.embedding.chunk.overlap=${CHUNK_OVERLAP:50}
 
 # ============================================================================
 # CONTEXT ENGINEERING CONFIGURATION
 # ============================================================================
 
 # Context Window
-silat.context.max-tokens=${CONTEXT_MAX_TOKENS:8000}
+gamelan.context.max-tokens=${CONTEXT_MAX_TOKENS:8000}
 
 # Scoring Weights
-silat.context.decay-rate=${CONTEXT_DECAY_RATE:0.001}
-silat.context.recency-weight=${CONTEXT_RECENCY_WEIGHT:0.3}
-silat.context.importance-weight=${CONTEXT_IMPORTANCE_WEIGHT:0.4}
-silat.context.similarity-weight=${CONTEXT_SIMILARITY_WEIGHT:0.3}
+gamelan.context.decay-rate=${CONTEXT_DECAY_RATE:0.001}
+gamelan.context.recency-weight=${CONTEXT_RECENCY_WEIGHT:0.3}
+gamelan.context.importance-weight=${CONTEXT_IMPORTANCE_WEIGHT:0.4}
+gamelan.context.similarity-weight=${CONTEXT_SIMILARITY_WEIGHT:0.3}
 
 # ============================================================================
 # EXECUTOR CONFIGURATION
 # ============================================================================
 
 # Executor Registration
-silat.executor.id=${EXECUTOR_ID:memory-executor-1}
-silat.executor.transport=${EXECUTOR_TRANSPORT:GRPC}
+gamelan.executor.id=${EXECUTOR_ID:memory-executor-1}
+gamelan.executor.transport=${EXECUTOR_TRANSPORT:GRPC}
 
 # Engine Connection
-silat.engine.grpc.host=${ENGINE_GRPC_HOST:localhost}
-silat.engine.grpc.port=${ENGINE_GRPC_PORT:9090}
-silat.engine.rest.endpoint=${ENGINE_REST_ENDPOINT:http://localhost:8080}
+gamelan.engine.grpc.host=${ENGINE_GRPC_HOST:localhost}
+gamelan.engine.grpc.port=${ENGINE_GRPC_PORT:9090}
+gamelan.engine.rest.endpoint=${ENGINE_REST_ENDPOINT:http://localhost:8080}
 
 # Kafka Configuration (if using Kafka transport)
 kafka.bootstrap.servers=${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 mp.messaging.incoming.workflow-tasks.connector=smallrye-kafka
-mp.messaging.incoming.workflow-tasks.topic=silat.tasks
+mp.messaging.incoming.workflow-tasks.topic=gamelan.tasks
 mp.messaging.incoming.workflow-tasks.value.deserializer=org.apache.kafka.common.serialization.StringDeserializer
-mp.messaging.incoming.workflow-tasks.group.id=silat-memory-executors
+mp.messaging.incoming.workflow-tasks.group.id=gamelan-memory-executors
 
 mp.messaging.outgoing.workflow-results.connector=smallrye-kafka
-mp.messaging.outgoing.workflow-results.topic=silat.results
+mp.messaging.outgoing.workflow-results.topic=gamelan.results
 mp.messaging.outgoing.workflow-results.value.serializer=org.apache.kafka.common.serialization.StringSerializer
 
 # ============================================================================
@@ -2726,8 +2726,8 @@ mp.messaging.outgoing.workflow-results.value.serializer=org.apache.kafka.common.
 # ============================================================================
 
 # Tenant Isolation
-silat.multitenancy.enabled=${MULTITENANCY_ENABLED:true}
-silat.multitenancy.default-tenant=${DEFAULT_TENANT:default}
+gamelan.multitenancy.enabled=${MULTITENANCY_ENABLED:true}
+gamelan.multitenancy.default-tenant=${DEFAULT_TENANT:default}
 
 # ============================================================================
 # OBSERVABILITY
@@ -2735,7 +2735,7 @@ silat.multitenancy.default-tenant=${DEFAULT_TENANT:default}
 
 # Logging
 quarkus.log.level=INFO
-quarkus.log.category."tech.kayys.silat".level=DEBUG
+quarkus.log.category."tech.kayys.gamelan".level=DEBUG
 quarkus.log.console.format=%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%c{2.}] (%t) %s%e%n
 
 # Health Checks
@@ -2764,9 +2764,9 @@ quarkus.rest-client.openai.read-timeout=60000
 # ============================================================================
 
 %dev.quarkus.log.console.level=DEBUG
-%dev.silat.memory.store.type=inmemory
-%dev.silat.embedding.provider=local
-%dev.quarkus.datasource.reactive.url=postgresql://localhost:5432/silat_memory_dev
+%dev.gamelan.memory.store.type=inmemory
+%dev.gamelan.embedding.provider=local
+%dev.quarkus.datasource.reactive.url=postgresql://localhost:5432/gamelan_memory_dev
 
 # ============================================================================
 # TEST CONFIGURATION
@@ -2774,28 +2774,28 @@ quarkus.rest-client.openai.read-timeout=60000
 
 %test.quarkus.datasource.db-kind=h2
 %test.quarkus.datasource.reactive.url=jdbc:h2:mem:test;DB_CLOSE_DELAY=-1
-%test.silat.memory.store.type=inmemory
-%test.silat.embedding.provider=local
+%test.gamelan.memory.store.type=inmemory
+%test.gamelan.embedding.provider=local
 
 # ============================================================================
 # PRODUCTION CONFIGURATION
 # ============================================================================
 
 %prod.quarkus.log.level=INFO
-%prod.quarkus.log.category."tech.kayys.silat".level=INFO
-%prod.silat.memory.store.type=postgres
-%prod.silat.embedding.provider=openai
+%prod.quarkus.log.category."tech.kayys.gamelan".level=INFO
+%prod.gamelan.memory.store.type=postgres
+%prod.gamelan.embedding.provider=openai
 
 
 ---EXAMPLES--
-package tech.kayys.silat.executor.memory.examples;
+package tech.kayys.gamelan.executor.memory.examples;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.executor.memory.*;
+import tech.kayys.gamelan.executor.memory.*;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -3211,11 +3211,11 @@ services:
   # PostgreSQL with pgvector
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: silat-postgres
+    container_name: gamelan-postgres
     environment:
-      POSTGRES_DB: silat_memory
-      POSTGRES_USER: silat
-      POSTGRES_PASSWORD: silat
+      POSTGRES_DB: gamelan_memory
+      POSTGRES_USER: gamelan
+      POSTGRES_PASSWORD: gamelan
       POSTGRES_INITDB_ARGS: "-E UTF8"
     ports:
       - "5432:5432"
@@ -3223,19 +3223,19 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U silat"]
+      test: ["CMD-SHELL", "pg_isready -U gamelan"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - silat-network
+      - gamelan-network
 
-  # Silat Memory Executor
+  # Gamelan Memory Executor
   memory-executor:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: silat-memory-executor
+    container_name: gamelan-memory-executor
     depends_on:
       postgres:
         condition: service_healthy
@@ -3243,9 +3243,9 @@ services:
       # Database
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: silat_memory
-      DB_USER: silat
-      DB_PASSWORD: silat
+      DB_NAME: gamelan_memory
+      DB_USER: gamelan
+      DB_PASSWORD: gamelan
       
       # Memory Store
       MEMORY_STORE_TYPE: postgres
@@ -3263,7 +3263,7 @@ services:
       # Executor
       EXECUTOR_ID: memory-executor-1
       EXECUTOR_TRANSPORT: GRPC
-      ENGINE_GRPC_HOST: silat-engine
+      ENGINE_GRPC_HOST: gamelan-engine
       ENGINE_GRPC_PORT: 9090
       
       # Multi-tenancy
@@ -3282,24 +3282,24 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - silat-network
+      - gamelan-network
     restart: unless-stopped
 
   # Kafka (optional, for Kafka-based executors)
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
-    container_name: silat-zookeeper
+    container_name: gamelan-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     networks:
-      - silat-network
+      - gamelan-network
     profiles:
       - kafka
 
   kafka:
     image: confluentinc/cp-kafka:7.6.0
-    container_name: silat-kafka
+    container_name: gamelan-kafka
     depends_on:
       - zookeeper
     ports:
@@ -3313,14 +3313,14 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     networks:
-      - silat-network
+      - gamelan-network
     profiles:
       - kafka
 
   # Prometheus (monitoring)
   prometheus:
     image: prom/prometheus:v2.48.1
-    container_name: silat-prometheus
+    container_name: gamelan-prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
@@ -3330,14 +3330,14 @@ services:
     ports:
       - "9090:9090"
     networks:
-      - silat-network
+      - gamelan-network
     profiles:
       - monitoring
 
   # Grafana (visualization)
   grafana:
     image: grafana/grafana:10.2.3
-    container_name: silat-grafana
+    container_name: gamelan-grafana
     depends_on:
       - prometheus
     environment:
@@ -3348,7 +3348,7 @@ services:
     ports:
       - "3000:3000"
     networks:
-      - silat-network
+      - gamelan-network
     profiles:
       - monitoring
 
@@ -3361,7 +3361,7 @@ volumes:
     driver: local
 
 networks:
-  silat-network:
+  gamelan-network:
     driver: bridge
 
 
@@ -3369,23 +3369,23 @@ networks:
 init-db.sql
 ----------
 -- ============================================================================
--- SILAT MEMORY STORE DATABASE INITIALIZATION
+-- GAMELAN MEMORY STORE DATABASE INITIALIZATION
 -- ============================================================================
 
 -- Enable pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Create schema
-CREATE SCHEMA IF NOT EXISTS silat;
+CREATE SCHEMA IF NOT EXISTS gamelan;
 
 -- Set search path
-SET search_path TO silat, public;
+SET search_path TO gamelan, public;
 
 -- ============================================================================
 -- MAIN MEMORY TABLE
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS silat_memories (
+CREATE TABLE IF NOT EXISTS gamelan_memories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     namespace VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
@@ -3407,44 +3407,44 @@ CREATE TABLE IF NOT EXISTS silat_memories (
 
 -- Namespace index
 CREATE INDEX IF NOT EXISTS idx_memories_namespace 
-    ON silat_memories(namespace);
+    ON gamelan_memories(namespace);
 
 -- Tenant index
 CREATE INDEX IF NOT EXISTS idx_memories_tenant 
-    ON silat_memories(tenant_id);
+    ON gamelan_memories(tenant_id);
 
 -- Type index
 CREATE INDEX IF NOT EXISTS idx_memories_type 
-    ON silat_memories(type);
+    ON gamelan_memories(type);
 
 -- Timestamp index (for temporal queries)
 CREATE INDEX IF NOT EXISTS idx_memories_timestamp 
-    ON silat_memories(timestamp DESC);
+    ON gamelan_memories(timestamp DESC);
 
 -- Importance index
 CREATE INDEX IF NOT EXISTS idx_memories_importance 
-    ON silat_memories(importance DESC);
+    ON gamelan_memories(importance DESC);
 
 -- Full-text search index
 CREATE INDEX IF NOT EXISTS idx_memories_content_fts 
-    ON silat_memories USING GIN(content_tsvector);
+    ON gamelan_memories USING GIN(content_tsvector);
 
 -- JSONB metadata index
 CREATE INDEX IF NOT EXISTS idx_memories_metadata 
-    ON silat_memories USING GIN(metadata);
+    ON gamelan_memories USING GIN(metadata);
 
 -- Composite index for common queries
 CREATE INDEX IF NOT EXISTS idx_memories_tenant_namespace_timestamp
-    ON silat_memories(tenant_id, namespace, timestamp DESC);
+    ON gamelan_memories(tenant_id, namespace, timestamp DESC);
 
 -- Vector similarity index (HNSW for best performance)
 CREATE INDEX IF NOT EXISTS idx_memories_embedding_hnsw 
-    ON silat_memories USING hnsw (embedding vector_cosine_ops)
+    ON gamelan_memories USING hnsw (embedding vector_cosine_ops)
     WITH (m = 16, ef_construction = 64);
 
 -- Alternative: IVFFlat index (faster build, slower search)
 -- CREATE INDEX IF NOT EXISTS idx_memories_embedding_ivfflat 
---     ON silat_memories USING ivfflat (embedding vector_cosine_ops)
+--     ON gamelan_memories USING ivfflat (embedding vector_cosine_ops)
 --     WITH (lists = 100);
 
 -- ============================================================================
@@ -3452,13 +3452,13 @@ CREATE INDEX IF NOT EXISTS idx_memories_embedding_hnsw
 -- ============================================================================
 
 -- Uncomment to enable partitioning by tenant
--- ALTER TABLE silat_memories PARTITION BY LIST (tenant_id);
+-- ALTER TABLE gamelan_memories PARTITION BY LIST (tenant_id);
 
 -- Create default partition
--- CREATE TABLE silat_memories_default PARTITION OF silat_memories DEFAULT;
+-- CREATE TABLE gamelan_memories_default PARTITION OF gamelan_memories DEFAULT;
 
 -- Example: Create partition for specific tenant
--- CREATE TABLE silat_memories_acme PARTITION OF silat_memories
+-- CREATE TABLE gamelan_memories_acme PARTITION OF gamelan_memories
 --     FOR VALUES IN ('acme-corp');
 
 -- ============================================================================
@@ -3475,8 +3475,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger for updated_at
-CREATE TRIGGER update_silat_memories_updated_at
-    BEFORE UPDATE ON silat_memories
+CREATE TRIGGER update_gamelan_memories_updated_at
+    BEFORE UPDATE ON gamelan_memories
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
@@ -3486,7 +3486,7 @@ RETURNS INTEGER AS $$
 DECLARE
     deleted_count INTEGER;
 BEGIN
-    DELETE FROM silat_memories
+    DELETE FROM gamelan_memories
     WHERE expires_at IS NOT NULL AND expires_at < NOW();
     
     GET DIAGNOSTICS deleted_count = ROW_COUNT;
@@ -3517,7 +3517,7 @@ BEGIN
         AVG(importance) as avg_importance,
         MIN(timestamp) as oldest_memory,
         MAX(timestamp) as newest_memory
-    FROM silat_memories
+    FROM gamelan_memories
     WHERE namespace = p_namespace
         AND (expires_at IS NULL OR expires_at > NOW());
 END;
@@ -3532,7 +3532,7 @@ CREATE OR REPLACE VIEW active_memories AS
 SELECT 
     id, namespace, content, type, metadata, 
     timestamp, importance, tenant_id
-FROM silat_memories
+FROM gamelan_memories
 WHERE expires_at IS NULL OR expires_at > NOW();
 
 -- View for memory statistics by namespace
@@ -3546,7 +3546,7 @@ SELECT
     AVG(importance) as avg_importance,
     MIN(timestamp) as oldest_memory,
     MAX(timestamp) as newest_memory
-FROM silat_memories
+FROM gamelan_memories
 WHERE expires_at IS NULL OR expires_at > NOW()
 GROUP BY namespace, tenant_id;
 
@@ -3556,7 +3556,7 @@ GROUP BY namespace, tenant_id;
 
 -- Uncomment to insert sample data
 /*
-INSERT INTO silat_memories (
+INSERT INTO gamelan_memories (
     namespace, content, embedding, type, metadata, importance, tenant_id
 ) VALUES (
     'test:sample',
@@ -3573,10 +3573,10 @@ INSERT INTO silat_memories (
 -- GRANTS (Adjust as needed for your security model)
 -- ============================================================================
 
--- Grant permissions to silat user
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA silat TO silat;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA silat TO silat;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA silat TO silat;
+-- Grant permissions to gamelan user
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA gamelan TO gamelan;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA gamelan TO gamelan;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA gamelan TO gamelan;
 
 -- ============================================================================
 -- MAINTENANCE
@@ -3587,7 +3587,7 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA silat TO silat;
 -- SELECT cron.schedule('clean-expired-memories', '0 2 * * *', 'SELECT clean_expired_memories()');
 
 -- Analyze tables for query optimization
-ANALYZE silat_memories;
+ANALYZE gamelan_memories;
 
 -- ============================================================================
 -- MONITORING QUERIES
@@ -3597,23 +3597,23 @@ ANALYZE silat_memories;
 -- SELECT 
 --     schemaname, tablename, indexname, idx_scan, idx_tup_read, idx_tup_fetch
 -- FROM pg_stat_user_indexes
--- WHERE schemaname = 'silat'
+-- WHERE schemaname = 'gamelan'
 -- ORDER BY idx_scan DESC;
 
 -- Example: Check table size
 -- SELECT 
---     pg_size_pretty(pg_total_relation_size('silat.silat_memories')) as total_size,
---     pg_size_pretty(pg_relation_size('silat.silat_memories')) as table_size,
---     pg_size_pretty(pg_indexes_size('silat.silat_memories')) as indexes_size;
+--     pg_size_pretty(pg_total_relation_size('gamelan.gamelan_memories')) as total_size,
+--     pg_size_pretty(pg_relation_size('gamelan.gamelan_memories')) as table_size,
+--     pg_size_pretty(pg_indexes_size('gamelan.gamelan_memories')) as indexes_size;
 
 -- ============================================================================
 -- COMPLETION
 -- ============================================================================
 
-\echo 'Silat Memory Store database initialized successfully!'
+\echo 'Gamelan Memory Store database initialized successfully!'
 \echo 'pgvector extension: ENABLED'
-\echo 'Schema: silat'
-\echo 'Table: silat_memories'
+\echo 'Schema: gamelan'
+\echo 'Table: gamelan_memories'
 \echo 'Indexes: 10 created'
 \echo 'Functions: 3 created'
 \echo 'Views: 2 created'
@@ -3622,9 +3622,9 @@ ANALYZE silat_memories;
 
 
 -------
-package tech.kayys.silat.core.engine;
+package tech.kayys.gamelan.core.engine;
 
-import tech.kayys.silat.core.domain.*;
+import tech.kayys.gamelan.core.domain.*;
 
 import java.util.Map;
 
@@ -3734,7 +3734,7 @@ public record NodeExecutionResult(
 }
 
 
-package tech.kayys.silat.core.scheduler;
+package tech.kayys.gamelan.core.scheduler;
 
 /**
  * ============================================================================
@@ -3767,15 +3767,15 @@ public enum CommunicationType {
     WEBSOCKET
 }
 
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
-import tech.kayys.silat.core.domain.*;
-import tech.kayys.silat.core.engine.NodeExecutionResult;
-import tech.kayys.silat.core.engine.NodeExecutionTask;
+import tech.kayys.gamelan.core.domain.*;
+import tech.kayys.gamelan.core.engine.NodeExecutionResult;
+import tech.kayys.gamelan.core.engine.NodeExecutionTask;
 
 import java.time.Instant;
 import java.util.List;
@@ -3993,7 +3993,7 @@ public class MemoryExecutorTest {
 
 
 
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
@@ -4005,7 +4005,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * ============================================================================
- * SILAT MEMORY EXECUTOR - MAIN APPLICATION
+ * GAMELAN MEMORY EXECUTOR - MAIN APPLICATION
  * ============================================================================
  */
 @QuarkusMain
@@ -4014,14 +4014,14 @@ public class MemoryExecutorApplication implements QuarkusApplication {
     private static final Logger LOG = LoggerFactory.getLogger(MemoryExecutorApplication.class);
     
     public static void main(String[] args) {
-        LOG.info("Starting Silat Memory Executor...");
+        LOG.info("Starting Gamelan Memory Executor...");
         Quarkus.run(MemoryExecutorApplication.class, args);
     }
     
     @Override
     public int run(String... args) throws Exception {
         LOG.info("=".repeat(60));
-        LOG.info("  Silat Memory Executor Started");
+        LOG.info("  Gamelan Memory Executor Started");
         LOG.info("  Version: 1.0.0");
         LOG.info("  Ready to process memory-aware workflow tasks");
         LOG.info("=".repeat(60));

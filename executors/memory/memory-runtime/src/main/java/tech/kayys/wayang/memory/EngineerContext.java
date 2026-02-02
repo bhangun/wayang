@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -65,7 +65,7 @@ public class EngineerContext {
 
             if (type.startsWith("memory_")) {
                 List<String> memories = (List<String>) structured.computeIfAbsent(
-                    "memories", k -> new ArrayList<String>());
+                        "memories", k -> new ArrayList<String>());
                 memories.add(section.getContent());
             } else {
                 structured.put(type, section.getContent());
@@ -74,18 +74,31 @@ public class EngineerContext {
 
         structured.put("query", query);
         structured.put("metadata", Map.of(
-            "totalTokens", totalTokens,
-            "maxTokens", maxTokens,
-            "sectionCount", sections.size()
-        ));
+                "totalTokens", totalTokens,
+                "maxTokens", maxTokens,
+                "sectionCount", sections.size()));
 
         return structured;
     }
 
     // Getters
-    public String getQuery() { return query; }
-    public List<ContextSection> getSections() { return sections; }
-    public int getTotalTokens() { return totalTokens; }
-    public int getMaxTokens() { return maxTokens; }
-    public double getUtilization() { return (double) totalTokens / maxTokens; }
+    public String getQuery() {
+        return query;
+    }
+
+    public List<ContextSection> getSections() {
+        return sections;
+    }
+
+    public int getTotalTokens() {
+        return totalTokens;
+    }
+
+    public int getMaxTokens() {
+        return maxTokens;
+    }
+
+    public double getUtilization() {
+        return (double) totalTokens / maxTokens;
+    }
 }

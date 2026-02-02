@@ -1,8 +1,8 @@
-# Silat Human Task Executor - Complete Production Implementation
+# Gamelan Human Task Executor - Complete Production Implementation
 
 ## 🎯 Overview
 
-A **complete, production-ready** Human-in-the-Loop executor for the Silat workflow engine. This implementation includes:
+A **complete, production-ready** Human-in-the-Loop executor for the Gamelan workflow engine. This implementation includes:
 
 ✅ **Full Domain Model** with Event Sourcing  
 ✅ **Reactive Persistence** with PostgreSQL  
@@ -17,7 +17,7 @@ A **complete, production-ready** Human-in-the-Loop executor for the Silat workfl
 ## 📁 Project Structure
 
 ```
-tech.kayys.silat.executor.human/
+tech.kayys.gamelan.executor.human/
 ├── domain/
 │   ├── HumanTask.java              # Aggregate root
 │   ├── HumanTaskId.java            # Value objects
@@ -269,8 +269,8 @@ GROUP BY status;
 
 ```bash
 # Database
-QUARKUS_DATASOURCE_REACTIVE_URL=postgresql://localhost:5432/silat_db
-QUARKUS_DATASOURCE_USERNAME=silat
+QUARKUS_DATASOURCE_REACTIVE_URL=postgresql://localhost:5432/gamelan_db
+QUARKUS_DATASOURCE_USERNAME=gamelan
 QUARKUS_DATASOURCE_PASSWORD=your_password
 
 # Email (Gmail example)
@@ -287,7 +287,7 @@ TEAMS_WEBHOOK_URL=https://outlook.office.com/webhook/YOUR/WEBHOOK
 ### Application Properties
 
 ```yaml
-silat:
+gamelan:
   notifications:
     email:
       enabled: true
@@ -468,10 +468,10 @@ human_tasks_overdue_total
 
 ```bash
 # View logs
-docker-compose logs -f silat-app
+docker-compose logs -f gamelan-app
 
 # Filter by level
-docker-compose logs -f silat-app | grep ERROR
+docker-compose logs -f gamelan-app | grep ERROR
 
 # View specific service logs
 docker-compose logs -f postgres
@@ -486,10 +486,10 @@ docker-compose logs -f postgres
 ./gradlew build -Dquarkus.package.type=native -Dquarkus.native.container-build=true
 
 # Build Docker image
-docker build -f src/main/docker/Dockerfile.native -t silat-human-task:1.0.0 .
+docker build -f src/main/docker/Dockerfile.native -t gamelan-human-task:1.0.0 .
 
 # Run container
-docker run -p 8080:8080 silat-human-task:1.0.0
+docker run -p 8080:8080 gamelan-human-task:1.0.0
 ```
 
 ### Kubernetes Deployment
@@ -498,20 +498,20 @@ docker run -p 8080:8080 silat-human-task:1.0.0
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: silat-human-task
+  name: gamelan-human-task
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: silat-human-task
+      app: gamelan-human-task
   template:
     metadata:
       labels:
-        app: silat-human-task
+        app: gamelan-human-task
     spec:
       containers:
       - name: app
-        image: silat-human-task:1.0.0
+        image: gamelan-human-task:1.0.0
         ports:
         - containerPort: 8080
         env:
@@ -536,5 +536,5 @@ Copyright © 2024 Kayys Technology. All rights reserved.
 ## 📞 Support
 
 - Email: support@kayys.tech
-- Docs: https://docs.silat.kayys.tech
-- Issues: https://github.com/kayys-tech/silat/issues
+- Docs: https://docs.gamelan.kayys.tech
+- Issues: https://github.com/kayys-tech/gamelan/issues

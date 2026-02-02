@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import java.util.List;
 import java.util.Map;
@@ -40,7 +40,15 @@ public class PromptTemplate {
         return result;
     }
 
-    public String getName() { return name; }
-    public String getTemplate() { return template; }
-    public List<String> getRequiredVariables() { return requiredVariables; }
+    public String getName() {
+        return name;
+    }
+
+    public String getTemplate() {
+        return template;
+    }
+
+    public List<String> getRequiredVariables() {
+        return requiredVariables;
+    }
 }

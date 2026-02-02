@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -13,26 +13,27 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Context engineering service for building optimized context from memories and current query
+ * Context engineering service for building optimized context from memories and
+ * current query
  */
 @ApplicationScoped
 public class ContextEngineeringService {
 
     private static final Logger LOG = LoggerFactory.getLogger(ContextEngineeringService.class);
 
-    @ConfigProperty(name = "silat.context.max-tokens", defaultValue = "8000")
+    @ConfigProperty(name = "gamelan.context.max-tokens", defaultValue = "8000")
     int maxContextTokens;
 
-    @ConfigProperty(name = "silat.context.decay-rate", defaultValue = "0.001")
+    @ConfigProperty(name = "gamelan.context.decay-rate", defaultValue = "0.001")
     double temporalDecayRate;
 
-    @ConfigProperty(name = "silat.context.recency-weight", defaultValue = "0.3")
+    @ConfigProperty(name = "gamelan.context.recency-weight", defaultValue = "0.3")
     double recencyWeight;
 
-    @ConfigProperty(name = "silat.context.importance-weight", defaultValue = "0.4")
+    @ConfigProperty(name = "gamelan.context.importance-weight", defaultValue = "0.4")
     double importanceWeight;
 
-    @ConfigProperty(name = "silat.context.similarity-weight", defaultValue = "0.3")
+    @ConfigProperty(name = "gamelan.context.similarity-weight", defaultValue = "0.3")
     double similarityWeight;
 
     @Inject
@@ -47,9 +48,9 @@ public class ContextEngineeringService {
     /**
      * Build optimized context from memories and current query
      *
-     * @param query Current query/instruction
+     * @param query     Current query/instruction
      * @param namespace Memory namespace
-     * @param config Context configuration
+     * @param config    Context configuration
      * @return Optimized context object
      */
     public Uni<EngineerContext> buildContext(
@@ -63,24 +64,19 @@ public class ContextEngineeringService {
 
         // Generate query embedding
         return embeddingService.embed(query)
-            .flatMap(queryEmbedding ->
-                retrieveRelevantMemories(
-                    queryEmbedding,
-                    namespace,
-                    config
-                )
-            )
-            .map(memories ->
-                assembleContext(query, memories, config)
-            );
+                .flatMap(queryEmbedding -> retrieveRelevantMemories(
+                        queryEmbedding,
+                        namespace,
+                        config))
+                .map(memories -> assembleContext(query, memories, config));
     }
 
     /**
      * Retrieve relevant memories with multi-factor scoring
      *
      * @param queryEmbedding Query vector embedding
-     * @param namespace Memory namespace
-     * @param config Context configuration
+     * @param namespace      Memory namespace
+     * @param config         Context configuration
      * @return List of relevant memories
      */
     private Uni<List<ScoredMemory>> retrieveRelevantMemories(
@@ -103,16 +99,11 @@ public class ContextEngineeringService {
                 queryEmbedding,
                 config.getMaxMemories() * 2, // Retrieve more, then re-rank
                 0.5, // Minimum similarity
-                filters
-            )
-            .map(scoredMemories ->
-                reRankWithMultipleFactors(scoredMemories, queryEmbedding)
-            )
-            .map(reranked ->
-                reranked.stream()
-                    .limit(config.getMaxMemories())
-                    .collect(Collectors.toList())
-            );
+                filters)
+                .map(scoredMemories -> reRankWithMultipleFactors(scoredMemories, queryEmbedding))
+                .map(reranked -> reranked.stream()
+                        .limit(config.getMaxMemories())
+                        .collect(Collectors.toList()));
     }
 
     /**
@@ -149,19 +140,17 @@ public class ContextEngineeringService {
             double frequencyScore = Math.log(accessCount + 1) / Math.log(100); // Normalized log
 
             // Combined score
-            double combinedScore =
-                (similarityScore * similarityWeight) +
-                (recencyScore * recencyWeight) +
-                (importanceScore * importanceWeight) +
-                (frequencyScore * 0.1); // Small weight for frequency
+            double combinedScore = (similarityScore * similarityWeight) +
+                    (recencyScore * recencyWeight) +
+                    (importanceScore * importanceWeight) +
+                    (frequencyScore * 0.1); // Small weight for frequency
 
             Map<String, Object> scoreBreakdown = Map.of(
-                "total", combinedScore,
-                "similarity", similarityScore,
-                "recency", recencyScore,
-                "importance", importanceScore,
-                "frequency", frequencyScore
-            );
+                    "total", combinedScore,
+                    "similarity", similarityScore,
+                    "recency", recencyScore,
+                    "importance", importanceScore,
+                    "frequency", frequencyScore);
 
             reranked.add(new ScoredMemory(memory, combinedScore, scoreBreakdown));
         }
@@ -170,7 +159,7 @@ public class ContextEngineeringService {
         reranked.sort((a, b) -> Double.compare(b.getScore(), a.getScore()));
 
         LOG.debug("Re-ranking complete, top score: {}",
-            reranked.isEmpty() ? 0 : reranked.get(0).getScore());
+                reranked.isEmpty() ? 0 : reranked.get(0).getScore());
 
         return reranked;
     }
@@ -178,9 +167,9 @@ public class ContextEngineeringService {
     /**
      * Assemble context from memories with token budget optimization
      *
-     * @param query Original query
+     * @param query    Original query
      * @param memories Relevant memories
-     * @param config Context configuration
+     * @param config   Context configuration
      * @return Assembled context
      */
     private EngineerContext assembleContext(
@@ -203,11 +192,10 @@ public class ContextEngineeringService {
             int systemTokens = textChunker.estimateTokenCount(config.getSystemPrompt());
             if (usedTokens + systemTokens <= availableTokens) {
                 sections.add(new ContextSection(
-                    "system",
-                    config.getSystemPrompt(),
-                    systemTokens,
-                    1.0
-                ));
+                        "system",
+                        config.getSystemPrompt(),
+                        systemTokens,
+                        1.0));
                 usedTokens += systemTokens;
             }
         }
@@ -215,14 +203,13 @@ public class ContextEngineeringService {
         // 2. Recent conversation history (if provided)
         if (config.getConversationHistory() != null) {
             int historyTokens = textChunker.estimateTokenCount(
-                String.join("\n", config.getConversationHistory()));
+                    String.join("\n", config.getConversationHistory()));
             if (usedTokens + historyTokens <= availableTokens * 0.3) { // Max 30% for history
                 sections.add(new ContextSection(
-                    "conversation_history",
-                    String.join("\n", config.getConversationHistory()),
-                    historyTokens,
-                    0.9
-                ));
+                        "conversation_history",
+                        String.join("\n", config.getConversationHistory()),
+                        historyTokens,
+                        0.9));
                 usedTokens += historyTokens;
             }
         }
@@ -235,11 +222,10 @@ public class ContextEngineeringService {
 
             if (usedTokens + memoryTokens <= availableTokens) {
                 sections.add(new ContextSection(
-                    "memory_" + memory.getType().name().toLowerCase(),
-                    content,
-                    memoryTokens,
-                    scoredMemory.getScore()
-                ));
+                        "memory_" + memory.getType().name().toLowerCase(),
+                        content,
+                        memoryTokens,
+                        scoredMemory.getScore()));
                 usedTokens += memoryTokens;
 
                 // Update access count
@@ -249,10 +235,9 @@ public class ContextEngineeringService {
                 metadata.put("lastAccessed", Instant.now().toString());
 
                 memoryStore.updateMetadata(memory.getId(), metadata)
-                    .subscribe().with(
-                        updated -> LOG.trace("Updated access count for memory: {}", memory.getId()),
-                        error -> LOG.warn("Failed to update memory metadata", error)
-                    );
+                        .subscribe().with(
+                                updated -> LOG.trace("Updated access count for memory: {}", memory.getId()),
+                                error -> LOG.warn("Failed to update memory metadata", error));
             } else {
                 LOG.debug("Token budget exhausted, skipping remaining memories");
                 break;
@@ -264,24 +249,22 @@ public class ContextEngineeringService {
             int instructionTokens = textChunker.estimateTokenCount(config.getTaskInstructions());
             if (usedTokens + instructionTokens <= availableTokens) {
                 sections.add(new ContextSection(
-                    "task_instructions",
-                    config.getTaskInstructions(),
-                    instructionTokens,
-                    1.0
-                ));
+                        "task_instructions",
+                        config.getTaskInstructions(),
+                        instructionTokens,
+                        1.0));
                 usedTokens += instructionTokens;
             }
         }
 
         EngineerContext context = new EngineerContext(
-            query,
-            sections,
-            usedTokens,
-            maxContextTokens
-        );
+                query,
+                sections,
+                usedTokens,
+                maxContextTokens);
 
         LOG.info("Context assembled: {} sections, {} tokens used of {} available",
-            sections.size(), usedTokens, availableTokens);
+                sections.size(), usedTokens, availableTokens);
 
         return context;
     }
@@ -299,12 +282,12 @@ public class ContextEngineeringService {
         // Add metadata if enabled
         if (config.isIncludeMetadata()) {
             formatted.append("[")
-                .append(memory.getType().name())
-                .append(" - ")
-                .append(formatTimestamp(memory.getTimestamp()))
-                .append(" - Importance: ")
-                .append(String.format("%.2f", memory.getImportance()))
-                .append("]\n");
+                    .append(memory.getType().name())
+                    .append(" - ")
+                    .append(formatTimestamp(memory.getTimestamp()))
+                    .append(" - Importance: ")
+                    .append(String.format("%.2f", memory.getImportance()))
+                    .append("]\n");
         }
 
         // Add content

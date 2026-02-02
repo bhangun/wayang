@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.rag.domain;
+package tech.kayys.gamelan.executor.rag.domain;
 
 public class ChunkingConfig {
     private final ChunkingStrategy strategy;
@@ -16,7 +16,15 @@ public class ChunkingConfig {
     }
 
     // Getters
-    public ChunkingStrategy strategy() { return strategy; }
-    public int chunkSize() { return chunkSize; }
-    public int chunkOverlap() { return chunkOverlap; }
+    public ChunkingStrategy strategy() {
+        return strategy;
+    }
+
+    public int chunkSize() {
+        return chunkSize;
+    }
+
+    public int chunkOverlap() {
+        return chunkOverlap;
+    }
 }

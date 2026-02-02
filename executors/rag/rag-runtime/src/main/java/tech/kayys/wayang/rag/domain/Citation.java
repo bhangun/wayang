@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.rag.domain;
+package tech.kayys.gamelan.executor.rag.domain;
 
 public class Citation {
     private final int index;
@@ -9,8 +9,8 @@ public class Citation {
     private final String sectionTitle;
     private final float confidenceScore;
 
-    public Citation(int index, String content, String sourceUri, String title, int pageNumber, 
-                   String sectionTitle, float confidenceScore) {
+    public Citation(int index, String content, String sourceUri, String title, int pageNumber,
+            String sectionTitle, float confidenceScore) {
         this.index = index;
         this.content = content;
         this.sourceUri = sourceUri;
@@ -21,11 +21,31 @@ public class Citation {
     }
 
     // Getters
-    public int getIndex() { return index; }
-    public String getContent() { return content; }
-    public String getSourceUri() { return sourceUri; }
-    public String getTitle() { return title; }
-    public int getPageNumber() { return pageNumber; }
-    public String getSectionTitle() { return sectionTitle; }
-    public float getConfidenceScore() { return confidenceScore; }
+    public int getIndex() {
+        return index;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public String getSourceUri() {
+        return sourceUri;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public int getPageNumber() {
+        return pageNumber;
+    }
+
+    public String getSectionTitle() {
+        return sectionTitle;
+    }
+
+    public float getConfidenceScore() {
+        return confidenceScore;
+    }
 }

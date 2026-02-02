@@ -5,8 +5,17 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.sdk.executor.AbstractWorkflowExecutor;
-import tech.kayys.silat.sdk.executor.Executor;
+import tech.kayys.gamelan.engine.node.DefaultNodeExecutionResult;
+import tech.kayys.gamelan.engine.node.NodeExecutionResult;
+import tech.kayys.gamelan.engine.node.NodeExecutionStatus;
+import tech.kayys.gamelan.engine.node.NodeExecutionTask;
+import tech.kayys.gamelan.engine.node.NodeId;
+import tech.kayys.gamelan.engine.workflow.WorkflowRunId;
+import tech.kayys.gamelan.sdk.executor.core.WorkflowExecutor;
+import tech.kayys.gamelan.sdk.executor.core.Executor;
+import tech.kayys.gamelan.engine.protocol.CommunicationType;
+import tech.kayys.gamelan.engine.error.ErrorInfo;
+import tech.kayys.gamelan.engine.execution.ExecutionToken;
 import tech.kayys.wayang.agent.model.AgentExecutionResult;
 import tech.kayys.wayang.agent.model.AgentConfiguration;
 import tech.kayys.wayang.agent.model.AgentContext;
@@ -18,12 +27,6 @@ import tech.kayys.wayang.agent.model.ToolCall;
 import tech.kayys.wayang.agent.model.ToolRegistry;
 import tech.kayys.wayang.agent.model.ToolResult;
 import tech.kayys.wayang.agent.model.llmprovider.LLMProviderRegistry;
-import tech.kayys.silat.execution.DefaultNodeExecutionResult;
-import tech.kayys.silat.execution.NodeExecutionResult;
-import tech.kayys.silat.execution.NodeExecutionStatus;
-import tech.kayys.silat.execution.NodeExecutionTask;
-import tech.kayys.silat.model.CommunicationType;
-import tech.kayys.silat.model.ErrorInfo;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -45,7 +48,7 @@ import java.util.stream.Collectors;
  */
 @Executor(executorType = "common-agent", communicationType = CommunicationType.GRPC, maxConcurrentTasks = 10, version = "1.0.0")
 @ApplicationScoped
-public class AgentExecutor extends AbstractWorkflowExecutor {
+public class AgentExecutor implements WorkflowExecutor {
 
     private static final Logger LOG = LoggerFactory.getLogger(AgentExecutor.class);
 
@@ -66,6 +69,11 @@ public class AgentExecutor extends AbstractWorkflowExecutor {
 
     @Inject
     protected tech.kayys.wayang.agent.model.AgentMemoryManager memoryManager;
+
+    @Override
+    public String getExecutorType() {
+        return "common-agent";
+    }
 
     @Override
     public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {

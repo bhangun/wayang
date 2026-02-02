@@ -21,6 +21,8 @@ import tech.kayys.wayang.agent.service.JsonMapper;
  * Production MessageRepository using database
  */
 @ApplicationScoped
+@jakarta.inject.Named("database")
+@jakarta.enterprise.inject.Alternative
 public class DatabaseMessageRepository implements MessageRepository {
 
     private static final Logger LOG = LoggerFactory.getLogger(DatabaseMessageRepository.class);

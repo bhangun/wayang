@@ -56,13 +56,13 @@ public class RealOpenAIProvider extends AbstractLLMProvider {
     @Inject
     WebClient webClient;
 
-    @ConfigProperty(name = "silat.agent.llm.openai.api-key")
+    @ConfigProperty(name = "gamelan.agent.llm.openai.api-key")
     String apiKey;
 
-    @ConfigProperty(name = "silat.agent.llm.openai.base-url", defaultValue = "https://api.openai.com/v1")
+    @ConfigProperty(name = "gamelan.agent.llm.openai.base-url", defaultValue = "https://api.openai.com/v1")
     String baseUrl;
 
-    @ConfigProperty(name = "silat.agent.llm.openai.timeout", defaultValue = "60000")
+    @ConfigProperty(name = "gamelan.agent.llm.openai.timeout", defaultValue = "60000")
     long timeout;
 
     public RealOpenAIProvider() {

@@ -33,6 +33,7 @@ public class SecretException extends RuntimeException {
         INVALID_PATH("The secret path format is invalid"),
         QUOTA_EXCEEDED("Secret storage quota has been exceeded"),
         VERSION_NOT_FOUND("The requested secret version does not exist"),
+        SECRET_EXPIRED("The requested secret has expired"),
         ROTATION_FAILED("Secret rotation operation failed"),
         INVALID_REQUEST("Invalid request parameters"),
         INTERNAL_ERROR("An internal error occurred");

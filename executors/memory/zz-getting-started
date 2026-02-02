@@ -1,4 +1,4 @@
-# Silat Memory Executor - Getting Started Guide
+# Gamelan Memory Executor - Getting Started Guide
 
 ## 🚀 Quick Start (5 Minutes)
 
@@ -10,7 +10,7 @@
 ### Step 1: Build the Project
 
 ```bash
-cd silat-memory-executor
+cd gamelan-memory-executor
 mvn clean package -DskipTests
 ```
 
@@ -79,10 +79,10 @@ docker-compose up -d postgres
 
 # Or manually
 docker run -d \
-  --name silat-postgres \
-  -e POSTGRES_DB=silat_memory \
-  -e POSTGRES_USER=silat \
-  -e POSTGRES_PASSWORD=silat \
+  --name gamelan-postgres \
+  -e POSTGRES_DB=gamelan_memory \
+  -e POSTGRES_USER=gamelan \
+  -e POSTGRES_PASSWORD=gamelan \
   -p 5432:5432 \
   pgvector/pgvector:pg16
 ```
@@ -92,7 +92,7 @@ docker run -d \
 ```bash
 # The database is automatically initialized on startup
 # Or run manually:
-docker exec -i silat-postgres psql -U silat -d silat_memory < init-db.sql
+docker exec -i gamelan-postgres psql -U gamelan -d gamelan_memory < init-db.sql
 ```
 
 ### Step 3: Configure Application
@@ -101,13 +101,13 @@ Edit `src/main/resources/application.properties`:
 
 ```properties
 # Change to PostgreSQL
-silat.memory.store.type=postgres
+gamelan.memory.store.type=postgres
 
 # Database connection (already configured)
 quarkus.datasource.db-kind=postgresql
-quarkus.datasource.username=silat
-quarkus.datasource.password=silat
-quarkus.datasource.reactive.url=postgresql://localhost:5432/silat_memory
+quarkus.datasource.username=gamelan
+quarkus.datasource.password=gamelan
+quarkus.datasource.reactive.url=postgresql://localhost:5432/gamelan_memory
 ```
 
 ### Step 4: Run with PostgreSQL
@@ -123,9 +123,9 @@ mvn quarkus:dev
 Edit `application.properties`:
 
 ```properties
-silat.embedding.provider=openai
-silat.embedding.openai.api-key=sk-your-api-key-here
-silat.embedding.openai.model=text-embedding-3-small
+gamelan.embedding.provider=openai
+gamelan.embedding.openai.api-key=sk-your-api-key-here
+gamelan.embedding.openai.model=text-embedding-3-small
 ```
 
 ### Step 2: Test OpenAI Embeddings
@@ -145,7 +145,7 @@ curl -X POST http://localhost:8081/api/memory/store \
 ### Build Docker Image
 
 ```bash
-docker build -t silat-memory-executor:1.0.0 .
+docker build -t gamelan-memory-executor:1.0.0 .
 ```
 
 ### Run with Docker Compose
@@ -168,7 +168,7 @@ Run the verification script:
 ```bash
 #!/bin/bash
 
-echo "=== Silat Memory Executor Verification ==="
+echo "=== Gamelan Memory Executor Verification ==="
 
 # Check if service is running
 if curl -sf http://localhost:8081/health/live > /dev/null; then
@@ -321,10 +321,10 @@ docker-compose logs memory-executor
 docker ps | grep postgres
 
 # Test connection
-docker exec silat-postgres psql -U silat -d silat_memory -c "SELECT 1"
+docker exec gamelan-postgres psql -U gamelan -d gamelan_memory -c "SELECT 1"
 
 # Check pgvector extension
-docker exec silat-postgres psql -U silat -d silat_memory -c "SELECT * FROM pg_extension WHERE extname='vector'"
+docker exec gamelan-postgres psql -U gamelan -d gamelan_memory -c "SELECT * FROM pg_extension WHERE extname='vector'"
 ```
 
 ### Memory search returns empty
@@ -345,7 +345,7 @@ curl -X POST http://localhost:8081/api/memory/search \
    - [ARCHITECTURE.md](ARCHITECTURE.md) - Technical details
 
 2. **Explore Examples**
-   - See `src/main/java/tech/kayys/silat/executor/memory/examples/`
+   - See `src/main/java/tech/kayys/gamelan/executor/memory/examples/`
    - Run examples via API or programmatically
 
 3. **Integrate with Workflows**

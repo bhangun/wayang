@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 /**
  * Context section
@@ -17,8 +17,19 @@ public class ContextSection {
         this.relevanceScore = relevanceScore;
     }
 
-    public String getType() { return type; }
-    public String getContent() { return content; }
-    public int getTokenCount() { return tokenCount; }
-    public double getRelevanceScore() { return relevanceScore; }
+    public String getType() {
+        return type;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public int getTokenCount() {
+        return tokenCount;
+    }
+
+    public double getRelevanceScore() {
+        return relevanceScore;
+    }
 }

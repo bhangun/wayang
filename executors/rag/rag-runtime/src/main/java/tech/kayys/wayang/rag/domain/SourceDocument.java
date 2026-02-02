@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.rag.domain;
+package tech.kayys.gamelan.executor.rag.domain;
 
 import java.util.Map;
 
@@ -12,9 +12,9 @@ public class SourceDocument {
     private final int pageNumber;
     private final String sectionTitle;
 
-    public SourceDocument(String id, String title, String content, String sourceUri, 
-                         Map<String, String> metadata, float similarityScore, int pageNumber, 
-                         String sectionTitle) {
+    public SourceDocument(String id, String title, String content, String sourceUri,
+            Map<String, String> metadata, float similarityScore, int pageNumber,
+            String sectionTitle) {
         this.id = id;
         this.title = title;
         this.content = content;
@@ -26,12 +26,35 @@ public class SourceDocument {
     }
 
     // Getters
-    public String getId() { return id; }
-    public String getTitle() { return title; }
-    public String getContent() { return content; }
-    public String getSourceUri() { return sourceUri; }
-    public Map<String, String> getMetadata() { return metadata; }
-    public float getSimilarityScore() { return similarityScore; }
-    public int getPageNumber() { return pageNumber; }
-    public String getSectionTitle() { return sectionTitle; }
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public String getSourceUri() {
+        return sourceUri;
+    }
+
+    public Map<String, String> getMetadata() {
+        return metadata;
+    }
+
+    public float getSimilarityScore() {
+        return similarityScore;
+    }
+
+    public int getPageNumber() {
+        return pageNumber;
+    }
+
+    public String getSectionTitle() {
+        return sectionTitle;
+    }
 }

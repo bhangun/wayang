@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.rag.domain;
+package tech.kayys.gamelan.executor.rag.domain;
 
 import org.junit.jupiter.api.Test;
 
@@ -13,10 +13,10 @@ class DomainClassesTest {
     @Test
     void testRetrievalConfig_Creation() {
         // Given
-        RetrievalConfig config = new RetrievalConfig(10, 0.75f, 1024, 100, true, 
-                                                   RerankingModel.COHERE_RERANK, true, 0.6f, 
-                                                   true, 5, false, 0, Map.of("key", "value"), 
-                                                   List.of("field"), true, true);
+        RetrievalConfig config = new RetrievalConfig(10, 0.75f, 1024, 100, true,
+                RerankingModel.COHERE_RERANK, true, 0.6f,
+                true, 5, false, 0, Map.of("key", "value"),
+                List.of("field"), true, true);
 
         // When & Then
         assertEquals(10, config.topK());
@@ -58,11 +58,11 @@ class DomainClassesTest {
     @Test
     void testGenerationConfig_Creation() {
         // Given
-        GenerationConfig config = new GenerationConfig("anthropic", "claude-3", 0.5f, 2048, 
-                                                     0.9f, 0.1f, 0.1f, List.of("STOP"), 
-                                                     "Custom system prompt", Map.of("param", "value"), 
-                                                     true, true, CitationStyle.APA, true, true, 
-                                                     Map.of("safety", "setting"));
+        GenerationConfig config = new GenerationConfig("anthropic", "claude-3", 0.5f, 2048,
+                0.9f, 0.1f, 0.1f, List.of("STOP"),
+                "Custom system prompt", Map.of("param", "value"),
+                true, true, CitationStyle.APA, true, true,
+                Map.of("safety", "setting"));
 
         // When & Then
         assertEquals("anthropic", config.provider());
@@ -111,17 +111,16 @@ class DomainClassesTest {
     void testRagResponse_Creation() {
         // Given
         RagResponse response = new RagResponse(
-            "test query",
-            "test answer",
-            List.of(new SourceDocument("id1", "title1", "content1", "uri1", Map.of(), 0.9f, 1, "section1")),
-            List.of(new Citation(1, "citation content", "uri1", "title1", 1, "section1", 0.8f)),
-            new RagMetrics(100, 5, 100, 0.85f, 3, 5, true),
-            "context content",
-            Instant.now(),
-            Map.of("meta", "data"),
-            List.of("source1"),
-            java.util.Optional.empty()
-        );
+                "test query",
+                "test answer",
+                List.of(new SourceDocument("id1", "title1", "content1", "uri1", Map.of(), 0.9f, 1, "section1")),
+                List.of(new Citation(1, "citation content", "uri1", "title1", 1, "section1", 0.8f)),
+                new RagMetrics(100, 5, 100, 0.85f, 3, 5, true),
+                "context content",
+                Instant.now(),
+                Map.of("meta", "data"),
+                List.of("source1"),
+                java.util.Optional.empty());
 
         // When & Then
         assertEquals("test query", response.query());
@@ -141,7 +140,7 @@ class DomainClassesTest {
         // Given
         RetrievalConfig retrievalConfig = RetrievalConfig.defaults();
         GenerationConfig generationConfig = GenerationConfig.defaults();
-        
+
         RagWorkflowInput input = new RagWorkflowInput("tenant1", "query1", retrievalConfig, generationConfig);
 
         // When & Then
@@ -191,8 +190,8 @@ class DomainClassesTest {
     @Test
     void testSourceDocument_Creation() {
         // Given
-        SourceDocument doc = new SourceDocument("id1", "title1", "content1", "uri1", 
-                                              Map.of("key", "value"), 0.85f, 1, "section1");
+        SourceDocument doc = new SourceDocument("id1", "title1", "content1", "uri1",
+                Map.of("key", "value"), 0.85f, 1, "section1");
 
         // When & Then
         assertEquals("id1", doc.getId());

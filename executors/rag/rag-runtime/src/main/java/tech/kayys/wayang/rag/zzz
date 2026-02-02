@@ -82,7 +82,7 @@ enum CitationStyle { INLINE_NUMBERED, FOOTNOTE, APA, MLA }
  * # PostgreSQL Configuration
  * langchain4j.vectorstore.postgres.host=localhost
  * langchain4j.vectorstore.postgres.port=5432
- * langchain4j.vectorstore.postgres.database=silat
+ * langchain4j.vectorstore.postgres.database=gamelan
  * langchain4j.vectorstore.postgres.user=postgres
  * langchain4j.vectorstore.postgres.password=${DB_PASSWORD}
  * langchain4j.vectorstore.postgres.table=embeddings
@@ -91,7 +91,7 @@ enum CitationStyle { INLINE_NUMBERED, FOOTNOTE, APA, MLA }
  * langchain4j.vectorstore.pinecone.api-key=${PINECONE_API_KEY}
  * langchain4j.vectorstore.pinecone.environment=${PINECONE_ENVIRONMENT}
  * langchain4j.vectorstore.pinecone.project-id=${PINECONE_PROJECT_ID}
- * langchain4j.vectorstore.pinecone.index=silat
+ * langchain4j.vectorstore.pinecone.index=gamelan
  *
  * # Weaviate Configuration (alternative)
  * langchain4j.vectorstore.weaviate.api-key=${WEAVIATE_API_KEY}
@@ -337,7 +337,7 @@ public class RagUsageExamples {
  * # PostgreSQL Configuration
  * langchain4j.vectorstore.postgres.host=localhost
  * langchain4j.vectorstore.postgres.port=5432
- * langchain4j.vectorstore.postgres.database=silat
+ * langchain4j.vectorstore.postgres.database=gamelan
  * langchain4j.vectorstore.postgres.user=postgres
  * langchain4j.vectorstore.postgres.password=${DB_PASSWORD}
  * langchain4j.vectorstore.postgres.table=embeddings
@@ -346,7 +346,7 @@ public class RagUsageExamples {
  * langchain4j.vectorstore.pinecone.api-key=${PINECONE_API_KEY}
  * langchain4j.vectorstore.pinecone.environment=${PINECONE_ENVIRONMENT}
  * langchain4j.vectorstore.pinecone.project-id=${PINECONE_PROJECT_ID}
- * langchain4j.vectorstore.pinecone.index=silat
+ * langchain4j.vectorstore.pinecone.index=gamelan
  * 
  * # Weaviate Configuration (alternative)
  * langchain4j.vectorstore.weaviate.api-key=${WEAVIATE_API_KEY}
@@ -355,7 +355,7 @@ public class RagUsageExamples {
  * langchain4j.vectorstore.weaviate.class-name=Document
  */
 
-package tech.kayys.silat.executor.rag.langchain;
+package tech.kayys.gamelan.executor.rag.langchain;
 
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentSplitter;
@@ -391,13 +391,13 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.executor.AbstractWorkflowExecutor;
-import tech.kayys.silat.executor.Executor;
-import tech.kayys.silat.executor.rag.domain.*;
-import tech.kayys.silat.core.domain.*;
-import tech.kayys.silat.core.engine.NodeExecutionResult;
-import tech.kayys.silat.core.engine.NodeExecutionTask;
-import tech.kayys.silat.core.scheduler.CommunicationType;
+import tech.kayys.gamelan.executor.AbstractWorkflowExecutor;
+import tech.kayys.gamelan.executor.Executor;
+import tech.kayys.gamelan.executor.rag.domain.*;
+import tech.kayys.gamelan.core.domain.*;
+import tech.kayys.gamelan.core.engine.NodeExecutionResult;
+import tech.kayys.gamelan.core.engine.NodeExecutionTask;
+import tech.kayys.gamelan.core.scheduler.CommunicationType;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -406,7 +406,7 @@ import java.util.stream.Collectors;
 
 /**
  * ============================================================================
- * SILAT RAG EXECUTOR WITH LANGCHAIN4J
+ * GAMELAN RAG EXECUTOR WITH LANGCHAIN4J
  * ============================================================================
  * 
  * Production-ready RAG implementation using LangChain4j framework.
@@ -1139,7 +1139,7 @@ public class LangChain4jEmbeddingStoreFactory {
  //------------
  
  
- package tech.kayys.silat.executor.rag.client;
+ package tech.kayys.gamelan.executor.rag.client;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.*;
@@ -1544,7 +1544,7 @@ record WeaviateObject(
 
 // ==================== CONFIGURATION CLASSES ====================
 
-package tech.kayys.silat.executor.rag.config;
+package tech.kayys.gamelan.executor.rag.config;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -1630,7 +1630,7 @@ public class WeaviateConfig {
 
 // ==================== CACHING SERVICES ====================
 
-package tech.kayys.silat.executor.rag.cache;
+package tech.kayys.gamelan.executor.rag.cache;
 
 import io.quarkus.cache.CacheResult;
 import io.quarkus.cache.CacheKey;
@@ -1641,7 +1641,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.executor.rag.domain.*;
+import tech.kayys.gamelan.executor.rag.domain.*;
 
 import java.time.Duration;
 import java.util.*;
@@ -1854,7 +1854,7 @@ public class RagCacheService {
  * # Pinecone Configuration
  * pinecone.api.key=${PINECONE_API_KEY}
  * pinecone.environment=${PINECONE_ENVIRONMENT}
- * pinecone.index.name=silat-vectors
+ * pinecone.index.name=gamelan-vectors
  * quarkus.rest-client.pinecone.url=https://${pinecone.index.name}-${pinecone.environment}.svc.pinecone.io
  * quarkus.rest-client.pinecone.scope=jakarta.inject.Singleton
  *
@@ -1869,7 +1869,7 @@ public class RagCacheService {
  * quarkus.datasource.db-kind=postgresql
  * quarkus.datasource.username=${DB_USER:postgres}
  * quarkus.datasource.password=${DB_PASSWORD:postgres}
- * quarkus.datasource.reactive.url=postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:silat}
+ * quarkus.datasource.reactive.url=postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:gamelan}
  *
  * # Redis Configuration (for caching)
  * quarkus.redis.hosts=redis://${REDIS_HOST:localhost}:${REDIS_PORT:6379}
@@ -1877,19 +1877,19 @@ public class RagCacheService {
  * quarkus.redis.client-type=standalone
  *
  * # Vector Store Configuration
- * silat.vectorstore.default.backend=postgres
+ * gamelan.vectorstore.default.backend=postgres
  *
  * # Cache Configuration
  * quarkus.cache.caffeine.rag-responses.maximum-size=1000
  * quarkus.cache.caffeine.rag-responses.expire-after-write=1H
  */
 
-package tech.kayys.silat.executor.rag;
+package tech.kayys.gamelan.executor.rag;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.executor.rag.domain.*;
+import tech.kayys.gamelan.executor.rag.domain.*;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -2096,14 +2096,14 @@ public class CitationExtractor {
 
 // ==================== VECTOR STORE IMPLEMENTATIONS ====================
 
-package tech.kayys.silat.executor.rag.vectorstore;
+package tech.kayys.gamelan.executor.rag.vectorstore;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.executor.rag.domain.*;
+import tech.kayys.gamelan.executor.rag.domain.*;
 
 import java.time.Instant;
 import java.util.*;
@@ -2668,7 +2668,7 @@ public class WeaviateVectorStore implements VectorStore {
 @ApplicationScoped
 public class VectorStoreConfig {
     
-    @org.eclipse.microprofile.config.inject.ConfigProperty(name = "silat.vectorstore.default.backend")
+    @org.eclipse.microprofile.config.inject.ConfigProperty(name = "gamelan.vectorstore.default.backend")
     String defaultBackend;
     
     public String getBackend(String tenantId) {
@@ -2678,7 +2678,7 @@ public class VectorStoreConfig {
 }
 
 
-package tech.kayys.silat.executor.rag.llm;
+package tech.kayys.gamelan.executor.rag.llm;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -2902,7 +2902,7 @@ class AzureOpenAIProvider implements LlmProvider {
 
 // ==================== RERANKING SERVICE ====================
 
-package tech.kayys.silat.executor.rag.rerank;
+package tech.kayys.gamelan.executor.rag.rerank;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -2910,7 +2910,7 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.executor.rag.domain.*;
+import tech.kayys.gamelan.executor.rag.domain.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -3108,15 +3108,15 @@ class VoyageRerankingProvider implements RerankingProvider {
 
 // ==================== QUERY ANALYZER ====================
 
-package tech.kayys.silat.executor.rag;
+package tech.kayys.gamelan.executor.rag;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.executor.rag.domain.*;
-import tech.kayys.silat.executor.rag.llm.LlmService;
+import tech.kayys.gamelan.executor.rag.domain.*;
+import tech.kayys.gamelan.executor.rag.llm.LlmService;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -3378,7 +3378,7 @@ public class QueryAnalyzer {
     }
 }
 
-package tech.kayys.silat.executor.rag.embedding;
+package tech.kayys.gamelan.executor.rag.embedding;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -3386,7 +3386,7 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.executor.rag.domain.*;
+import tech.kayys.gamelan.executor.rag.domain.*;
 
 import java.util.*;
 
@@ -3698,14 +3698,14 @@ class VoyageAIProvider implements EmbeddingProvider {
 
 // ==================== VECTOR STORE SERVICE ====================
 
-package tech.kayys.silat.executor.rag.vectorstore;
+package tech.kayys.gamelan.executor.rag.vectorstore;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.executor.rag.domain.*;
+import tech.kayys.gamelan.executor.rag.domain.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -3958,25 +3958,25 @@ interface VectorStore {
     Uni<Long> count(String tenantId, List<String> collections);
 }
 
-package tech.kayys.silat.executor.rag;
+package tech.kayys.gamelan.executor.rag;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.executor.AbstractWorkflowExecutor;
-import tech.kayys.silat.executor.Executor;
-import tech.kayys.silat.executor.rag.domain.*;
-import tech.kayys.silat.executor.rag.embedding.EmbeddingService;
-import tech.kayys.silat.executor.rag.vectorstore.VectorStoreService;
-import tech.kayys.silat.executor.rag.llm.LlmService;
-import tech.kayys.silat.executor.rag.rerank.RerankingService;
-import tech.kayys.silat.executor.rag.cache.RagCacheService;
-import tech.kayys.silat.core.domain.*;
-import tech.kayys.silat.core.engine.NodeExecutionResult;
-import tech.kayys.silat.core.engine.NodeExecutionTask;
-import tech.kayys.silat.core.scheduler.CommunicationType;
+import tech.kayys.gamelan.executor.AbstractWorkflowExecutor;
+import tech.kayys.gamelan.executor.Executor;
+import tech.kayys.gamelan.executor.rag.domain.*;
+import tech.kayys.gamelan.executor.rag.embedding.EmbeddingService;
+import tech.kayys.gamelan.executor.rag.vectorstore.VectorStoreService;
+import tech.kayys.gamelan.executor.rag.llm.LlmService;
+import tech.kayys.gamelan.executor.rag.rerank.RerankingService;
+import tech.kayys.gamelan.executor.rag.cache.RagCacheService;
+import tech.kayys.gamelan.core.domain.*;
+import tech.kayys.gamelan.core.engine.NodeExecutionResult;
+import tech.kayys.gamelan.core.engine.NodeExecutionTask;
+import tech.kayys.gamelan.core.scheduler.CommunicationType;
 
 import java.time.Instant;
 import java.util.*;
@@ -3987,7 +3987,7 @@ import java.util.stream.Collectors;
  * RAG WORKFLOW EXECUTOR
  * ============================================================================
  * 
- * Production-ready RAG executor for Silat workflow engine.
+ * Production-ready RAG executor for Gamelan workflow engine.
  * 
  * Pipeline stages:
  * 1. Query Analysis & Routing
@@ -4635,25 +4635,25 @@ record LlmRequest(
     Map<String, Object> metadata
 ) {}
 
-package tech.kayys.silat.executor.rag;
+package tech.kayys.gamelan.executor.rag;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.executor.AbstractWorkflowExecutor;
-import tech.kayys.silat.executor.Executor;
-import tech.kayys.silat.executor.rag.domain.*;
-import tech.kayys.silat.executor.rag.embedding.EmbeddingService;
-import tech.kayys.silat.executor.rag.vectorstore.VectorStoreService;
-import tech.kayys.silat.executor.rag.llm.LlmService;
-import tech.kayys.silat.executor.rag.rerank.RerankingService;
-import tech.kayys.silat.executor.rag.cache.RagCacheService;
-import tech.kayys.silat.core.domain.*;
-import tech.kayys.silat.core.engine.NodeExecutionResult;
-import tech.kayys.silat.core.engine.NodeExecutionTask;
-import tech.kayys.silat.core.scheduler.CommunicationType;
+import tech.kayys.gamelan.executor.AbstractWorkflowExecutor;
+import tech.kayys.gamelan.executor.Executor;
+import tech.kayys.gamelan.executor.rag.domain.*;
+import tech.kayys.gamelan.executor.rag.embedding.EmbeddingService;
+import tech.kayys.gamelan.executor.rag.vectorstore.VectorStoreService;
+import tech.kayys.gamelan.executor.rag.llm.LlmService;
+import tech.kayys.gamelan.executor.rag.rerank.RerankingService;
+import tech.kayys.gamelan.executor.rag.cache.RagCacheService;
+import tech.kayys.gamelan.core.domain.*;
+import tech.kayys.gamelan.core.engine.NodeExecutionResult;
+import tech.kayys.gamelan.core.engine.NodeExecutionTask;
+import tech.kayys.gamelan.core.scheduler.CommunicationType;
 
 import java.time.Instant;
 import java.util.*;
@@ -4664,7 +4664,7 @@ import java.util.stream.Collectors;
  * RAG WORKFLOW EXECUTOR
  * ============================================================================
  * 
- * Production-ready RAG executor for Silat workflow engine.
+ * Production-ready RAG executor for Gamelan workflow engine.
  * 
  * Pipeline stages:
  * 1. Query Analysis & Routing

@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -14,7 +14,7 @@ public class VectorStoreFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(VectorStoreFactory.class);
 
-    @ConfigProperty(name = "silat.memory.store.type", defaultValue = "inmemory")
+    @ConfigProperty(name = "gamelan.memory.store.type", defaultValue = "inmemory")
     String storeType;
 
     @Inject
@@ -41,10 +41,9 @@ public class VectorStoreFactory {
         // Initialize if needed
         if (store instanceof PostgresVectorStore pgStore) {
             pgStore.initialize()
-                .subscribe().with(
-                    v -> LOG.info("Vector store initialized"),
-                    error -> LOG.error("Failed to initialize vector store", error)
-                );
+                    .subscribe().with(
+                            v -> LOG.info("Vector store initialized"),
+                            error -> LOG.error("Failed to initialize vector store", error));
         }
 
         return store;

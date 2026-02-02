@@ -6,6 +6,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
+import tech.kayys.wayang.security.secrets.core.DefaultSecretManager;
 import tech.kayys.wayang.security.secrets.core.SecretManager;
 import tech.kayys.wayang.security.secrets.dto.*;
 import tech.kayys.wayang.security.secrets.exception.SecretException;
@@ -32,6 +33,7 @@ public class SecretResource {
     private static final Logger LOG = Logger.getLogger(SecretResource.class);
 
     @Inject
+    @DefaultSecretManager
     SecretManager secretManager;
 
     /**
@@ -42,26 +44,26 @@ public class SecretResource {
         LOG.infof("Storing secret: tenant=%s, path=%s", request.tenantId(), request.path());
 
         StoreSecretRequest storeRequest = StoreSecretRequest.builder()
-            .tenantId(request.tenantId())
-            .path(request.path())
-            .data(request.data())
-            .type(request.type() != null ? SecretType.valueOf(request.type()) : SecretType.GENERIC)
-            .metadata(request.metadata() != null ? request.metadata() : Map.of())
-            .rotatable(request.rotatable() != null ? request.rotatable() : false)
-            .build();
+                .tenantId(request.tenantId())
+                .path(request.path())
+                .data(request.data())
+                .type(request.type() != null ? SecretType.valueOf(request.type()) : SecretType.GENERIC)
+                .metadata(request.metadata() != null ? request.metadata() : Map.of())
+                .rotatable(request.rotatable() != null ? request.rotatable() : false)
+                .build();
 
         return secretManager.store(storeRequest)
-            .onItem().transform(metadata -> Response
-                .status(Response.Status.CREATED)
-                .entity(SecretMetadataResponse.from(metadata))
-                .build())
-            .onFailure().recoverWithItem(th -> {
-                LOG.errorf(th, "Failed to store secret: %s", request.path());
-                return Response
-                    .status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(ErrorResponse.from(th))
-                    .build();
-            });
+                .onItem().transform(metadata -> Response
+                        .status(Response.Status.CREATED)
+                        .entity(SecretMetadataResponse.from(metadata))
+                        .build())
+                .onFailure().recoverWithItem(th -> {
+                    LOG.errorf(th, "Failed to store secret: %s", request.path());
+                    return Response
+                            .status(Response.Status.INTERNAL_SERVER_ERROR)
+                            .entity(ErrorResponse.from(th))
+                            .build();
+                });
     }
 
     /**
@@ -73,37 +75,36 @@ public class SecretResource {
             @PathParam("path") String path,
             @QueryParam("tenantId") String tenantId,
             @QueryParam("version") Integer version) {
-        
-        LOG.debugf("Retrieving secret: tenant=%s, path=%s, version=%s", 
-            tenantId, path, version);
+
+        LOG.debugf("Retrieving secret: tenant=%s, path=%s, version=%s",
+                tenantId, path, version);
 
         RetrieveSecretRequest request = new RetrieveSecretRequest(
-            tenantId,
-            path,
-            Optional.ofNullable(version)
-        );
+                tenantId,
+                path,
+                Optional.ofNullable(version));
 
         return secretManager.retrieve(request)
-            .onItem().transform(secret -> Response
-                .ok(SecretResponse.from(secret))
-                .build())
-            .onFailure(SecretException.class).recoverWithItem(ex -> {
-                SecretException se = (SecretException) ex;
-                if (se.getErrorCode() == SecretException.ErrorCode.SECRET_NOT_FOUND) {
+                .onItem().transform(secret -> Response
+                        .ok(SecretResponse.from(secret))
+                        .build())
+                .onFailure(SecretException.class).recoverWithItem(ex -> {
+                    SecretException se = (SecretException) ex;
+                    if (se.getErrorCode() == SecretException.ErrorCode.SECRET_NOT_FOUND) {
+                        return Response
+                                .status(Response.Status.NOT_FOUND)
+                                .entity(ErrorResponse.from(ex))
+                                .build();
+                    }
                     return Response
-                        .status(Response.Status.NOT_FOUND)
-                        .entity(ErrorResponse.from(ex))
-                        .build();
-                }
-                return Response
-                    .status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(ErrorResponse.from(ex))
-                    .build();
-            })
-            .onFailure().recoverWithItem(th -> Response
-                .status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(ErrorResponse.from(th))
-                .build());
+                            .status(Response.Status.INTERNAL_SERVER_ERROR)
+                            .entity(ErrorResponse.from(ex))
+                            .build();
+                })
+                .onFailure().recoverWithItem(th -> Response
+                        .status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(ErrorResponse.from(th))
+                        .build());
     }
 
     /**
@@ -116,22 +117,21 @@ public class SecretResource {
             @QueryParam("tenantId") String tenantId,
             @QueryParam("hard") @DefaultValue("false") boolean hard,
             @QueryParam("reason") String reason) {
-        
+
         LOG.infof("Deleting secret: tenant=%s, path=%s, hard=%b", tenantId, path, hard);
 
         DeleteSecretRequest request = new DeleteSecretRequest(
-            tenantId,
-            path,
-            hard,
-            reason != null ? reason : "Deleted via API"
-        );
+                tenantId,
+                path,
+                hard,
+                reason != null ? reason : "Deleted via API");
 
         return secretManager.delete(request)
-            .onItem().transform(v -> Response.noContent().build())
-            .onFailure().recoverWithItem(th -> Response
-                .status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(ErrorResponse.from(th))
-                .build());
+                .onItem().transform(v -> Response.noContent().build())
+                .onFailure().recoverWithItem(th -> Response
+                        .status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(ErrorResponse.from(th))
+                        .build());
     }
 
     /**
@@ -141,17 +141,17 @@ public class SecretResource {
     public Uni<Response> listSecrets(
             @QueryParam("tenantId") String tenantId,
             @QueryParam("path") @DefaultValue("") String path) {
-        
+
         LOG.debugf("Listing secrets: tenant=%s, path=%s", tenantId, path);
 
         return secretManager.list(tenantId, path)
-            .onItem().transform(metadataList -> Response
-                .ok(SecretListResponse.from(metadataList))
-                .build())
-            .onFailure().recoverWithItem(th -> Response
-                .status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(ErrorResponse.from(th))
-                .build());
+                .onItem().transform(metadataList -> Response
+                        .ok(SecretListResponse.from(metadataList))
+                        .build())
+                .onFailure().recoverWithItem(th -> Response
+                        .status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(ErrorResponse.from(th))
+                        .build());
     }
 
     /**
@@ -162,24 +162,23 @@ public class SecretResource {
     public Uni<Response> rotateSecret(
             @PathParam("path") String path,
             RotateSecretApiRequest request) {
-        
+
         LOG.infof("Rotating secret: tenant=%s, path=%s", request.tenantId(), path);
 
         RotateSecretRequest rotateRequest = new RotateSecretRequest(
-            request.tenantId(),
-            path,
-            request.newData(),
-            request.deprecateOld() != null ? request.deprecateOld() : true
-        );
+                request.tenantId(),
+                path,
+                request.newData(),
+                request.deprecateOld() != null ? request.deprecateOld() : true);
 
         return secretManager.rotate(rotateRequest)
-            .onItem().transform(metadata -> Response
-                .ok(SecretMetadataResponse.from(metadata))
-                .build())
-            .onFailure().recoverWithItem(th -> Response
-                .status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(ErrorResponse.from(th))
-                .build());
+                .onItem().transform(metadata -> Response
+                        .ok(SecretMetadataResponse.from(metadata))
+                        .build())
+                .onFailure().recoverWithItem(th -> Response
+                        .status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(ErrorResponse.from(th))
+                        .build());
     }
 
     /**
@@ -190,21 +189,21 @@ public class SecretResource {
     public Uni<Response> getMetadata(
             @PathParam("path") String path,
             @QueryParam("tenantId") String tenantId) {
-        
+
         return secretManager.getMetadata(tenantId, path)
-            .onItem().transform(metadata -> Response
-                .ok(SecretMetadataResponse.from(metadata))
-                .build())
-            .onFailure(SecretException.class).recoverWithItem(ex -> {
-                SecretException se = (SecretException) ex;
-                if (se.getErrorCode() == SecretException.ErrorCode.SECRET_NOT_FOUND) {
-                    return Response.status(Response.Status.NOT_FOUND).build();
-                }
-                return Response
-                    .status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(ErrorResponse.from(ex))
-                    .build();
-            });
+                .onItem().transform(metadata -> Response
+                        .ok(SecretMetadataResponse.from(metadata))
+                        .build())
+                .onFailure(SecretException.class).recoverWithItem(ex -> {
+                    SecretException se = (SecretException) ex;
+                    if (se.getErrorCode() == SecretException.ErrorCode.SECRET_NOT_FOUND) {
+                        return Response.status(Response.Status.NOT_FOUND).build();
+                    }
+                    return Response
+                            .status(Response.Status.INTERNAL_SERVER_ERROR)
+                            .entity(ErrorResponse.from(ex))
+                            .build();
+                });
     }
 
     /**
@@ -215,11 +214,11 @@ public class SecretResource {
     public Uni<Response> secretExists(
             @PathParam("path") String path,
             @QueryParam("tenantId") String tenantId) {
-        
+
         return secretManager.exists(tenantId, path)
-            .onItem().transform(exists -> exists
-                ? Response.ok().build()
-                : Response.status(Response.Status.NOT_FOUND).build());
+                .onItem().transform(exists -> exists
+                        ? Response.ok().build()
+                        : Response.status(Response.Status.NOT_FOUND).build());
     }
 
     /**
@@ -229,108 +228,99 @@ public class SecretResource {
     @Path("/health")
     public Uni<Response> health() {
         return secretManager.health()
-            .onItem().transform(health -> Response
-                .status(health.healthy() ? Response.Status.OK : Response.Status.SERVICE_UNAVAILABLE)
-                .entity(health)
-                .build());
+                .onItem().transform(health -> Response
+                        .status(health.healthy() ? Response.Status.OK : Response.Status.SERVICE_UNAVAILABLE)
+                        .entity(health)
+                        .build());
     }
 }
 
 // API Request/Response DTOs
 
 record StoreSecretApiRequest(
-    String tenantId,
-    String path,
-    Map<String, String> data,
-    String type,
-    Long ttlSeconds,
-    Map<String, String> metadata,
-    Boolean rotatable
-) {}
+        String tenantId,
+        String path,
+        Map<String, String> data,
+        String type,
+        Long ttlSeconds,
+        Map<String, String> metadata,
+        Boolean rotatable) {
+}
 
 record RotateSecretApiRequest(
-    String tenantId,
-    Map<String, String> newData,
-    Boolean deprecateOld
-) {}
+        String tenantId,
+        Map<String, String> newData,
+        Boolean deprecateOld) {
+}
 
 record SecretResponse(
-    String tenantId,
-    String path,
-    Map<String, String> data,
-    SecretMetadataResponse metadata
-) {
+        String tenantId,
+        String path,
+        Map<String, String> data,
+        SecretMetadataResponse metadata) {
     static SecretResponse from(Secret secret) {
         return new SecretResponse(
-            secret.tenantId(),
-            secret.path(),
-            secret.data(),
-            SecretMetadataResponse.from(secret.metadata())
-        );
+                secret.tenantId(),
+                secret.path(),
+                secret.data(),
+                SecretMetadataResponse.from(secret.metadata()));
     }
 }
 
 record SecretMetadataResponse(
-    String tenantId,
-    String path,
-    int version,
-    String type,
-    String createdAt,
-    String updatedAt,
-    String expiresAt,
-    String createdBy,
-    Map<String, String> metadata,
-    boolean rotatable,
-    String status
-) {
+        String tenantId,
+        String path,
+        int version,
+        String type,
+        String createdAt,
+        String updatedAt,
+        String expiresAt,
+        String createdBy,
+        Map<String, String> metadata,
+        boolean rotatable,
+        String status) {
     static SecretMetadataResponse from(SecretMetadata metadata) {
         return new SecretMetadataResponse(
-            metadata.tenantId(),
-            metadata.path(),
-            metadata.version(),
-            metadata.type().name(),
-            metadata.createdAt().toString(),
-            metadata.updatedAt().toString(),
-            metadata.expiresAt().map(Object::toString).orElse(null),
-            metadata.createdBy(),
-            metadata.metadata(),
-            metadata.rotatable(),
-            metadata.status().name()
-        );
+                metadata.tenantId(),
+                metadata.path(),
+                metadata.version(),
+                metadata.type().name(),
+                metadata.createdAt().toString(),
+                metadata.updatedAt().toString(),
+                metadata.expiresAt().map(Object::toString).orElse(null),
+                metadata.createdBy(),
+                metadata.metadata(),
+                metadata.rotatable(),
+                metadata.status().name());
     }
 }
 
 record SecretListResponse(
-    int count,
-    List<SecretMetadataResponse> secrets
-) {
+        int count,
+        List<SecretMetadataResponse> secrets) {
     static SecretListResponse from(List<SecretMetadata> metadataList) {
         return new SecretListResponse(
-            metadataList.size(),
-            metadataList.stream()
-                .map(SecretMetadataResponse::from)
-                .toList()
-        );
+                metadataList.size(),
+                metadataList.stream()
+                        .map(SecretMetadataResponse::from)
+                        .toList());
     }
 }
 
 record ErrorResponse(
-    String error,
-    String message,
-    String code
-) {
+        String error,
+        String message,
+        String code) {
     static ErrorResponse from(Throwable th) {
         if (th instanceof SecretException se) {
             return new ErrorResponse(
-                "SecretException",
-                se.getMessage(),
-                se.getErrorCode().name()
-            );
+                    "SecretException",
+                    se.getMessage(),
+                    se.getErrorCode().name());
         }
         return new ErrorResponse(
-            th.getClass().getSimpleName(),
-            th.getMessage(),
-            "UNKNOWN"
-        );
+                th.getClass().getSimpleName(),
+                th.getMessage(),
+                "UNKNOWN");
     }
 }

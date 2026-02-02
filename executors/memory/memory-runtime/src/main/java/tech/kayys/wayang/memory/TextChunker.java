@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -16,10 +16,10 @@ public class TextChunker {
 
     private static final Logger LOG = LoggerFactory.getLogger(TextChunker.class);
 
-    @ConfigProperty(name = "silat.embedding.chunk.size", defaultValue = "512")
+    @ConfigProperty(name = "gamelan.embedding.chunk.size", defaultValue = "512")
     int chunkSize;
 
-    @ConfigProperty(name = "silat.embedding.chunk.overlap", defaultValue = "50")
+    @ConfigProperty(name = "gamelan.embedding.chunk.overlap", defaultValue = "50")
     int chunkOverlap;
 
     /**

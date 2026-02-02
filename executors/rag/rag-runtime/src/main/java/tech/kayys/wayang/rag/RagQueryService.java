@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.rag.examples;
+package tech.kayys.gamelan.executor.rag.examples;
 
 import dev.langchain4j.data.segment.TextSegment;
 import io.smallrye.mutiny.Uni;
@@ -6,14 +6,14 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.client.SilatClient;
-import tech.kayys.silat.executor.rag.domain.*;
+import tech.kayys.gamelan.client.GamelanClient;
+import tech.kayys.gamelan.executor.rag.domain.*;
 
 import java.time.Instant;
 import java.util.*;
 
 /**
- * High-level service for executing RAG queries via Silat
+ * High-level service for executing RAG queries via Gamelan
  */
 @ApplicationScoped
 public class RagQueryService {
@@ -21,7 +21,7 @@ public class RagQueryService {
     private static final Logger LOG = LoggerFactory.getLogger(RagQueryService.class);
 
     @Inject
-    SilatClient silatClient;
+    GamelanClient gamelanClient;
 
     /**
      * Execute simple RAG query
@@ -32,15 +32,14 @@ public class RagQueryService {
             String collectionName) {
 
         return executeRagWorkflow(
-            tenantId,
-            query,
-            RagMode.STANDARD,
-            SearchStrategy.HYBRID,
-            RetrievalConfig.defaults(),
-            GenerationConfig.defaults(),
-            List.of(collectionName),
-            Map.of()
-        );
+                tenantId,
+                query,
+                RagMode.STANDARD,
+                SearchStrategy.HYBRID,
+                RetrievalConfig.defaults(),
+                GenerationConfig.defaults(),
+                List.of(collectionName),
+                Map.of());
     }
 
     /**
@@ -49,15 +48,14 @@ public class RagQueryService {
     public Uni<RagResponse> advancedQuery(RagQueryRequest request) {
 
         return executeRagWorkflow(
-            request.tenantId(),
-            request.query(),
-            request.ragMode(),
-            request.searchStrategy(),
-            request.retrievalConfig(),
-            request.generationConfig(),
-            request.collections(),
-            request.filters()
-        );
+                request.tenantId(),
+                request.query(),
+                request.ragMode(),
+                request.searchStrategy(),
+                request.retrievalConfig(),
+                request.generationConfig(),
+                request.collections(),
+                request.filters());
     }
 
     /**
@@ -78,15 +76,14 @@ public class RagQueryService {
         String enhancedQuery = enhanceQueryWithHistory(query, history);
 
         return executeRagWorkflow(
-            tenantId,
-            enhancedQuery,
-            RagMode.STANDARD,
-            SearchStrategy.HYBRID,
-            RetrievalConfig.defaults(),
-            GenerationConfig.defaults(),
-            List.of(),
-            metadata
-        );
+                tenantId,
+                enhancedQuery,
+                RagMode.STANDARD,
+                SearchStrategy.HYBRID,
+                RetrievalConfig.defaults(),
+                GenerationConfig.defaults(),
+                List.of(),
+                metadata);
     }
 
     private Uni<RagResponse> executeRagWorkflow(
@@ -113,22 +110,22 @@ public class RagQueryService {
         input.put("filters", filters);
 
         // Execute workflow
-        return silatClient.runs()
-            .create("rag-langchain4j-workflow")
-            .input("query", query)
-            .input("tenantId", tenantId)
-            .input("ragMode", mode.name())
-            .input("searchStrategy", strategy.name())
-            .input("retrievalConfig", serializeRetrievalConfig(retrievalConfig))
-            .input("generationConfig", serializeGenerationConfig(generationConfig))
-            .input("collections", collections)
-            .input("filters", filters)
-            .executeAndStart()
-            .map(run -> {
-                // Poll for completion
-                return pollForCompletion(run.runId());
-            })
-            .flatMap(runId -> getRagResponse(runId));
+        return gamelanClient.runs()
+                .create("rag-langchain4j-workflow")
+                .input("query", query)
+                .input("tenantId", tenantId)
+                .input("ragMode", mode.name())
+                .input("searchStrategy", strategy.name())
+                .input("retrievalConfig", serializeRetrievalConfig(retrievalConfig))
+                .input("generationConfig", serializeGenerationConfig(generationConfig))
+                .input("collections", collections)
+                .input("filters", filters)
+                .executeAndStart()
+                .map(run -> {
+                    // Poll for completion
+                    return pollForCompletion(run.runId());
+                })
+                .flatMap(runId -> getRagResponse(runId));
     }
 
     private String pollForCompletion(String runId) {
@@ -137,13 +134,13 @@ public class RagQueryService {
     }
 
     private Uni<RagResponse> getRagResponse(String runId) {
-        return silatClient.runs()
-            .get(runId)
-            .map(run -> {
-                // Extract RAG response from run output
-                Map<String, Object> output = (Map<String, Object>) run;
-                return parseRagResponse(output);
-            });
+        return gamelanClient.runs()
+                .get(runId)
+                .map(run -> {
+                    // Extract RAG response from run output
+                    Map<String, Object> output = (Map<String, Object>) run;
+                    return parseRagResponse(output);
+                });
     }
 
     private RagResponse parseRagResponse(Map<String, Object> output) {
@@ -151,17 +148,16 @@ public class RagQueryService {
         String answer = (String) output.get("answer");
 
         return new RagResponse(
-            "", // query
-            answer,
-            List.of(),
-            List.of(),
-            null,
-            null,
-            Instant.now(),
-            Map.of(),
-            List.of(),
-            Optional.empty()
-        );
+                "", // query
+                answer,
+                List.of(),
+                List.of(),
+                null,
+                null,
+                Instant.now(),
+                Map.of(),
+                List.of(),
+                Optional.empty());
     }
 
     private String enhanceQueryWithHistory(

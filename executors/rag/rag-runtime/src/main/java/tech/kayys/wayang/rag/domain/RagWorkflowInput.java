@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.rag.domain;
+package tech.kayys.gamelan.executor.rag.domain;
 
 public class RagWorkflowInput {
     private final String tenantId;
@@ -6,8 +6,8 @@ public class RagWorkflowInput {
     private final RetrievalConfig retrievalConfig;
     private final GenerationConfig generationConfig;
 
-    public RagWorkflowInput(String tenantId, String query, RetrievalConfig retrievalConfig, 
-                           GenerationConfig generationConfig) {
+    public RagWorkflowInput(String tenantId, String query, RetrievalConfig retrievalConfig,
+            GenerationConfig generationConfig) {
         this.tenantId = tenantId;
         this.query = query;
         this.retrievalConfig = retrievalConfig;
@@ -15,8 +15,19 @@ public class RagWorkflowInput {
     }
 
     // Getters
-    public String tenantId() { return tenantId; }
-    public String query() { return query; }
-    public RetrievalConfig retrievalConfig() { return retrievalConfig; }
-    public GenerationConfig generationConfig() { return generationConfig; }
+    public String tenantId() {
+        return tenantId;
+    }
+
+    public String query() {
+        return query;
+    }
+
+    public RetrievalConfig retrievalConfig() {
+        return retrievalConfig;
+    }
+
+    public GenerationConfig generationConfig() {
+        return generationConfig;
+    }
 }

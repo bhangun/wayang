@@ -1,8 +1,8 @@
-# Silat Agent Executor - Configuration and Usage Guide
+# Gamelan Agent Executor - Configuration and Usage Guide
 
 ## 📋 Overview
 
-The Silat Agent Executor provides a comprehensive, production-ready agent system for the Silat Workflow Engine. It supports:
+The Gamelan Agent Executor provides a comprehensive, production-ready agent system for the Gamelan Workflow Engine. It supports:
 
 - **Multi-Provider LLM Integration**: OpenAI, Anthropic Claude, Azure, local models
 - **Pluggable Memory Systems**: Buffer, Summary, Vector, Entity memory
@@ -74,42 +74,42 @@ The Silat Agent Executor provides a comprehensive, production-ready agent system
 # application.properties
 
 # LLM Provider Configuration
-silat.agent.llm.openai.api-key=${OPENAI_API_KEY}
-silat.agent.llm.openai.base-url=https://api.openai.com/v1
-silat.agent.llm.anthropic.api-key=${ANTHROPIC_API_KEY}
-silat.agent.llm.anthropic.base-url=https://api.anthropic.com/v1
+gamelan.agent.llm.openai.api-key=${OPENAI_API_KEY}
+gamelan.agent.llm.openai.base-url=https://api.openai.com/v1
+gamelan.agent.llm.anthropic.api-key=${ANTHROPIC_API_KEY}
+gamelan.agent.llm.anthropic.base-url=https://api.anthropic.com/v1
 
 # Memory Configuration
-silat.agent.memory.cache-size=1000
-silat.agent.memory.cache-ttl=3600000
-silat.agent.memory.default-type=buffer
-silat.agent.memory.default-window-size=10
+gamelan.agent.memory.cache-size=1000
+gamelan.agent.memory.cache-ttl=3600000
+gamelan.agent.memory.default-type=buffer
+gamelan.agent.memory.default-window-size=10
 
 # Tool Configuration
-silat.agent.tools.enabled=calculator,web_search,current_time
-silat.agent.tools.web-search.api-key=${WEB_SEARCH_API_KEY}
+gamelan.agent.tools.enabled=calculator,web_search,current_time
+gamelan.agent.tools.web-search.api-key=${WEB_SEARCH_API_KEY}
 
 # Executor Configuration
-silat.executor.transport=GRPC
-silat.executor.max-concurrent-tasks=10
-silat.executor.grpc.port=9090
-silat.executor.kafka.bootstrap-servers=localhost:9092
+gamelan.executor.transport=GRPC
+gamelan.executor.max-concurrent-tasks=10
+gamelan.executor.grpc.port=9090
+gamelan.executor.kafka.bootstrap-servers=localhost:9092
 
 # Metrics
-silat.metrics.enabled=true
-silat.metrics.export-interval=60000
+gamelan.metrics.enabled=true
+gamelan.metrics.export-interval=60000
 ```
 
 ### 3. Define Workflow with Agent Node
 
 ```java
-import tech.kayys.silat.client.*;
-import tech.kayys.silat.api.dto.*;
+import tech.kayys.gamelan.client.*;
+import tech.kayys.gamelan.api.dto.*;
 
 public class AIWorkflowExample {
     
     public static void main(String[] args) {
-        SilatClient client = SilatClient.builder()
+        GamelanClient client = GamelanClient.builder()
             .restEndpoint("http://localhost:8080")
             .tenantId("acme-corp")
             .apiKey("your-api-key")
@@ -182,7 +182,7 @@ public class AIWorkflowExample {
 public class ExecuteAIWorkflow {
     
     public static void main(String[] args) {
-        SilatClient client = SilatClient.builder()
+        GamelanClient client = GamelanClient.builder()
             .restEndpoint("http://localhost:8080")
             .tenantId("acme-corp")
             .apiKey("your-api-key")
@@ -312,7 +312,7 @@ RunResponse run2 = client.runs()
 ```java
 package com.acme.tools;
 
-import tech.kayys.silat.agent.tools.*;
+import tech.kayys.gamelan.agent.tools.*;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -451,13 +451,13 @@ public void printMetrics() {
 // - Metrics
 
 // Tenant A
-client1 = SilatClient.builder()
+client1 = GamelanClient.builder()
     .tenantId("tenant-a")
     .apiKey("tenant-a-key")
     .build();
 
 // Tenant B
-client2 = SilatClient.builder()
+client2 = GamelanClient.builder()
     .tenantId("tenant-b")
     .apiKey("tenant-b-key")
     .build();
@@ -592,7 +592,7 @@ Solution: Optimize configuration
 
 ## 📖 API Reference
 
-Full API documentation available at: `https://docs.silat.dev/agent-executor`
+Full API documentation available at: `https://docs.gamelan.dev/agent-executor`
 
 ## 🤝 Contributing
 

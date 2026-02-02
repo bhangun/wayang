@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import java.util.Map;
 
@@ -20,7 +20,15 @@ public class ScoredMemory {
         this.scoreBreakdown = scoreBreakdown;
     }
 
-    public Memory getMemory() { return memory; }
-    public double getScore() { return score; }
-    public Map<String, Object> getScoreBreakdown() { return scoreBreakdown; }
+    public Memory getMemory() {
+        return memory;
+    }
+
+    public double getScore() {
+        return score;
+    }
+
+    public Map<String, Object> getScoreBreakdown() {
+        return scoreBreakdown;
+    }
 }

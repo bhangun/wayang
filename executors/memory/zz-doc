@@ -1,4 +1,4 @@
-# Silat Memory Executor - Architecture Documentation
+# Gamelan Memory Executor - Architecture Documentation
 
 ## 🏛️ System Architecture
 
@@ -6,7 +6,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        Silat Workflow Engine                             │
+│                        Gamelan Workflow Engine                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                 │
 │  │   Control    │  │   Workflow   │  │   Executor   │                 │
 │  │    Plane     │  │   Runtime    │  │   Registry   │                 │
@@ -246,7 +246,7 @@ Hit Rate: ~80% in typical workloads
 ### 1. Semantic Search
 ```sql
 SELECT *, 1 - (embedding <=> $queryEmbedding) as similarity
-FROM silat_memories
+FROM gamelan_memories
 WHERE namespace = $namespace
 ORDER BY embedding <=> $queryEmbedding
 LIMIT 10
@@ -277,7 +277,7 @@ ORDER BY combined_score DESC
 ### 3. Filtered Search
 ```sql
 SELECT *
-FROM silat_memories
+FROM gamelan_memories
 WHERE namespace = $namespace
   AND metadata @> '{"category": "refund"}'::jsonb
   AND importance >= 0.7
@@ -341,9 +341,9 @@ double calculateImportance(NodeExecutionTask task, NodeExecutionResult result) {
 
 **PostgreSQL RLS Policy**:
 ```sql
-CREATE POLICY tenant_isolation ON silat_memories
+CREATE POLICY tenant_isolation ON gamelan_memories
     FOR ALL
-    TO silat_user
+    TO gamelan_user
     USING (tenant_id = current_setting('app.current_tenant')::text);
 ```
 
@@ -353,16 +353,16 @@ CREATE POLICY tenant_isolation ON silat_memories
 
 ```sql
 -- Primary indexes
-CREATE INDEX idx_embedding_hnsw ON silat_memories 
+CREATE INDEX idx_embedding_hnsw ON gamelan_memories 
     USING hnsw (embedding vector_cosine_ops)
     WITH (m = 16, ef_construction = 64);
 
 -- Composite indexes
-CREATE INDEX idx_tenant_namespace_time ON silat_memories 
+CREATE INDEX idx_tenant_namespace_time ON gamelan_memories 
     (tenant_id, namespace, timestamp DESC);
 
 -- Partial indexes
-CREATE INDEX idx_active_high_importance ON silat_memories (importance DESC)
+CREATE INDEX idx_active_high_importance ON gamelan_memories (importance DESC)
     WHERE expires_at IS NULL OR expires_at > NOW();
 ```
 
@@ -370,11 +370,11 @@ CREATE INDEX idx_active_high_importance ON silat_memories (importance DESC)
 
 ```sql
 -- Partition by tenant for large deployments
-CREATE TABLE silat_memories_acme PARTITION OF silat_memories
+CREATE TABLE gamelan_memories_acme PARTITION OF gamelan_memories
     FOR VALUES IN ('acme-corp');
 
 -- Time-based partitioning for archival
-CREATE TABLE silat_memories_2024_01 PARTITION OF silat_memories
+CREATE TABLE gamelan_memories_2024_01 PARTITION OF gamelan_memories
     FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
 ```
 
@@ -422,20 +422,20 @@ L3: Database (PostgreSQL with pgvector)
 
 ```java
 // Executor metrics
-silat.executor.tasks.processed.total
-silat.executor.tasks.duration.seconds
-silat.executor.tasks.failed.total
+gamelan.executor.tasks.processed.total
+gamelan.executor.tasks.duration.seconds
+gamelan.executor.tasks.failed.total
 
 // Memory metrics
-silat.memory.store.operations.total
-silat.memory.store.operations.duration
-silat.memory.search.results.count
-silat.memory.context.tokens.used
+gamelan.memory.store.operations.total
+gamelan.memory.store.operations.duration
+gamelan.memory.search.results.count
+gamelan.memory.context.tokens.used
 
 // Embedding metrics
-silat.embedding.cache.hit.ratio
-silat.embedding.api.calls.total
-silat.embedding.api.latency
+gamelan.embedding.cache.hit.ratio
+gamelan.embedding.api.calls.total
+gamelan.embedding.api.latency
 ```
 
 ### Health Checks
@@ -493,4 +493,4 @@ silat.embedding.api.latency
 
 **Version**: 1.0.0  
 **Last Updated**: 2024-01-09  
-**Authors**: Silat Engineering Team
+**Authors**: Gamelan Engineering Team

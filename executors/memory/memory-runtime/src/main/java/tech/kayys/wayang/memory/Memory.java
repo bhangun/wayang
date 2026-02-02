@@ -1,4 +1,4 @@
-package tech.kayys.silat.core.domain;
+package tech.kayys.gamelan.core.domain;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -34,22 +34,49 @@ public class Memory {
         return new Builder();
     }
 
-    public String getId() { return id; }
-    public String getNamespace() { return namespace; }
-    public String getContent() { return content; }
-    public float[] getEmbedding() { return embedding; }
-    public MemoryType getType() { return type; }
-    public Map<String, Object> getMetadata() { return metadata; }
-    public Instant getTimestamp() { return timestamp; }
-    public Instant getExpiresAt() { return expiresAt; }
-    public double getImportance() { return importance; }
+    public String getId() {
+        return id;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public float[] getEmbedding() {
+        return embedding;
+    }
+
+    public MemoryType getType() {
+        return type;
+    }
+
+    public Map<String, Object> getMetadata() {
+        return metadata;
+    }
+
+    public Instant getTimestamp() {
+        return timestamp;
+    }
+
+    public Instant getExpiresAt() {
+        return expiresAt;
+    }
+
+    public double getImportance() {
+        return importance;
+    }
 
     /**
      * Calculate decayed importance based on temporal decay rate
      */
     public double getDecayedImportance(double decayRate) {
-        if (timestamp == null) return importance;
-        
+        if (timestamp == null)
+            return importance;
+
         long ageMinutes = java.time.Duration.between(timestamp, Instant.now()).toMinutes();
         return importance * Math.exp(-decayRate * ageMinutes);
     }

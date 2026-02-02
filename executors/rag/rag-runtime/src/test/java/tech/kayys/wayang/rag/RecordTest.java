@@ -1,8 +1,8 @@
-package tech.kayys.silat.executor.rag.examples;
+package tech.kayys.gamelan.executor.rag.examples;
 
 import org.junit.jupiter.api.Test;
-import tech.kayys.silat.executor.rag.domain.RagMode;
-import tech.kayys.silat.executor.rag.domain.SearchStrategy;
+import tech.kayys.gamelan.executor.rag.domain.RagMode;
+import tech.kayys.gamelan.executor.rag.domain.SearchStrategy;
 
 import java.time.Instant;
 import java.util.List;
@@ -57,16 +57,15 @@ class RecordTest {
         String query = "test query";
         RagMode ragMode = RagMode.STANDARD;
         SearchStrategy searchStrategy = SearchStrategy.HYBRID;
-        var retrievalConfig = tech.kayys.silat.executor.rag.domain.RetrievalConfig.defaults();
-        var generationConfig = tech.kayys.silat.executor.rag.domain.GenerationConfig.defaults();
+        var retrievalConfig = tech.kayys.gamelan.executor.rag.domain.RetrievalConfig.defaults();
+        var generationConfig = tech.kayys.gamelan.executor.rag.domain.GenerationConfig.defaults();
         List<String> collections = List.of("collection1", "collection2");
         Map<String, Object> filters = Map.of("filter", "value");
 
         // When
         RagQueryRequest request = new RagQueryRequest(
-            tenantId, query, ragMode, searchStrategy, 
-            retrievalConfig, generationConfig, collections, filters
-        );
+                tenantId, query, ragMode, searchStrategy,
+                retrievalConfig, generationConfig, collections, filters);
 
         // Then
         assertEquals(tenantId, request.tenantId());

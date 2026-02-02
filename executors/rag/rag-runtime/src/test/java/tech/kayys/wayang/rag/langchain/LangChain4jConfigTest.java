@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.rag.langchain;
+package tech.kayys.gamelan.executor.rag.langchain;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +29,7 @@ class LangChain4jConfigTest {
         config.setAzureEndpoint("https://test.openai.azure.com/");
         config.setAzureChatDeployment("gpt-4");
         config.setAzureEmbeddingDeployment("text-embedding-ada-002");
-        
+
         assertEquals("test-azure-key", config.getAzureApiKey());
         assertEquals("https://test.openai.azure.com/", config.getAzureEndpoint());
         assertEquals("gpt-4", config.getAzureChatDeployment());
@@ -54,7 +54,7 @@ class LangChain4jConfigTest {
         config.setPostgresUser("test-user");
         config.setPostgresPassword("test-password");
         config.setPostgresTable("test-table");
-        
+
         assertEquals("test-host", config.getPostgresHost());
         assertEquals(5433, config.getPostgresPort());
         assertEquals("test-db", config.getPostgresDatabase());
@@ -67,7 +67,7 @@ class LangChain4jConfigTest {
         config.setPineconeEnvironment("test-env");
         config.setPineconeProjectId("test-project");
         config.setPineconeIndex("test-index");
-        
+
         assertEquals("test-pinecone-key", config.getPineconeApiKey());
         assertEquals("test-env", config.getPineconeEnvironment());
         assertEquals("test-project", config.getPineconeProjectId());
@@ -78,7 +78,7 @@ class LangChain4jConfigTest {
         config.setWeaviateScheme("https");
         config.setWeaviateHost("test.weaviate.network");
         config.setWeaviateClassName("TestClass");
-        
+
         assertEquals("test-weaviate-key", config.getWeaviateApiKey());
         assertEquals("https", config.getWeaviateScheme());
         assertEquals("test.weaviate.network", config.getWeaviateHost());
@@ -94,10 +94,10 @@ class LangChain4jConfigTest {
         assertEquals(1536, config.getEmbeddingDimension());
         assertEquals("localhost", config.getPostgresHost());
         assertEquals(5432, config.getPostgresPort());
-        assertEquals("silat", config.getPostgresDatabase());
+        assertEquals("gamelan", config.getPostgresDatabase());
         assertEquals("postgres", config.getPostgresUser());
         assertEquals("embeddings", config.getPostgresTable());
-        assertEquals("silat", config.getPineconeIndex());
+        assertEquals("gamelan", config.getPineconeIndex());
         assertEquals("https", config.getWeaviateScheme());
         assertEquals("Document", config.getWeaviateClassName());
     }

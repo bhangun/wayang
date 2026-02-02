@@ -4,16 +4,16 @@
 
 quarkus:
   application:
-    name: silat-human-task-executor
+    name: gamelan-human-task-executor
     version: 1.0.0
 
   # Database Configuration
   datasource:
     db-kind: postgresql
-    username: silat
-    password: silat_password
+    username: gamelan
+    password: gamelan_password
     reactive:
-      url: postgresql://localhost:5432/silat_db
+      url: postgresql://localhost:5432/gamelan_db
       max-size: 20
 
   hibernate-orm:
@@ -30,7 +30,7 @@ quarkus:
 
   # Mailer Configuration
   mailer:
-    from: noreply@silat.company.com
+    from: noreply@gamelan.company.com
     host: smtp.gmail.com
     port: 587
     start-tls: REQUIRED
@@ -52,8 +52,8 @@ quarkus:
     always-include: true
     path: /swagger-ui
 
-# Silat Configuration
-silat:
+# Gamelan Configuration
+gamelan:
   app:
     base-url: http://localhost:8080
 

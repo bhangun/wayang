@@ -15,6 +15,7 @@ import java.util.*;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.CoreMatchers.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -38,15 +39,17 @@ import org.junit.jupiter.api.DisplayName;
  * - Performance benchmarks
  */
 @QuarkusTest
-@Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class SecretManagementIntegrationTest {
 
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine")
-            .withDatabaseName("wayang_test")
-            .withUsername("test")
-            .withPassword("test");
+    /*
+     * @Container
+     * static PostgreSQLContainer<?> postgres = new
+     * PostgreSQLContainer<>("postgres:15-alpine")
+     * .withDatabaseName("wayang_test")
+     * .withUsername("test")
+     * .withPassword("test");
+     */
 
     @Inject
     @DefaultSecretManager
@@ -57,7 +60,6 @@ public class SecretManagementIntegrationTest {
 
     @BeforeEach
     void setup() {
-        RestAssured.port = 8081;
     }
 
     @AfterEach

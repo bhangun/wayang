@@ -1,29 +1,26 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.core.domain.*;
-import tech.kayys.silat.core.engine.NodeExecutionResult;
-import tech.kayys.silat.core.engine.NodeExecutionTask;
-import tech.kayys.silat.executor.AbstractWorkflowExecutor;
-import tech.kayys.silat.executor.Executor;
+import tech.kayys.gamelan.core.domain.*;
+import tech.kayys.gamelan.core.engine.NodeExecutionResult;
+import tech.kayys.gamelan.core.engine.NodeExecutionTask;
+import tech.kayys.gamelan.executor.AbstractWorkflowExecutor;
+import tech.kayys.gamelan.executor.Executor;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 
 /**
- * Memory-aware workflow executor that leverages semantic memory and context engineering
+ * Memory-aware workflow executor that leverages semantic memory and context
+ * engineering
  * to enhance task execution with relevant historical context.
  */
-@Executor(
-    executorType = "memory-aware-executor",
-    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
-    maxConcurrentTasks = 10
-)
+@Executor(executorType = "memory-aware-executor", communicationType = tech.kayys.gamelan.core.scheduler.CommunicationType.GRPC, maxConcurrentTasks = 10)
 @ApplicationScoped
 public class MemoryAwareExecutor extends AbstractWorkflowExecutor {
 
@@ -44,24 +41,23 @@ public class MemoryAwareExecutor extends AbstractWorkflowExecutor {
     @Override
     public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
         LOG.info("Executing memory-aware task: run={}, node={}",
-            task.runId().value(), task.nodeId().value());
+                task.runId().value(), task.nodeId().value());
 
         String namespace = buildNamespace(task);
         String taskDescription = buildTaskDescription(task);
 
         // Build context from memory
         ContextConfig contextConfig = ContextConfig.builder()
-            .maxMemories(5)
-            .memoryTypes(List.of(MemoryType.EPISODIC, MemoryType.SEMANTIC))
-            .includeMetadata(true)
-            .build();
+                .maxMemories(5)
+                .memoryTypes(List.of(MemoryType.EPISODIC, MemoryType.SEMANTIC))
+                .includeMetadata(true)
+                .build();
 
         return contextService.buildContext(taskDescription, namespace, contextConfig)
-            .flatMap(context -> executeWithContext(task, context))
-            .flatMap(result -> storeExecutionMemory(task, result, namespace)
-                .replaceWith(result))
-            .onFailure().invoke(error ->
-                LOG.error("Memory-aware execution failed", error));
+                .flatMap(context -> executeWithContext(task, context))
+                .flatMap(result -> storeExecutionMemory(task, result, namespace)
+                        .replaceWith(result))
+                .onFailure().invoke(error -> LOG.error("Memory-aware execution failed", error));
     }
 
     /**
@@ -72,7 +68,7 @@ public class MemoryAwareExecutor extends AbstractWorkflowExecutor {
             EngineerContext context) {
 
         LOG.debug("Executing with context: {} tokens, {} sections",
-            context.getTotalTokens(), context.getSections().size());
+                context.getTotalTokens(), context.getSections().size());
 
         // Extract task-specific logic from context
         Map<String, Object> taskContext = task.context();
@@ -89,18 +85,17 @@ public class MemoryAwareExecutor extends AbstractWorkflowExecutor {
 
             // Add relevant memories summary
             List<String> relevantInsights = context.getSections().stream()
-                .filter(s -> s.getType().startsWith("memory_"))
-                .map(s -> s.getContent().substring(0, Math.min(100, s.getContent().length())))
-                .toList();
+                    .filter(s -> s.getType().startsWith("memory_"))
+                    .map(s -> s.getContent().substring(0, Math.min(100, s.getContent().length())))
+                    .toList();
             output.put("relevantInsights", relevantInsights);
 
             return NodeExecutionResult.success(
-                task.runId(),
-                task.nodeId(),
-                task.attempt(),
-                output,
-                task.token()
-            );
+                    task.runId(),
+                    task.nodeId(),
+                    task.attempt(),
+                    output,
+                    task.token());
         });
     }
 
@@ -124,24 +119,24 @@ public class MemoryAwareExecutor extends AbstractWorkflowExecutor {
 
         // Generate embedding and store
         return embeddingService.embed(memoryContent)
-            .flatMap(embedding -> {
-                Memory memory = Memory.builder()
-                    .namespace(namespace)
-                    .content(memoryContent)
-                    .embedding(embedding)
-                    .type(MemoryType.EPISODIC)
-                    .importance(importance)
-                    .timestamp(Instant.now())
-                    .addMetadata("runId", task.runId().value())
-                    .addMetadata("nodeId", task.nodeId().value())
-                    .addMetadata("attempt", task.attempt())
-                    .addMetadata("status", result.status().name())
-                    .addMetadata("executionTime", System.currentTimeMillis())
-                    .addMetadata("accessCount", 0)
-                    .build();
+                .flatMap(embedding -> {
+                    Memory memory = Memory.builder()
+                            .namespace(namespace)
+                            .content(memoryContent)
+                            .embedding(embedding)
+                            .type(MemoryType.EPISODIC)
+                            .importance(importance)
+                            .timestamp(Instant.now())
+                            .addMetadata("runId", task.runId().value())
+                            .addMetadata("nodeId", task.nodeId().value())
+                            .addMetadata("attempt", task.attempt())
+                            .addMetadata("status", result.status().name())
+                            .addMetadata("executionTime", System.currentTimeMillis())
+                            .addMetadata("accessCount", 0)
+                            .build();
 
-                return memoryStore.store(memory);
-            });
+                    return memoryStore.store(memory);
+                });
     }
 
     /**
@@ -169,8 +164,8 @@ public class MemoryAwareExecutor extends AbstractWorkflowExecutor {
         context.forEach((key, value) -> {
             if (value != null && !key.equals("internalState")) {
                 description.append("- ").append(key).append(": ")
-                    .append(value.toString().substring(0, Math.min(100, value.toString().length())))
-                    .append("\n");
+                        .append(value.toString().substring(0, Math.min(100, value.toString().length())))
+                        .append("\n");
             }
         });
 

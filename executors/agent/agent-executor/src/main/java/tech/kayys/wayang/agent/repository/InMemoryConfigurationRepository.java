@@ -16,6 +16,8 @@ import tech.kayys.wayang.agent.model.AgentConfiguration;
  * For production, replace with actual database implementation
  */
 @ApplicationScoped
+@jakarta.inject.Named("in-memory")
+@jakarta.enterprise.inject.Alternative
 public class InMemoryConfigurationRepository implements ConfigurationRepository {
 
     private static final Logger LOG = LoggerFactory.getLogger(InMemoryConfigurationRepository.class);

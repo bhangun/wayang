@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.rag.examples;
+package tech.kayys.gamelan.executor.rag.examples;
 
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.parser.apache.pdfbox.ApachePdfBoxDocumentParser;
@@ -13,10 +13,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.kayys.silat.executor.rag.domain.RetrievalConfig;
-import tech.kayys.silat.executor.rag.langchain.LangChain4jConfig;
-import tech.kayys.silat.executor.rag.langchain.LangChain4jEmbeddingStoreFactory;
-import tech.kayys.silat.executor.rag.langchain.LangChain4jModelFactory;
+import tech.kayys.gamelan.executor.rag.domain.RetrievalConfig;
+import tech.kayys.gamelan.executor.rag.langchain.LangChain4jConfig;
+import tech.kayys.gamelan.executor.rag.langchain.LangChain4jEmbeddingStoreFactory;
+import tech.kayys.gamelan.executor.rag.langchain.LangChain4jModelFactory;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -61,16 +61,17 @@ class DocumentIngestionServiceTest {
         String tenantId = "test-tenant";
         List<Path> pdfPaths = List.of(Path.of("/test/document.pdf"));
         Map<String, String> metadata = Map.of("collection", "test-collection");
-        
+
         // Mock the static methods and dependencies
         when(storeFactory.getStore(eq(tenantId), any(RetrievalConfig.class))).thenReturn(embeddingStore);
         when(modelFactory.createEmbeddingModel(eq(tenantId), eq("text-embedding-3-small"))).thenReturn(embeddingModel);
 
-        // Since we can't easily mock static methods like FileSystemDocumentLoader.loadDocument,
+        // Since we can't easily mock static methods like
+        // FileSystemDocumentLoader.loadDocument,
         // we'll test the logic assuming the document loading works
         Document mockDoc = Document.from("test content");
         when(FileSystemDocumentLoader.loadDocument(any(Path.class), any(ApachePdfBoxDocumentParser.class)))
-            .thenReturn(mockDoc);
+                .thenReturn(mockDoc);
 
         // When
         Uni<IngestResult> result = ingestionService.ingestPdfDocuments(tenantId, pdfPaths, metadata);
@@ -87,7 +88,7 @@ class DocumentIngestionServiceTest {
         List<String> texts = List.of("test text content");
         Map<String, String> metadata = Map.of("collection", "test-collection");
         ChunkingConfig chunkingConfig = ChunkingConfig.defaults();
-        
+
         when(storeFactory.getStore(eq(tenantId), any(RetrievalConfig.class))).thenReturn(embeddingStore);
         when(modelFactory.createEmbeddingModel(eq(tenantId), eq("text-embedding-3-small"))).thenReturn(embeddingModel);
 
@@ -103,9 +104,8 @@ class DocumentIngestionServiceTest {
         // Given
         String tenantId = "test-tenant";
         List<DocumentSource> sources = List.of(
-            new DocumentSource(SourceType.TEXT, null, "test content", Map.of("collection", "test"))
-        );
-        
+                new DocumentSource(SourceType.TEXT, null, "test content", Map.of("collection", "test")));
+
         when(storeFactory.getStore(eq(tenantId), any(RetrievalConfig.class))).thenReturn(embeddingStore);
         when(modelFactory.createEmbeddingModel(eq(tenantId), eq("text-embedding-3-small"))).thenReturn(embeddingModel);
 

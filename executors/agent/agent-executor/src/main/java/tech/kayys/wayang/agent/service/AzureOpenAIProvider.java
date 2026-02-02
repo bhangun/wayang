@@ -29,16 +29,16 @@ public class AzureOpenAIProvider extends AbstractLLMProvider {
     @Inject
     WebClient webClient;
 
-    @ConfigProperty(name = "silat.agent.llm.azure.api-key")
+    @ConfigProperty(name = "gamelan.agent.llm.azure.api-key")
     Optional<String> apiKey;
 
-    @ConfigProperty(name = "silat.agent.llm.azure.endpoint")
+    @ConfigProperty(name = "gamelan.agent.llm.azure.endpoint")
     Optional<String> endpoint;
 
-    @ConfigProperty(name = "silat.agent.llm.azure.deployment")
+    @ConfigProperty(name = "gamelan.agent.llm.azure.deployment")
     Optional<String> deployment;
 
-    @ConfigProperty(name = "silat.agent.llm.azure.api-version", defaultValue = "2024-02-15-preview")
+    @ConfigProperty(name = "gamelan.agent.llm.azure.api-version", defaultValue = "2024-02-15-preview")
     String apiVersion;
 
     public AzureOpenAIProvider() {

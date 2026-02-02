@@ -16,6 +16,8 @@ import tech.kayys.wayang.agent.service.JsonMapper;
  * Production ConfigurationRepository using database
  */
 @ApplicationScoped
+@jakarta.inject.Named("database")
+@jakarta.enterprise.inject.Alternative
 public class DatabaseConfigurationRepository implements ConfigurationRepository {
 
     private static final Logger LOG = LoggerFactory.getLogger(DatabaseConfigurationRepository.class);

@@ -17,6 +17,8 @@ import tech.kayys.wayang.agent.model.Message;
  * For production, replace with actual database implementation
  */
 @ApplicationScoped
+@jakarta.inject.Named("in-memory")
+@jakarta.enterprise.inject.Alternative
 public class InMemoryMessageRepository implements MessageRepository {
 
     private static final Logger LOG = LoggerFactory.getLogger(InMemoryMessageRepository.class);

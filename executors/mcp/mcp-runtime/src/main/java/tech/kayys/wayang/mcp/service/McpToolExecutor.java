@@ -104,7 +104,7 @@ public class McpToolExecutor {
                 .setConnectTimeout(10000)
                 .setIdleTimeout(60000)
                 .setMaxPoolSize(100)
-                .setUserAgent("Silat-MCP/1.0");
+                .setUserAgent("Gamelan-MCP/1.0");
 
         this.webClient = WebClient.create(vertx, options);
     }

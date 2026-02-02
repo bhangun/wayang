@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.rag.langchain;
+package tech.kayys.gamelan.executor.rag.langchain;
 
 import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.kayys.silat.client.SilatClient;
-import tech.kayys.silat.executor.rag.domain.*;
+import tech.kayys.gamelan.client.GamelanClient;
+import tech.kayys.gamelan.executor.rag.domain.*;
 
 import java.time.Instant;
 import java.util.List;
@@ -27,25 +27,25 @@ class RagExecutionServiceTest {
     private LangChain4jEmbeddingStoreFactory storeFactory;
 
     @Mock
-    private SilatClient silatClient;
+    private GamelanClient gamelanClient;
 
     private RagExecutionService ragExecutionService;
 
     @BeforeEach
     void setUp() {
         ragExecutionService = new RagExecutionService();
-        // Note: In a real scenario, we would use reflection or constructor injection to set the mocks
+        // Note: In a real scenario, we would use reflection or constructor injection to
+        // set the mocks
     }
 
     @Test
     void testExecuteRagWorkflow_Success() {
         // Given
         RagWorkflowInput input = new RagWorkflowInput(
-            "test-tenant",
-            "test-query",
-            RetrievalConfig.defaults(),
-            GenerationConfig.defaults()
-        );
+                "test-tenant",
+                "test-query",
+                RetrievalConfig.defaults(),
+                GenerationConfig.defaults());
 
         // When
         Uni<RagResponse> result = ragExecutionService.executeRagWorkflow(input);

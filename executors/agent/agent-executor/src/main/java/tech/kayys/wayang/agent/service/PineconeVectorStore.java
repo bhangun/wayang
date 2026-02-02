@@ -23,6 +23,7 @@ import tech.kayys.wayang.agent.model.Message;
 import tech.kayys.wayang.agent.model.VectorStore;
 
 @ApplicationScoped
+@jakarta.inject.Named("pinecone")
 public class PineconeVectorStore implements VectorStore {
 
     private static final Logger LOG = LoggerFactory.getLogger(PineconeVectorStore.class);
@@ -33,13 +34,13 @@ public class PineconeVectorStore implements VectorStore {
     @Inject
     EmbeddingService embeddingService;
 
-    @ConfigProperty(name = "silat.agent.memory.vector.pinecone.api-key")
+    @ConfigProperty(name = "gamelan.agent.memory.vector.pinecone.api-key")
     Optional<String> apiKey;
 
-    @ConfigProperty(name = "silat.agent.memory.vector.pinecone.environment")
+    @ConfigProperty(name = "gamelan.agent.memory.vector.pinecone.environment")
     Optional<String> environment;
 
-    @ConfigProperty(name = "silat.agent.memory.vector.pinecone.index-name")
+    @ConfigProperty(name = "gamelan.agent.memory.vector.pinecone.index-name")
     Optional<String> indexName;
 
     @Override

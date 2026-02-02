@@ -28,6 +28,7 @@
 
     <module>wayang-plugin-registry</module>
     <module>wayang-executor</module>
+    <module>wayang-runtime-standalone</module>
   </modules>
 
   <properties>

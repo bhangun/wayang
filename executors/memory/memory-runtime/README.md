@@ -1,4 +1,4 @@
-# Silat Memory Executor - Architecture Documentation
+# Gamelan Memory Executor - Architecture Documentation
 
 ## 🏛️ System Architecture
 
@@ -6,7 +6,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        Silat Workflow Engine                             │
+│                        Gamelan Workflow Engine                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                 │
 │  │   Control    │  │   Workflow   │  │   Executor   │                 │
 │  │    Plane     │  │   Runtime    │  │   Registry   │                 │
@@ -246,7 +246,7 @@ Hit Rate: ~80% in typical workloads
 ### 1. Semantic Search
 ```sql
 SELECT *, 1 - (embedding <=> $queryEmbedding) as similarity
-FROM silat_memories
+FROM gamelan_memories
 WHERE namespace = $namespace
 ORDER BY embedding <=> $queryEmbedding
 LIMIT 10
@@ -277,7 +277,7 @@ ORDER BY combined_score DESC
 ### 3. Filtered Search
 ```sql
 SELECT *
-FROM silat_memories
+FROM gamelan_memories
 WHERE namespace = $namespace
   AND metadata @> '{"category": "refund"}'::jsonb
   AND importance >= 0.7
@@ -341,9 +341,9 @@ double calculateImportance(NodeExecutionTask task, NodeExecutionResult result) {
 
 **PostgreSQL RLS Policy**:
 ```sql
-CREATE POLICY tenant_isolation ON silat_memories
+CREATE POLICY tenant_isolation ON gamelan_memories
     FOR ALL
-    TO silat_user
+    TO gamelan_user
     USING (tenant_id = current_setting('app.current_tenant')::text);
 ```
 
@@ -353,16 +353,16 @@ CREATE POLICY tenant_isolation ON silat_memories
 
 ```sql
 -- Primary indexes
-CREATE INDEX idx_embedding_hnsw ON silat_memories 
+CREATE INDEX idx_embedding_hnsw ON gamelan_memories 
     USING hnsw (embedding vector_cosine_ops)
     WITH (m = 16, ef_construction = 64);
 
 -- Composite indexes
-CREATE INDEX idx_tenant_namespace_time ON silat_memories 
+CREATE INDEX idx_tenant_namespace_time ON gamelan_memories 
     (tenant_id, namespace, timestamp DESC);
 
 -- Partial indexes
-CREATE INDEX idx_active_high_importance ON silat_memories (importance DESC)
+CREATE INDEX idx_active_high_importance ON gamelan_memories (importance DESC)
     WHERE expires_at IS NULL OR expires_at > NOW();
 ```
 
@@ -370,11 +370,11 @@ CREATE INDEX idx_active_high_importance ON silat_memories (importance DESC)
 
 ```sql
 -- Partition by tenant for large deployments
-CREATE TABLE silat_memories_acme PARTITION OF silat_memories
+CREATE TABLE gamelan_memories_acme PARTITION OF gamelan_memories
     FOR VALUES IN ('acme-corp');
 
 -- Time-based partitioning for archival
-CREATE TABLE silat_memories_2024_01 PARTITION OF silat_memories
+CREATE TABLE gamelan_memories_2024_01 PARTITION OF gamelan_memories
     FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
 ```
 
@@ -422,20 +422,20 @@ L3: Database (PostgreSQL with pgvector)
 
 ```java
 // Executor metrics
-silat.executor.tasks.processed.total
-silat.executor.tasks.duration.seconds
-silat.executor.tasks.failed.total
+gamelan.executor.tasks.processed.total
+gamelan.executor.tasks.duration.seconds
+gamelan.executor.tasks.failed.total
 
 // Memory metrics
-silat.memory.store.operations.total
-silat.memory.store.operations.duration
-silat.memory.search.results.count
-silat.memory.context.tokens.used
+gamelan.memory.store.operations.total
+gamelan.memory.store.operations.duration
+gamelan.memory.search.results.count
+gamelan.memory.context.tokens.used
 
 // Embedding metrics
-silat.embedding.cache.hit.ratio
-silat.embedding.api.calls.total
-silat.embedding.api.latency
+gamelan.embedding.cache.hit.ratio
+gamelan.embedding.api.calls.total
+gamelan.embedding.api.latency
 ```
 
 ### Health Checks
@@ -493,11 +493,11 @@ silat.embedding.api.latency
 
 **Version**: 1.0.0  
 **Last Updated**: 2024-01-09  
-**Authors**: Silat Engineering Team
+**Authors**: Gamelan Engineering Team
 
 
 
-# Silat Memory Executor - Getting Started Guide
+# Gamelan Memory Executor - Getting Started Guide
 
 ## 🚀 Quick Start (5 Minutes)
 
@@ -509,7 +509,7 @@ silat.embedding.api.latency
 ### Step 1: Build the Project
 
 ```bash
-cd silat-memory-executor
+cd gamelan-memory-executor
 mvn clean package -DskipTests
 ```
 
@@ -578,10 +578,10 @@ docker-compose up -d postgres
 
 # Or manually
 docker run -d \
-  --name silat-postgres \
-  -e POSTGRES_DB=silat_memory \
-  -e POSTGRES_USER=silat \
-  -e POSTGRES_PASSWORD=silat \
+  --name gamelan-postgres \
+  -e POSTGRES_DB=gamelan_memory \
+  -e POSTGRES_USER=gamelan \
+  -e POSTGRES_PASSWORD=gamelan \
   -p 5432:5432 \
   pgvector/pgvector:pg16
 ```
@@ -591,7 +591,7 @@ docker run -d \
 ```bash
 # The database is automatically initialized on startup
 # Or run manually:
-docker exec -i silat-postgres psql -U silat -d silat_memory < init-db.sql
+docker exec -i gamelan-postgres psql -U gamelan -d gamelan_memory < init-db.sql
 ```
 
 ### Step 3: Configure Application
@@ -600,13 +600,13 @@ Edit `src/main/resources/application.properties`:
 
 ```properties
 # Change to PostgreSQL
-silat.memory.store.type=postgres
+gamelan.memory.store.type=postgres
 
 # Database connection (already configured)
 quarkus.datasource.db-kind=postgresql
-quarkus.datasource.username=silat
-quarkus.datasource.password=silat
-quarkus.datasource.reactive.url=postgresql://localhost:5432/silat_memory
+quarkus.datasource.username=gamelan
+quarkus.datasource.password=gamelan
+quarkus.datasource.reactive.url=postgresql://localhost:5432/gamelan_memory
 ```
 
 ### Step 4: Run with PostgreSQL
@@ -622,9 +622,9 @@ mvn quarkus:dev
 Edit `application.properties`:
 
 ```properties
-silat.embedding.provider=openai
-silat.embedding.openai.api-key=sk-your-api-key-here
-silat.embedding.openai.model=text-embedding-3-small
+gamelan.embedding.provider=openai
+gamelan.embedding.openai.api-key=sk-your-api-key-here
+gamelan.embedding.openai.model=text-embedding-3-small
 ```
 
 ### Step 2: Test OpenAI Embeddings
@@ -644,7 +644,7 @@ curl -X POST http://localhost:8081/api/memory/store \
 ### Build Docker Image
 
 ```bash
-docker build -t silat-memory-executor:1.0.0 .
+docker build -t gamelan-memory-executor:1.0.0 .
 ```
 
 ### Run with Docker Compose
@@ -667,7 +667,7 @@ Run the verification script:
 ```bash
 #!/bin/bash
 
-echo "=== Silat Memory Executor Verification ==="
+echo "=== Gamelan Memory Executor Verification ==="
 
 # Check if service is running
 if curl -sf http://localhost:8081/health/live > /dev/null; then
@@ -820,10 +820,10 @@ docker-compose logs memory-executor
 docker ps | grep postgres
 
 # Test connection
-docker exec silat-postgres psql -U silat -d silat_memory -c "SELECT 1"
+docker exec gamelan-postgres psql -U gamelan -d gamelan_memory -c "SELECT 1"
 
 # Check pgvector extension
-docker exec silat-postgres psql -U silat -d silat_memory -c "SELECT * FROM pg_extension WHERE extname='vector'"
+docker exec gamelan-postgres psql -U gamelan -d gamelan_memory -c "SELECT * FROM pg_extension WHERE extname='vector'"
 ```
 
 ### Memory search returns empty
@@ -844,7 +844,7 @@ curl -X POST http://localhost:8081/api/memory/search \
    - [ARCHITECTURE.md](ARCHITECTURE.md) - Technical details
 
 2. **Explore Examples**
-   - See `src/main/java/tech/kayys/silat/executor/memory/examples/`
+   - See `src/main/java/tech/kayys/gamelan/executor/memory/examples/`
    - Run examples via API or programmatically
 
 3. **Integrate with Workflows**

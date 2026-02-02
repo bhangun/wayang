@@ -5,6 +5,8 @@ import java.util.List;
 public class ApiKeyEntity {
     private String id;
     private String userId;
+    private String key;
+    private String tenantId;
     private boolean active;
     private List<String> roles;
     private List<String> permissions;
@@ -43,6 +45,22 @@ public class ApiKeyEntity {
 
     public void setRoles(List<String> roles) {
         this.roles = roles;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
     }
 
     public void setPermissions(List<String> permissions) {

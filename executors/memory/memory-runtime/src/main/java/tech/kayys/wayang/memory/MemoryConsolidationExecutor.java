@@ -1,33 +1,30 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.core.domain.*;
-import tech.kayys.silat.core.engine.NodeExecutionResult;
-import tech.kayys.silat.core.engine.NodeExecutionTask;
-import tech.kayys.silat.executor.AbstractWorkflowExecutor;
-import tech.kayys.silat.executor.Executor;
+import tech.kayys.gamelan.core.domain.*;
+import tech.kayys.gamelan.core.engine.NodeExecutionResult;
+import tech.kayys.gamelan.core.engine.NodeExecutionTask;
+import tech.kayys.gamelan.executor.AbstractWorkflowExecutor;
+import tech.kayys.gamelan.executor.Executor;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 
 /**
- * Specialized executor that consolidates episodic memories into semantic knowledge.
+ * Specialized executor that consolidates episodic memories into semantic
+ * knowledge.
  * Runs periodically to:
  * - Identify patterns across episodic memories
  * - Extract semantic knowledge
  * - Reduce memory footprint
  * - Improve retrieval quality
  */
-@Executor(
-    executorType = "memory-consolidation",
-    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
-    maxConcurrentTasks = 1
-)
+@Executor(executorType = "memory-consolidation", communicationType = tech.kayys.gamelan.core.scheduler.CommunicationType.GRPC, maxConcurrentTasks = 1)
 @ApplicationScoped
 public class MemoryConsolidationExecutor extends AbstractWorkflowExecutor {
 
@@ -49,22 +46,20 @@ public class MemoryConsolidationExecutor extends AbstractWorkflowExecutor {
         String namespace = (String) task.context().getOrDefault("namespace", "default");
 
         return consolidateMemories(namespace)
-            .map(stats -> {
-                Map<String, Object> output = Map.of(
-                    "consolidated", stats.consolidated,
-                    "patternsFound", stats.patterns,
-                    "semanticMemoriesCreated", stats.semanticCreated,
-                    "episodicMemoriesRetained", stats.episodicRetained
-                );
+                .map(stats -> {
+                    Map<String, Object> output = Map.of(
+                            "consolidated", stats.consolidated,
+                            "patternsFound", stats.patterns,
+                            "semanticMemoriesCreated", stats.semanticCreated,
+                            "episodicMemoriesRetained", stats.episodicRetained);
 
-                return NodeExecutionResult.success(
-                    task.runId(),
-                    task.nodeId(),
-                    task.attempt(),
-                    output,
-                    task.token()
-                );
-            });
+                    return NodeExecutionResult.success(
+                            task.runId(),
+                            task.nodeId(),
+                            task.attempt(),
+                            output,
+                            task.token());
+                });
     }
 
     /**
@@ -75,32 +70,32 @@ public class MemoryConsolidationExecutor extends AbstractWorkflowExecutor {
 
         // Get statistics
         return memoryStore.getStatistics(namespace)
-            .flatMap(stats -> {
-                LOG.info("Found {} episodic memories to consolidate", stats.getEpisodicCount());
+                .flatMap(stats -> {
+                    LOG.info("Found {} episodic memories to consolidate", stats.getEpisodicCount());
 
-                // For now, return basic stats
-                // In real implementation, would:
-                // 1. Cluster similar episodic memories
-                // 2. Extract common patterns
-                // 3. Create semantic memories
-                // 4. Archive or delete consolidated episodic memories
+                    // For now, return basic stats
+                    // In real implementation, would:
+                    // 1. Cluster similar episodic memories
+                    // 2. Extract common patterns
+                    // 3. Create semantic memories
+                    // 4. Archive or delete consolidated episodic memories
 
-                return Uni.createFrom().item(new ConsolidationStats(
-                    stats.getEpisodicCount(),
-                    0, // patterns found
-                    0, // semantic created
-                    stats.getEpisodicCount() // all retained for now
-                ));
-            });
+                    return Uni.createFrom().item(new ConsolidationStats(
+                            stats.getEpisodicCount(),
+                            0, // patterns found
+                            0, // semantic created
+                            stats.getEpisodicCount() // all retained for now
+                    ));
+                });
     }
 
     /**
      * Consolidation statistics
      */
     private record ConsolidationStats(
-        long consolidated,
-        int patterns,
-        int semanticCreated,
-        long episodicRetained
-    ) {}
+            long consolidated,
+            int patterns,
+            int semanticCreated,
+            long episodicRetained) {
+    }
 }

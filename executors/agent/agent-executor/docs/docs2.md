@@ -1,4 +1,4 @@
-# Silat Agent Executor - Production Deployment Guide
+# Gamelan Agent Executor - Production Deployment Guide
 
 ## 📦 Complete Production Setup
 
@@ -6,7 +6,7 @@
 
 ```sql
 -- ============================================================================
--- SILAT AGENT DATABASE SCHEMA
+-- GAMELAN AGENT DATABASE SCHEMA
 -- ============================================================================
 
 -- Agent Configurations Table
@@ -160,18 +160,18 @@ CREATE TABLE conversation_messages_2024_01 PARTITION OF conversation_messages
 
 ```properties
 # ============================================================================
-# SILAT AGENT EXECUTOR - PRODUCTION CONFIGURATION
+# GAMELAN AGENT EXECUTOR - PRODUCTION CONFIGURATION
 # ============================================================================
 
 # Application
-quarkus.application.name=silat-agent-executor
+quarkus.application.name=gamelan-agent-executor
 quarkus.application.version=1.0.0
 
 # ==================== DATABASE ====================
 quarkus.datasource.db-kind=postgresql
-quarkus.datasource.username=${DB_USERNAME:silat}
+quarkus.datasource.username=${DB_USERNAME:gamelan}
 quarkus.datasource.password=${DB_PASSWORD}
-quarkus.datasource.jdbc.url=jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:silat}
+quarkus.datasource.jdbc.url=jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:gamelan}
 quarkus.datasource.jdbc.max-size=20
 quarkus.datasource.jdbc.min-size=5
 
@@ -191,60 +191,60 @@ quarkus.redis.database=0
 quarkus.redis.max-pool-size=20
 
 # ==================== LLM PROVIDERS ====================
-silat.agent.llm.openai.api-key=${OPENAI_API_KEY}
-silat.agent.llm.openai.base-url=https://api.openai.com/v1
-silat.agent.llm.openai.timeout=60000
-silat.agent.llm.openai.max-retries=3
+gamelan.agent.llm.openai.api-key=${OPENAI_API_KEY}
+gamelan.agent.llm.openai.base-url=https://api.openai.com/v1
+gamelan.agent.llm.openai.timeout=60000
+gamelan.agent.llm.openai.max-retries=3
 
-silat.agent.llm.anthropic.api-key=${ANTHROPIC_API_KEY}
-silat.agent.llm.anthropic.base-url=https://api.anthropic.com/v1
-silat.agent.llm.anthropic.timeout=60000
+gamelan.agent.llm.anthropic.api-key=${ANTHROPIC_API_KEY}
+gamelan.agent.llm.anthropic.base-url=https://api.anthropic.com/v1
+gamelan.agent.llm.anthropic.timeout=60000
 
-silat.agent.llm.azure.api-key=${AZURE_OPENAI_API_KEY:}
-silat.agent.llm.azure.endpoint=${AZURE_OPENAI_ENDPOINT:}
-silat.agent.llm.azure.deployment=${AZURE_OPENAI_DEPLOYMENT:}
+gamelan.agent.llm.azure.api-key=${AZURE_OPENAI_API_KEY:}
+gamelan.agent.llm.azure.endpoint=${AZURE_OPENAI_ENDPOINT:}
+gamelan.agent.llm.azure.deployment=${AZURE_OPENAI_DEPLOYMENT:}
 
 # ==================== MEMORY ====================
-silat.agent.memory.cache-size=1000
-silat.agent.memory.cache-ttl-ms=3600000
-silat.agent.memory.default-type=buffer
-silat.agent.memory.default-window-size=10
+gamelan.agent.memory.cache-size=1000
+gamelan.agent.memory.cache-ttl-ms=3600000
+gamelan.agent.memory.default-type=buffer
+gamelan.agent.memory.default-window-size=10
 
 # Vector Database (for semantic memory)
-silat.agent.memory.vector.enabled=false
-silat.agent.memory.vector.provider=pinecone
-silat.agent.memory.vector.api-key=${PINECONE_API_KEY:}
-silat.agent.memory.vector.environment=${PINECONE_ENVIRONMENT:}
-silat.agent.memory.vector.index-name=agent-memory
+gamelan.agent.memory.vector.enabled=false
+gamelan.agent.memory.vector.provider=pinecone
+gamelan.agent.memory.vector.api-key=${PINECONE_API_KEY:}
+gamelan.agent.memory.vector.environment=${PINECONE_ENVIRONMENT:}
+gamelan.agent.memory.vector.index-name=agent-memory
 
 # ==================== TOOLS ====================
-silat.agent.tools.enabled=calculator,web_search,current_time
-silat.agent.tools.web-search.provider=google
-silat.agent.tools.web-search.api-key=${GOOGLE_SEARCH_API_KEY:}
-silat.agent.tools.web-search.cx=${GOOGLE_SEARCH_CX:}
+gamelan.agent.tools.enabled=calculator,web_search,current_time
+gamelan.agent.tools.web-search.provider=google
+gamelan.agent.tools.web-search.api-key=${GOOGLE_SEARCH_API_KEY:}
+gamelan.agent.tools.web-search.cx=${GOOGLE_SEARCH_CX:}
 
 # Tool Execution
-silat.agent.tools.execution.timeout-seconds=30
-silat.agent.tools.execution.max-concurrent=10
+gamelan.agent.tools.execution.timeout-seconds=30
+gamelan.agent.tools.execution.max-concurrent=10
 
 # ==================== SECURITY ====================
-silat.security.api-key.header=X-API-Key
-silat.security.tenant-header=X-Tenant-ID
-silat.security.rate-limit.capacity=100
-silat.security.rate-limit.refill-rate=10
+gamelan.security.api-key.header=X-API-Key
+gamelan.security.tenant-header=X-Tenant-ID
+gamelan.security.rate-limit.capacity=100
+gamelan.security.rate-limit.refill-rate=10
 
 # Encryption
-silat.security.encryption.algorithm=AES/GCM/NoPadding
-silat.security.encryption.key=${ENCRYPTION_KEY}
+gamelan.security.encryption.algorithm=AES/GCM/NoPadding
+gamelan.security.encryption.key=${ENCRYPTION_KEY}
 
 # JWT (optional)
 mp.jwt.verify.publickey.location=${JWT_PUBLIC_KEY_URL:}
 mp.jwt.verify.issuer=${JWT_ISSUER:}
 
 # ==================== EXECUTOR ====================
-silat.executor.type=common-agent
-silat.executor.transport=GRPC
-silat.executor.max-concurrent-tasks=10
+gamelan.executor.type=common-agent
+gamelan.executor.transport=GRPC
+gamelan.executor.max-concurrent-tasks=10
 
 # gRPC Configuration
 quarkus.grpc.server.port=9090
@@ -254,10 +254,10 @@ quarkus.grpc.server.enable-reflection-service=true
 # Kafka Configuration (if using Kafka transport)
 kafka.bootstrap.servers=${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 mp.messaging.incoming.workflow-tasks.connector=smallrye-kafka
-mp.messaging.incoming.workflow-tasks.topic=silat.workflow.tasks
+mp.messaging.incoming.workflow-tasks.topic=gamelan.workflow.tasks
 mp.messaging.incoming.workflow-tasks.group.id=agent-executor
 mp.messaging.outgoing.workflow-results.connector=smallrye-kafka
-mp.messaging.outgoing.workflow-results.topic=silat.workflow.results
+mp.messaging.outgoing.workflow-results.topic=gamelan.workflow.results
 
 # ==================== OBSERVABILITY ====================
 
@@ -273,14 +273,14 @@ quarkus.micrometer.export.prometheus.path=/metrics
 quarkus.otel.enabled=true
 quarkus.otel.traces.enabled=true
 quarkus.otel.exporter.otlp.traces.endpoint=${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4317}
-quarkus.otel.service.name=silat-agent-executor
+quarkus.otel.service.name=gamelan-agent-executor
 quarkus.otel.resource.attributes=deployment.environment=${ENVIRONMENT:dev}
 
 # Logging
 quarkus.log.level=INFO
-quarkus.log.category."tech.kayys.silat".level=DEBUG
+quarkus.log.category."tech.kayys.gamelan".level=DEBUG
 quarkus.log.console.json=true
-quarkus.log.console.json.additional-field."service".value=silat-agent-executor
+quarkus.log.console.json.additional-field."service".value=gamelan-agent-executor
 quarkus.log.console.json.additional-field."environment".value=${ENVIRONMENT:dev}
 
 # ==================== RESILIENCE ====================
@@ -324,7 +324,7 @@ quarkus.virtual-threads.enabled=true
 
 # ==================== PRODUCTION ====================
 %prod.quarkus.log.level=WARN
-%prod.quarkus.log.category."tech.kayys.silat".level=INFO
+%prod.quarkus.log.category."tech.kayys.gamelan".level=INFO
 %prod.quarkus.hibernate-orm.log.sql=false
 %prod.quarkus.datasource.jdbc.max-size=50
 ```
@@ -338,17 +338,17 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
-    container_name: silat-postgres
+    container_name: gamelan-postgres
     environment:
-      POSTGRES_DB: silat
-      POSTGRES_USER: silat
-      POSTGRES_PASSWORD: silat_password
+      POSTGRES_DB: gamelan
+      POSTGRES_USER: gamelan
+      POSTGRES_PASSWORD: gamelan_password
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U silat"]
+      test: ["CMD-SHELL", "pg_isready -U gamelan"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -356,7 +356,7 @@ services:
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: silat-redis
+    container_name: gamelan-redis
     ports:
       - "6379:6379"
     volumes:
@@ -370,7 +370,7 @@ services:
   # Kafka (Optional)
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
-    container_name: silat-zookeeper
+    container_name: gamelan-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -379,7 +379,7 @@ services:
 
   kafka:
     image: confluentinc/cp-kafka:latest
-    container_name: silat-kafka
+    container_name: gamelan-kafka
     depends_on:
       - zookeeper
     ports:
@@ -393,7 +393,7 @@ services:
   # OpenTelemetry Collector
   otel-collector:
     image: otel/opentelemetry-collector:latest
-    container_name: silat-otel-collector
+    container_name: gamelan-otel-collector
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
       - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
@@ -404,7 +404,7 @@ services:
   # Prometheus
   prometheus:
     image: prom/prometheus:latest
-    container_name: silat-prometheus
+    container_name: gamelan-prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
@@ -417,7 +417,7 @@ services:
   # Grafana
   grafana:
     image: grafana/grafana:latest
-    container_name: silat-grafana
+    container_name: gamelan-grafana
     ports:
       - "3000:3000"
     environment:
@@ -442,15 +442,15 @@ volumes:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: silat
+  name: gamelan
 
 ---
 # ConfigMap for Application Configuration
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: silat-agent-config
-  namespace: silat
+  name: gamelan-agent-config
+  namespace: gamelan
 data:
   application.properties: |
     # See application.properties above
@@ -460,8 +460,8 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: silat-agent-secrets
-  namespace: silat
+  name: gamelan-agent-secrets
+  namespace: gamelan
 type: Opaque
 stringData:
   OPENAI_API_KEY: "your-openai-key"
@@ -474,17 +474,17 @@ stringData:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: silat-agent-executor
-  namespace: silat
+  name: gamelan-agent-executor
+  namespace: gamelan
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: silat-agent-executor
+      app: gamelan-agent-executor
   template:
     metadata:
       labels:
-        app: silat-agent-executor
+        app: gamelan-agent-executor
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
@@ -492,7 +492,7 @@ spec:
     spec:
       containers:
       - name: agent-executor
-        image: your-registry/silat-agent-executor:1.0.0
+        image: your-registry/gamelan-agent-executor:1.0.0
         ports:
         - containerPort: 8080
           name: http
@@ -503,9 +503,9 @@ spec:
           value: "production"
         envFrom:
         - secretRef:
-            name: silat-agent-secrets
+            name: gamelan-agent-secrets
         - configMapRef:
-            name: silat-agent-config
+            name: gamelan-agent-config
         resources:
           requests:
             memory: "512Mi"
@@ -531,11 +531,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: silat-agent-executor
-  namespace: silat
+  name: gamelan-agent-executor
+  namespace: gamelan
 spec:
   selector:
-    app: silat-agent-executor
+    app: gamelan-agent-executor
   ports:
   - name: http
     port: 80
@@ -550,13 +550,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: silat-agent-executor-hpa
-  namespace: silat
+  name: gamelan-agent-executor-hpa
+  namespace: gamelan
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: silat-agent-executor
+    name: gamelan-agent-executor
   minReplicas: 3
   maxReplicas: 10
   metrics:
@@ -578,12 +578,12 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: silat-agent-executor-netpol
-  namespace: silat
+  name: gamelan-agent-executor-netpol
+  namespace: gamelan
 spec:
   podSelector:
     matchLabels:
-      app: silat-agent-executor
+      app: gamelan-agent-executor
   policyTypes:
   - Ingress
   - Egress
@@ -591,7 +591,7 @@ spec:
   - from:
     - podSelector:
         matchLabels:
-          app: silat-workflow-engine
+          app: gamelan-workflow-engine
     ports:
     - protocol: TCP
       port: 8080
@@ -620,7 +620,7 @@ spec:
 # Grafana Dashboard JSON
 {
   "dashboard": {
-    "title": "Silat Agent Executor",
+    "title": "Gamelan Agent Executor",
     "panels": [
       {
         "title": "Agent Executions per Second",
@@ -696,21 +696,21 @@ spec:
 quarkus.datasource.jdbc.max-size=100
 quarkus.thread-pool.max-threads=200
 quarkus.vertx.event-loops-pool-size=8
-silat.executor.max-concurrent-tasks=50
+gamelan.executor.max-concurrent-tasks=50
 
 # Low-latency configuration
 quarkus.datasource.jdbc.max-size=20
 quarkus.thread-pool.max-threads=50
 quarkus.vertx.event-loops-pool-size=4
-silat.executor.max-concurrent-tasks=10
-silat.agent.memory.cache-size=5000
+gamelan.executor.max-concurrent-tasks=10
+gamelan.agent.memory.cache-size=5000
 ```
 
 ### 8. Troubleshooting
 
 ```bash
 # Check logs
-kubectl logs -f deployment/silat-agent-executor -n silat
+kubectl logs -f deployment/gamelan-agent-executor -n gamelan
 
 # Check metrics
 curl http://localhost:8080/metrics
@@ -719,10 +719,10 @@ curl http://localhost:8080/metrics
 curl http://localhost:8080/health
 
 # Database connections
-kubectl exec -it postgres-pod -n silat -- psql -U silat -c "SELECT count(*) FROM pg_stat_activity;"
+kubectl exec -it postgres-pod -n gamelan -- psql -U gamelan -c "SELECT count(*) FROM pg_stat_activity;"
 
 # Redis cache stats
-kubectl exec -it redis-pod -n silat -- redis-cli INFO stats
+kubectl exec -it redis-pod -n gamelan -- redis-cli INFO stats
 
 # Circuit breaker status
 curl http://localhost:8080/q/metrics | grep circuitbreaker

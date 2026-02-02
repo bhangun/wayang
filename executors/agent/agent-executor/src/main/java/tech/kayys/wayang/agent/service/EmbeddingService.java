@@ -48,13 +48,13 @@ public class EmbeddingService {
     @Inject
     WebClient webClient;
 
-    @ConfigProperty(name = "silat.agent.embeddings.provider", defaultValue = "openai")
+    @ConfigProperty(name = "gamelan.agent.embeddings.provider", defaultValue = "openai")
     String provider;
 
-    @ConfigProperty(name = "silat.agent.embeddings.model", defaultValue = "text-embedding-ada-002")
+    @ConfigProperty(name = "gamelan.agent.embeddings.model", defaultValue = "text-embedding-ada-002")
     String model;
 
-    @ConfigProperty(name = "silat.agent.llm.openai.api-key")
+    @ConfigProperty(name = "gamelan.agent.llm.openai.api-key")
     String openaiApiKey;
 
     /**

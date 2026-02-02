@@ -1,15 +1,15 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.core.domain.*;
-import tech.kayys.silat.core.engine.NodeExecutionResult;
-import tech.kayys.silat.core.engine.NodeExecutionTask;
-import tech.kayys.silat.executor.AbstractWorkflowExecutor;
-import tech.kayys.silat.executor.Executor;
+import tech.kayys.gamelan.core.domain.*;
+import tech.kayys.gamelan.core.engine.NodeExecutionResult;
+import tech.kayys.gamelan.core.engine.NodeExecutionTask;
+import tech.kayys.gamelan.executor.AbstractWorkflowExecutor;
+import tech.kayys.gamelan.executor.Executor;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -22,11 +22,7 @@ import java.util.Map;
  * - Compress infrequently accessed memories
  * - Maintain memory store performance
  */
-@Executor(
-    executorType = "memory-cleanup",
-    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
-    maxConcurrentTasks = 1
-)
+@Executor(executorType = "memory-cleanup", communicationType = tech.kayys.gamelan.core.scheduler.CommunicationType.GRPC, maxConcurrentTasks = 1)
 @ApplicationScoped
 public class MemoryCleanupExecutor extends AbstractWorkflowExecutor {
 
@@ -47,22 +43,20 @@ public class MemoryCleanupExecutor extends AbstractWorkflowExecutor {
         String namespace = (String) task.context().getOrDefault("namespace", "default");
 
         return cleanupMemories(namespace)
-            .map(stats -> {
-                Map<String, Object> output = Map.of(
-                    "expiredRemoved", stats.expiredRemoved,
-                    "lowImportanceArchived", stats.lowImportanceArchived,
-                    "workingMemoryCleared", stats.workingMemoryCleared,
-                    "totalCleaned", stats.totalCleaned()
-                );
+                .map(stats -> {
+                    Map<String, Object> output = Map.of(
+                            "expiredRemoved", stats.expiredRemoved,
+                            "lowImportanceArchived", stats.lowImportanceArchived,
+                            "workingMemoryCleared", stats.workingMemoryCleared,
+                            "totalCleaned", stats.totalCleaned());
 
-                return NodeExecutionResult.success(
-                    task.runId(),
-                    task.nodeId(),
-                    task.attempt(),
-                    output,
-                    task.token()
-                );
-            });
+                    return NodeExecutionResult.success(
+                            task.runId(),
+                            task.nodeId(),
+                            task.attempt(),
+                            output,
+                            task.token());
+                });
     }
 
     /**
@@ -72,27 +66,26 @@ public class MemoryCleanupExecutor extends AbstractWorkflowExecutor {
         LOG.info("Cleaning up memories in namespace: {}", namespace);
 
         return memoryStore.getStatistics(namespace)
-            .flatMap(stats -> {
-                // In a real implementation, would:
-                // 1. Query expired memories and delete
-                // 2. Query low-importance old memories and archive
-                // 3. Clear working memory older than threshold
-                // 4. Optimize storage
+                .flatMap(stats -> {
+                    // In a real implementation, would:
+                    // 1. Query expired memories and delete
+                    // 2. Query low-importance old memories and archive
+                    // 3. Clear working memory older than threshold
+                    // 4. Optimize storage
 
-                LOG.info("Cleanup complete for namespace: {}", namespace);
+                    LOG.info("Cleanup complete for namespace: {}", namespace);
 
-                return Uni.createFrom().item(new CleanupStats(0, 0, 0));
-            });
+                    return Uni.createFrom().item(new CleanupStats(0, 0, 0));
+                });
     }
 
     /**
      * Cleanup statistics
      */
     private record CleanupStats(
-        int expiredRemoved,
-        int lowImportanceArchived,
-        int workingMemoryCleared
-    ) {
+            int expiredRemoved,
+            int lowImportanceArchived,
+            int workingMemoryCleared) {
         int totalCleaned() {
             return expiredRemoved + lowImportanceArchived + workingMemoryCleared;
         }

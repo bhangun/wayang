@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import java.time.Instant;
 
@@ -37,13 +37,39 @@ public class MemoryStatistics {
         this.newestMemory = newestMemory;
     }
 
-    public String getNamespace() { return namespace; }
-    public long getTotalMemories() { return totalMemories; }
-    public long getEpisodicCount() { return episodicCount; }
-    public long getSemanticCount() { return semanticCount; }
-    public long getProceduralCount() { return proceduralCount; }
-    public long getWorkingCount() { return workingCount; }
-    public double getAvgImportance() { return avgImportance; }
-    public Instant getOldestMemory() { return oldestMemory; }
-    public Instant getNewestMemory() { return newestMemory; }
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public long getTotalMemories() {
+        return totalMemories;
+    }
+
+    public long getEpisodicCount() {
+        return episodicCount;
+    }
+
+    public long getSemanticCount() {
+        return semanticCount;
+    }
+
+    public long getProceduralCount() {
+        return proceduralCount;
+    }
+
+    public long getWorkingCount() {
+        return workingCount;
+    }
+
+    public double getAvgImportance() {
+        return avgImportance;
+    }
+
+    public Instant getOldestMemory() {
+        return oldestMemory;
+    }
+
+    public Instant getNewestMemory() {
+        return newestMemory;
+    }
 }

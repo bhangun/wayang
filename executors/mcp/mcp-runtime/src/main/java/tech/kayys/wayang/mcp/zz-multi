@@ -1,4 +1,4 @@
-package tech.kayys.silat.mcp.parser.multispec;
+package tech.kayys.gamelan.mcp.parser.multispec;
 
 import io.smallrye.mutiny.Uni;
 import io.swagger.v3.oas.models.*;
@@ -10,8 +10,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.mcp.domain.*;
-import tech.kayys.silat.mcp.parser.*;
+import tech.kayys.gamelan.mcp.domain.*;
+import tech.kayys.gamelan.mcp.parser.*;
 
 import java.util.*;
 import java.util.stream.Collectors;

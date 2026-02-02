@@ -2,7 +2,7 @@
 
 ## 🎯 **What's New**
 
-### **1. Multi-Spec Support** (`silat_mcp_multispec`)
+### **1. Multi-Spec Support** (`gamelan_mcp_multispec`)
 
 #### **✅ Fully Supported Formats:**
 - **OpenAPI 3.x** (3.0.0 - 3.1.0) - Modern REST APIs
@@ -169,4 +169,4 @@ POST /api/v1/mcp/tools/openapi
 - **Extension registry** for adding new formats
 - **Full test coverage** (in production)
 
-You can now import **literally any API** into Silat MCP and use it in workflows and AI agents! 🎉
+You can now import **literally any API** into Gamelan MCP and use it in workflows and AI agents! 🎉

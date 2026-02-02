@@ -1,7 +1,7 @@
 
 ## 📦 Complete LangChain4j Integration
 
-### 1. **Main Executor** (`silat_rag_langchain4j`)
+### 1. **Main Executor** (`gamelan_rag_langchain4j`)
 - Full RAG pipeline using LangChain4j components
 - Multi-provider support (OpenAI, Anthropic, Azure OpenAI)
 - Advanced retrieval with query transformation
@@ -9,7 +9,7 @@
 - Custom query transformers and routers
 - Metrics collection and caching
 
-### 2. **Document Ingestion Service** (`silat_rag_langchain4j_usage`)
+### 2. **Document Ingestion Service** (`gamelan_rag_langchain4j_usage`)
 - PDF document ingestion with Apache PDFBox
 - Text document ingestion
 - URL scraping support
@@ -111,4 +111,4 @@ Add to your `pom.xml`:
 </dependency>
 ```
 
-This implementation gives you the **best of both worlds**: the power and flexibility of LangChain4j combined with Silat's workflow orchestration capabilities! 🎉
+This implementation gives you the **best of both worlds**: the power and flexibility of LangChain4j combined with Gamelan's workflow orchestration capabilities! 🎉

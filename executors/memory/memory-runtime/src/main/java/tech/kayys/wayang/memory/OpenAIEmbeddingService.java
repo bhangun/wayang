@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -22,20 +22,19 @@ public class OpenAIEmbeddingService implements EmbeddingService {
 
     private static final Logger LOG = LoggerFactory.getLogger(OpenAIEmbeddingService.class);
 
-    @ConfigProperty(name = "silat.embedding.openai.api-key")
+    @ConfigProperty(name = "gamelan.embedding.openai.api-key")
     Optional<String> apiKey;
 
-    @ConfigProperty(name = "silat.embedding.openai.model", defaultValue = "text-embedding-3-small")
+    @ConfigProperty(name = "gamelan.embedding.openai.model", defaultValue = "text-embedding-3-small")
     String model;
 
-    @ConfigProperty(name = "silat.embedding.openai.endpoint",
-                    defaultValue = "https://api.openai.com/v1/embeddings")
+    @ConfigProperty(name = "gamelan.embedding.openai.endpoint", defaultValue = "https://api.openai.com/v1/embeddings")
     String endpoint;
 
-    @ConfigProperty(name = "silat.embedding.cache.enabled", defaultValue = "true")
+    @ConfigProperty(name = "gamelan.embedding.cache.enabled", defaultValue = "true")
     boolean cacheEnabled;
 
-    @ConfigProperty(name = "silat.embedding.cache.max-size", defaultValue = "10000")
+    @ConfigProperty(name = "gamelan.embedding.cache.max-size", defaultValue = "10000")
     int cacheMaxSize;
 
     // Cache: text hash -> embedding
@@ -61,35 +60,30 @@ public class OpenAIEmbeddingService implements EmbeddingService {
 
         // Prepare request
         OpenAIEmbeddingRequest request = new OpenAIEmbeddingRequest(
-            model,
-            text,
-            "float"
-        );
+                model,
+                text,
+                "float");
 
         return restClient.createEmbedding(
-                "Bearer " + apiKey.orElseThrow(() ->
-                    new IllegalStateException("OpenAI API key not configured")),
-                request
-            )
-            .map(response -> {
-                if (response.data == null || response.data.isEmpty()) {
-                    throw new RuntimeException("No embedding returned from OpenAI");
-                }
+                "Bearer " + apiKey.orElseThrow(() -> new IllegalStateException("OpenAI API key not configured")),
+                request)
+                .map(response -> {
+                    if (response.data == null || response.data.isEmpty()) {
+                        throw new RuntimeException("No embedding returned from OpenAI");
+                    }
 
-                float[] embedding = response.data.get(0).embedding;
+                    float[] embedding = response.data.get(0).embedding;
 
-                // Cache the embedding
-                if (cacheEnabled && embeddingCache.size() < cacheMaxSize) {
-                    String textHash = hashText(text);
-                    embeddingCache.put(textHash, embedding);
-                }
+                    // Cache the embedding
+                    if (cacheEnabled && embeddingCache.size() < cacheMaxSize) {
+                        String textHash = hashText(text);
+                        embeddingCache.put(textHash, embedding);
+                    }
 
-                LOG.debug("Generated embedding with dimension: {}", embedding.length);
-                return embedding;
-            })
-            .onFailure().invoke(error ->
-                LOG.error("Failed to generate embedding", error)
-            );
+                    LOG.debug("Generated embedding with dimension: {}", embedding.length);
+                    return embedding;
+                })
+                .onFailure().invoke(error -> LOG.error("Failed to generate embedding", error));
     }
 
     @Override
@@ -130,37 +124,34 @@ public class OpenAIEmbeddingService implements EmbeddingService {
 
         // Batch request for uncached texts
         OpenAIEmbeddingBatchRequest request = new OpenAIEmbeddingBatchRequest(
-            model,
-            uncachedTexts,
-            "float"
-        );
+                model,
+                uncachedTexts,
+                "float");
 
         return restClient.createEmbeddingBatch(
-                "Bearer " + apiKey.orElseThrow(() ->
-                    new IllegalStateException("OpenAI API key not configured")),
-                request
-            )
-            .map(response -> {
-                if (response.data == null || response.data.size() != uncachedTexts.size()) {
-                    throw new RuntimeException("Invalid batch embedding response");
-                }
-
-                // Fill in the results and cache
-                for (int i = 0; i < uncachedTexts.size(); i++) {
-                    float[] embedding = response.data.get(i).embedding;
-                    int originalIndex = uncachedIndices.get(i);
-                    results.set(originalIndex, embedding);
-
-                    // Cache
-                    if (cacheEnabled && embeddingCache.size() < cacheMaxSize) {
-                        String textHash = hashText(uncachedTexts.get(i));
-                        embeddingCache.put(textHash, embedding);
+                "Bearer " + apiKey.orElseThrow(() -> new IllegalStateException("OpenAI API key not configured")),
+                request)
+                .map(response -> {
+                    if (response.data == null || response.data.size() != uncachedTexts.size()) {
+                        throw new RuntimeException("Invalid batch embedding response");
                     }
-                }
 
-                LOG.debug("Generated {} embeddings", response.data.size());
-                return results;
-            });
+                    // Fill in the results and cache
+                    for (int i = 0; i < uncachedTexts.size(); i++) {
+                        float[] embedding = response.data.get(i).embedding;
+                        int originalIndex = uncachedIndices.get(i);
+                        results.set(originalIndex, embedding);
+
+                        // Cache
+                        if (cacheEnabled && embeddingCache.size() < cacheMaxSize) {
+                            String textHash = hashText(uncachedTexts.get(i));
+                            embeddingCache.put(textHash, embedding);
+                        }
+                    }
+
+                    LOG.debug("Generated {} embeddings", response.data.size());
+                    return results;
+                });
     }
 
     @Override

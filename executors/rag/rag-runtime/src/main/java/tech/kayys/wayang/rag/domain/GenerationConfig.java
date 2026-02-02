@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.rag.domain;
+package tech.kayys.gamelan.executor.rag.domain;
 
 public class GenerationConfig {
     private final String provider;
@@ -18,13 +18,13 @@ public class GenerationConfig {
     private final boolean enableBiasDetection;
     private final java.util.Map<String, Object> safetySettings;
 
-    public GenerationConfig(String provider, String model, float temperature, int maxTokens, 
-                          float topP, float frequencyPenalty, float presencePenalty, 
-                          java.util.List<String> stopSequences, String systemPrompt, 
-                          java.util.Map<String, Object> additionalParams, boolean enableCitations, 
-                          boolean enableGrounding, CitationStyle citationStyle, 
-                          boolean enableFactualityChecks, boolean enableBiasDetection, 
-                          java.util.Map<String, Object> safetySettings) {
+    public GenerationConfig(String provider, String model, float temperature, int maxTokens,
+            float topP, float frequencyPenalty, float presencePenalty,
+            java.util.List<String> stopSequences, String systemPrompt,
+            java.util.Map<String, Object> additionalParams, boolean enableCitations,
+            boolean enableGrounding, CitationStyle citationStyle,
+            boolean enableFactualityChecks, boolean enableBiasDetection,
+            java.util.Map<String, Object> safetySettings) {
         this.provider = provider;
         this.model = model;
         this.temperature = temperature;
@@ -44,27 +44,74 @@ public class GenerationConfig {
     }
 
     public static GenerationConfig defaults() {
-        return new GenerationConfig("openai", "gpt-4", 0.7f, 1024, 1.0f, 0.0f, 0.0f, 
-                                  java.util.List.of(), "You are a helpful assistant.", 
-                                  java.util.Map.of(), false, false, CitationStyle.INLINE_NUMBERED, 
-                                  false, false, java.util.Map.of());
+        return new GenerationConfig("openai", "gpt-4", 0.7f, 1024, 1.0f, 0.0f, 0.0f,
+                java.util.List.of(), "You are a helpful assistant.",
+                java.util.Map.of(), false, false, CitationStyle.INLINE_NUMBERED,
+                false, false, java.util.Map.of());
     }
 
     // Getters
-    public String provider() { return provider; }
-    public String model() { return model; }
-    public float temperature() { return temperature; }
-    public int maxTokens() { return maxTokens; }
-    public float topP() { return topP; }
-    public float frequencyPenalty() { return frequencyPenalty; }
-    public float presencePenalty() { return presencePenalty; }
-    public java.util.List<String> stopSequences() { return stopSequences; }
-    public String systemPrompt() { return systemPrompt; }
-    public java.util.Map<String, Object> additionalParams() { return additionalParams; }
-    public boolean enableCitations() { return enableCitations; }
-    public boolean enableGrounding() { return enableGrounding; }
-    public CitationStyle citationStyle() { return citationStyle; }
-    public boolean enableFactualityChecks() { return enableFactualityChecks; }
-    public boolean enableBiasDetection() { return enableBiasDetection; }
-    public java.util.Map<String, Object> safetySettings() { return safetySettings; }
+    public String provider() {
+        return provider;
+    }
+
+    public String model() {
+        return model;
+    }
+
+    public float temperature() {
+        return temperature;
+    }
+
+    public int maxTokens() {
+        return maxTokens;
+    }
+
+    public float topP() {
+        return topP;
+    }
+
+    public float frequencyPenalty() {
+        return frequencyPenalty;
+    }
+
+    public float presencePenalty() {
+        return presencePenalty;
+    }
+
+    public java.util.List<String> stopSequences() {
+        return stopSequences;
+    }
+
+    public String systemPrompt() {
+        return systemPrompt;
+    }
+
+    public java.util.Map<String, Object> additionalParams() {
+        return additionalParams;
+    }
+
+    public boolean enableCitations() {
+        return enableCitations;
+    }
+
+    public boolean enableGrounding() {
+        return enableGrounding;
+    }
+
+    public CitationStyle citationStyle() {
+        return citationStyle;
+    }
+
+    public boolean enableFactualityChecks() {
+        return enableFactualityChecks;
+    }
+
+    public boolean enableBiasDetection() {
+        return enableBiasDetection;
+    }
+
+    public java.util.Map<String, Object> safetySettings() {
+        return safetySettings;
+    }
 }

@@ -26,7 +26,7 @@ import tech.kayys.wayang.mcp.dto.ToolType;
 
 /**
  * ============================================================================
- * SILAT MCP (Model Context Protocol) SERVER - DOMAIN MODEL
+ * GAMELAN MCP (Model Context Protocol) SERVER - DOMAIN MODEL
  * ============================================================================
  *
  * Production-grade OpenAPI → MCP Tool transformation engine.
@@ -39,7 +39,7 @@ import tech.kayys.wayang.mcp.dto.ToolType;
  * - Schema validation
  * - Rate limiting & observability
  *
- * Package: tech.kayys.silat.mcp
+ * Package: tech.kayys.gamelan.mcp
  */
 
 // ==================== MCP TOOL AGGREGATE ROOT ====================

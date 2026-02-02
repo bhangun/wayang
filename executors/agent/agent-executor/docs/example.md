@@ -1,15 +1,15 @@
-package tech.kayys.silat.examples;
+package tech.kayys.gamelan.examples;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import tech.kayys.silat.agent.core.*;
-import tech.kayys.silat.agent.executor.CommonAgentExecutor;
-import tech.kayys.silat.agent.memory.*;
-import tech.kayys.silat.agent.model.*;
-import tech.kayys.silat.agent.tools.*;
-import tech.kayys.silat.client.*;
-import tech.kayys.silat.api.dto.*;
+import tech.kayys.gamelan.agent.core.*;
+import tech.kayys.gamelan.agent.executor.CommonAgentExecutor;
+import tech.kayys.gamelan.agent.memory.*;
+import tech.kayys.gamelan.agent.model.*;
+import tech.kayys.gamelan.agent.tools.*;
+import tech.kayys.gamelan.client.*;
+import tech.kayys.gamelan.api.dto.*;
 
 import java.util.*;
 
@@ -18,7 +18,7 @@ import java.util.*;
  * COMPLETE END-TO-END EXAMPLE
  * ============================================================================
  * 
- * This example demonstrates the full Silat Agent Executor system:
+ * This example demonstrates the full Gamelan Agent Executor system:
  * 1. Workflow definition with AI agent node
  * 2. Custom tool creation and registration
  * 3. Agent execution with memory and tools
@@ -33,7 +33,7 @@ import java.util.*;
 public class CustomerSupportAgentExample {
     
     @Inject
-    SilatClient client;
+    GamelanClient client;
     
     @Inject
     ToolRegistry toolRegistry;
@@ -43,7 +43,7 @@ public class CustomerSupportAgentExample {
      */
     public void runExample() {
         System.out.println("=".repeat(80));
-        System.out.println("SILAT AGENT EXECUTOR - CUSTOMER SUPPORT EXAMPLE");
+        System.out.println("GAMELAN AGENT EXECUTOR - CUSTOMER SUPPORT EXAMPLE");
         System.out.println("=".repeat(80));
         
         // Step 1: Register custom tools
@@ -401,7 +401,7 @@ class RefundPolicyTool extends AbstractTool {
 public class DataAnalysisAgentExample {
     
     @Inject
-    SilatClient client;
+    GamelanClient client;
     
     /**
      * Data analysis agent with calculator and database tools
@@ -500,7 +500,7 @@ public class DataAnalysisAgentExample {
 public class MultiAgentExample {
     
     @Inject
-    SilatClient client;
+    GamelanClient client;
     
     /**
      * Workflow with multiple specialized agents
@@ -582,8 +582,8 @@ public class MultiAgentExample {
 public class RunAllExamples {
     
     public static void main(String[] args) {
-        // Initialize Silat client
-        SilatClient client = SilatClient.builder()
+        // Initialize Gamelan client
+        GamelanClient client = GamelanClient.builder()
             .restEndpoint("http://localhost:8080")
             .tenantId("acme-corp")
             .apiKey("your-api-key")

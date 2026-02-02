@@ -36,18 +36,18 @@
             <version>${project.version}</version>
         </dependency> -->
         <dependency>
-            <groupId>tech.kayys.silat</groupId>
-            <artifactId>silat-common</artifactId>
+            <groupId>tech.kayys.gamelan</groupId>
+            <artifactId>gamelan-common</artifactId>
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>tech.kayys.silat</groupId>
-            <artifactId>silat-sdk-executor</artifactId>
+            <groupId>tech.kayys.gamelan</groupId>
+            <artifactId>gamelan-sdk-executor</artifactId>
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
         <!--  <dependency>
-            <groupId>tech.kayys.silat</groupId>
-            <artifactId>silat-grpc</artifactId>
+            <groupId>tech.kayys.gamelan</groupId>
+            <artifactId>gamelan-grpc</artifactId>
             <version>1.0.0-SNAPSHOT</version>
         </dependency> -->
         <dependency>

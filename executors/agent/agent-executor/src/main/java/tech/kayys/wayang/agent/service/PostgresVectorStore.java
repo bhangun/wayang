@@ -17,6 +17,8 @@ import tech.kayys.wayang.agent.model.Message;
 import tech.kayys.wayang.agent.model.VectorStore;
 
 @ApplicationScoped
+@jakarta.inject.Named("postgres")
+@jakarta.enterprise.inject.Alternative
 public class PostgresVectorStore implements VectorStore {
 
     private static final Logger LOG = LoggerFactory.getLogger(PostgresVectorStore.class);

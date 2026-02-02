@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import java.util.List;
 import java.util.Map;
@@ -17,29 +17,58 @@ public class ContextConfig {
     private boolean includeMetadata = true;
 
     // Getters and setters
-    public int getMaxMemories() { return maxMemories; }
-    public void setMaxMemories(int maxMemories) { this.maxMemories = maxMemories; }
+    public int getMaxMemories() {
+        return maxMemories;
+    }
 
-    public int getReservedTokens() { return reservedTokens; }
-    public void setReservedTokens(int reservedTokens) { this.reservedTokens = reservedTokens; }
+    public void setMaxMemories(int maxMemories) {
+        this.maxMemories = maxMemories;
+    }
 
-    public List<MemoryType> getMemoryTypes() { return memoryTypes; }
-    public void setMemoryTypes(List<MemoryType> memoryTypes) { this.memoryTypes = memoryTypes; }
+    public int getReservedTokens() {
+        return reservedTokens;
+    }
 
-    public String getSystemPrompt() { return systemPrompt; }
-    public void setSystemPrompt(String systemPrompt) { this.systemPrompt = systemPrompt; }
+    public void setReservedTokens(int reservedTokens) {
+        this.reservedTokens = reservedTokens;
+    }
 
-    public List<String> getConversationHistory() { return conversationHistory; }
+    public List<MemoryType> getMemoryTypes() {
+        return memoryTypes;
+    }
+
+    public void setMemoryTypes(List<MemoryType> memoryTypes) {
+        this.memoryTypes = memoryTypes;
+    }
+
+    public String getSystemPrompt() {
+        return systemPrompt;
+    }
+
+    public void setSystemPrompt(String systemPrompt) {
+        this.systemPrompt = systemPrompt;
+    }
+
+    public List<String> getConversationHistory() {
+        return conversationHistory;
+    }
+
     public void setConversationHistory(List<String> conversationHistory) {
         this.conversationHistory = conversationHistory;
     }
 
-    public String getTaskInstructions() { return taskInstructions; }
+    public String getTaskInstructions() {
+        return taskInstructions;
+    }
+
     public void setTaskInstructions(String taskInstructions) {
         this.taskInstructions = taskInstructions;
     }
 
-    public boolean isIncludeMetadata() { return includeMetadata; }
+    public boolean isIncludeMetadata() {
+        return includeMetadata;
+    }
+
     public void setIncludeMetadata(boolean includeMetadata) {
         this.includeMetadata = includeMetadata;
     }

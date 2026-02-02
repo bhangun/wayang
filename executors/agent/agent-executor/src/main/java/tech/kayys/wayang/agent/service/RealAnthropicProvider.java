@@ -37,13 +37,13 @@ public class RealAnthropicProvider extends AbstractLLMProvider {
     @Inject
     WebClient webClient;
 
-    @ConfigProperty(name = "silat.agent.llm.anthropic.api-key")
+    @ConfigProperty(name = "gamelan.agent.llm.anthropic.api-key")
     String apiKey;
 
-    @ConfigProperty(name = "silat.agent.llm.anthropic.base-url", defaultValue = "https://api.anthropic.com/v1")
+    @ConfigProperty(name = "gamelan.agent.llm.anthropic.base-url", defaultValue = "https://api.anthropic.com/v1")
     String baseUrl;
 
-    @ConfigProperty(name = "silat.agent.llm.anthropic.timeout", defaultValue = "60000")
+    @ConfigProperty(name = "gamelan.agent.llm.anthropic.timeout", defaultValue = "60000")
     long timeout;
 
     private static final String ANTHROPIC_VERSION = "2023-06-01";

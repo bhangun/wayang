@@ -1,4 +1,4 @@
-package tech.kayys.silat.mcp.api;
+package tech.kayys.gamelan.mcp.api;
 
 import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Uni;
@@ -9,11 +9,11 @@ import jakarta.ws.rs.core.*;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.resteasy.reactive.RestResponse;
-import tech.kayys.silat.mcp.domain.*;
-import tech.kayys.silat.mcp.parser.OpenApiToolGenerator;
-import tech.kayys.silat.mcp.parser.GenerateToolsRequest;
-import tech.kayys.silat.mcp.runtime.McpToolExecutor;
-import tech.kayys.silat.mcp.runtime.ToolExecutionRequest;
+import tech.kayys.gamelan.mcp.domain.*;
+import tech.kayys.gamelan.mcp.parser.OpenApiToolGenerator;
+import tech.kayys.gamelan.mcp.parser.GenerateToolsRequest;
+import tech.kayys.gamelan.mcp.runtime.McpToolExecutor;
+import tech.kayys.gamelan.mcp.runtime.ToolExecutionRequest;
 
 import java.util.*;
 
@@ -48,10 +48,10 @@ public class McpToolResource {
     McpToolExecutor toolExecutor;
     
     @Inject
-    tech.kayys.silat.api.security.TenantContext tenantContext;
+    tech.kayys.gamelan.api.security.TenantContext tenantContext;
     
     @Inject
-    tech.kayys.silat.mcp.parser.wsdl.SpecFormatRegistry specFormatRegistry;
+    tech.kayys.gamelan.mcp.parser.wsdl.SpecFormatRegistry specFormatRegistry;
     
     /**
      * Get supported specification formats
@@ -59,7 +59,7 @@ public class McpToolResource {
     @GET
     @Path("/formats")
     @Operation(summary = "List supported API specification formats")
-    public Map<String, tech.kayys.silat.mcp.parser.wsdl.SpecFormatRegistry.SpecFormatInfo> getSupportedFormats() {
+    public Map<String, tech.kayys.gamelan.mcp.parser.wsdl.SpecFormatRegistry.SpecFormatInfo> getSupportedFormats() {
         return specFormatRegistry.getSupportedFormats();
     }
     
@@ -306,10 +306,10 @@ public class McpToolResource {
 public class AuthProfileResource {
     
     @Inject
-    tech.kayys.silat.api.security.TenantContext tenantContext;
+    tech.kayys.gamelan.api.security.TenantContext tenantContext;
     
     @Inject
-    tech.kayys.silat.mcp.security.VaultSecretManager vaultManager;
+    tech.kayys.gamelan.mcp.security.VaultSecretManager vaultManager;
     
     /**
      * Create auth profile
@@ -337,7 +337,7 @@ public class AuthProfileResource {
             profile.setConfig(config);
             
             // Store secret in Vault
-            String vaultPath = "silat/mcp/" + tenantId + "/" + profile.getProfileId();
+            String vaultPath = "gamelan/mcp/" + tenantId + "/" + profile.getProfileId();
             
             return vaultManager.storeSecret(vaultPath, request.secretValue())
                 .flatMap(v -> {
@@ -463,7 +463,7 @@ record AuthProfileResponse(
 
 // ==================== SECURITY COMPONENTS ====================
 
-package tech.kayys.silat.mcp.security;
+package tech.kayys.gamelan.mcp.security;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -483,15 +483,15 @@ public class AuthInjector {
     @jakarta.inject.Inject
     VaultSecretManager vaultManager;
     
-    public Uni<tech.kayys.silat.mcp.runtime.HttpRequestContext> injectAuth(
-            tech.kayys.silat.mcp.runtime.HttpRequestContext request,
+    public Uni<tech.kayys.gamelan.mcp.runtime.HttpRequestContext> injectAuth(
+            tech.kayys.gamelan.mcp.runtime.HttpRequestContext request,
             String authProfileId) {
         
         if (authProfileId == null) {
             return Uni.createFrom().item(request);
         }
         
-        return tech.kayys.silat.mcp.domain.AuthProfile.<tech.kayys.silat.mcp.domain.AuthProfile>findById(authProfileId)
+        return tech.kayys.gamelan.mcp.domain.AuthProfile.<tech.kayys.gamelan.mcp.domain.AuthProfile>findById(authProfileId)
             .flatMap(profile -> {
                 if (profile == null || !profile.isEnabled()) {
                     return Uni.createFrom().item(request);
@@ -522,7 +522,7 @@ public class AuthInjector {
                                     profile.getConfig().getParamName(),
                                     secret
                                 );
-                                return new tech.kayys.silat.mcp.runtime.HttpRequestContext(
+                                return new tech.kayys.gamelan.mcp.runtime.HttpRequestContext(
                                     request.method(),
                                     request.url(),
                                     queryParams,
@@ -533,7 +533,7 @@ public class AuthInjector {
                             }
                         }
                         
-                        return new tech.kayys.silat.mcp.runtime.HttpRequestContext(
+                        return new tech.kayys.gamelan.mcp.runtime.HttpRequestContext(
                             request.method(),
                             request.url(),
                             request.queryParams(),
@@ -599,7 +599,7 @@ public class RateLimiter {
     public void checkLimit(
             String tenantId,
             String toolId,
-            tech.kayys.silat.mcp.domain.ToolGuardrails guardrails) {
+            tech.kayys.gamelan.mcp.domain.ToolGuardrails guardrails) {
         
         String key = tenantId + ":" + toolId;
         RateLimitBucket bucket = buckets.computeIfAbsent(
@@ -611,7 +611,7 @@ public class RateLimiter {
         );
         
         if (!bucket.tryAcquire()) {
-            throw new tech.kayys.silat.mcp.runtime.RateLimitExceededException(
+            throw new tech.kayys.gamelan.mcp.runtime.RateLimitExceededException(
                 "Rate limit exceeded for tool: " + toolId);
         }
     }
@@ -663,8 +663,8 @@ public class NetworkSecurityFilter {
     private static final Logger LOG = LoggerFactory.getLogger(NetworkSecurityFilter.class);
     
     public Uni<Void> validateRequest(
-            tech.kayys.silat.mcp.runtime.HttpRequestContext request,
-            tech.kayys.silat.mcp.domain.ToolGuardrails guardrails) {
+            tech.kayys.gamelan.mcp.runtime.HttpRequestContext request,
+            tech.kayys.gamelan.mcp.domain.ToolGuardrails guardrails) {
         
         return Uni.createFrom().item(() -> {
             // Validate against allowed domains
@@ -730,12 +730,12 @@ public class PiiRedactor {
 
 // ==================== SUPPORTING SERVICES ====================
 
-package tech.kayys.silat.mcp.service;
+package tech.kayys.gamelan.mcp.service;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import tech.kayys.silat.mcp.domain.*;
-import tech.kayys.silat.mcp.runtime.*;
+import tech.kayys.gamelan.mcp.domain.*;
+import tech.kayys.gamelan.mcp.runtime.*;
 
 /**
  * Tool invocation recorder for audit
@@ -787,14 +787,14 @@ public class ToolMetricsCollector {
 @ApplicationScoped
 public class ToolCapabilityAnalyzer {
     
-    public tech.kayys.silat.mcp.domain.CapabilityLevel analyze(
+    public tech.kayys.gamelan.mcp.domain.CapabilityLevel analyze(
             io.swagger.v3.oas.models.PathItem.HttpMethod method,
             io.swagger.v3.oas.models.Operation operation,
             String path) {
         
         // Analyze based on HTTP method
         return switch (method) {
-            case GET, HEAD, OPTIONS -> tech.kayys.silat.mcp.domain.CapabilityLevel.READ_ONLY;
+            case GET, HEAD, OPTIONS -> tech.kayys.gamelan.mcp.domain.CapabilityLevel.READ_ONLY;
             case POST, PUT, PATCH -> {
                 // Check for administrative keywords
                 String fullPath = (path + " " + 
@@ -804,16 +804,16 @@ public class ToolCapabilityAnalyzer {
                 if (fullPath.contains("admin") || 
                     fullPath.contains("delete") ||
                     fullPath.contains("remove")) {
-                    yield tech.kayys.silat.mcp.domain.CapabilityLevel.ADMINISTRATIVE;
+                    yield tech.kayys.gamelan.mcp.domain.CapabilityLevel.ADMINISTRATIVE;
                 }
-                yield tech.kayys.silat.mcp.domain.CapabilityLevel.WRITE;
+                yield tech.kayys.gamelan.mcp.domain.CapabilityLevel.WRITE;
             }
-            case DELETE -> tech.kayys.silat.mcp.domain.CapabilityLevel.CRITICAL;
+            case DELETE -> tech.kayys.gamelan.mcp.domain.CapabilityLevel.CRITICAL;
         };
     }
 }
 
-package tech.kayys.silat.mcp.parser.wsdl;
+package tech.kayys.gamelan.mcp.parser.wsdl;
 
 import io.smallrye.mutiny.Uni;
 import io.swagger.v3.oas.models.*;
@@ -828,7 +828,7 @@ import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.*;
-import tech.kayys.silat.mcp.parser.*;
+import tech.kayys.gamelan.mcp.parser.*;
 
 import javax.xml.parsers.*;
 import java.io.*;

@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.rag.langchain;
+package tech.kayys.gamelan.executor.rag.langchain;
 
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import org.junit.jupiter.api.BeforeEach;
@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.kayys.silat.executor.rag.domain.LangChain4jConfig;
-import tech.kayys.silat.executor.rag.domain.RetrievalConfig;
+import tech.kayys.gamelan.executor.rag.domain.LangChain4jConfig;
+import tech.kayys.gamelan.executor.rag.domain.RetrievalConfig;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -23,7 +23,8 @@ class LangChain4jEmbeddingStoreFactoryTest {
     @BeforeEach
     void setUp() {
         storeFactory = new LangChain4jEmbeddingStoreFactory();
-        // Note: In a real scenario, we would use reflection or constructor injection to set the config mock
+        // Note: In a real scenario, we would use reflection or constructor injection to
+        // set the config mock
     }
 
     @Test
@@ -37,7 +38,8 @@ class LangChain4jEmbeddingStoreFactoryTest {
         EmbeddingStore<Object> result = storeFactory.getStore(tenantId, retrievalConfig);
 
         // Then
-        // Since the implementation returns null (placeholder), we're testing that the method can be called
+        // Since the implementation returns null (placeholder), we're testing that the
+        // method can be called
         // In a real implementation, this would return an actual store
         assertNull(result); // This reflects the placeholder implementation
     }

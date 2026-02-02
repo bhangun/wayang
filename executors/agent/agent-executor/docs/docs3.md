@@ -4,7 +4,7 @@
 
 ```yaml
 # .github/workflows/main.yml
-name: Silat Agent Executor CI/CD
+name: Gamelan Agent Executor CI/CD
 
 on:
   push:
@@ -16,7 +16,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/silat-agent-executor
+  IMAGE_NAME: ${{ github.repository }}/gamelan-agent-executor
 
 jobs:
   # ==================== BUILD AND TEST ====================
@@ -125,7 +125,7 @@ jobs:
     if: github.ref == 'refs/heads/develop'
     environment:
       name: staging
-      url: https://staging-agent.silat.dev
+      url: https://staging-agent.gamelan.dev
       
     steps:
       - name: Checkout code
@@ -147,23 +147,23 @@ jobs:
         run: |
           aws eks update-kubeconfig \
             --region us-east-1 \
-            --name silat-staging-cluster
+            --name gamelan-staging-cluster
             
       - name: Deploy to Kubernetes
         run: |
-          kubectl set image deployment/silat-agent-executor \
+          kubectl set image deployment/gamelan-agent-executor \
             agent-executor=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            -n silat-staging
+            -n gamelan-staging
             
       - name: Wait for rollout
         run: |
-          kubectl rollout status deployment/silat-agent-executor \
-            -n silat-staging \
+          kubectl rollout status deployment/gamelan-agent-executor \
+            -n gamelan-staging \
             --timeout=5m
             
       - name: Run smoke tests
         run: |
-          ./scripts/smoke-tests.sh https://staging-agent.silat.dev
+          ./scripts/smoke-tests.sh https://staging-agent.gamelan.dev
           
       - name: Notify Slack
         uses: slackapi/slack-github-action@v1
@@ -191,7 +191,7 @@ jobs:
     if: github.event_name == 'release'
     environment:
       name: production
-      url: https://agent.silat.dev
+      url: https://agent.gamelan.dev
       
     steps:
       - name: Checkout code
@@ -211,29 +211,29 @@ jobs:
         run: |
           aws eks update-kubeconfig \
             --region us-east-1 \
-            --name silat-production-cluster
+            --name gamelan-production-cluster
             
       - name: Create backup
         run: |
-          kubectl get deployment silat-agent-executor \
-            -n silat-production \
+          kubectl get deployment gamelan-agent-executor \
+            -n gamelan-production \
             -o yaml > backup-$(date +%Y%m%d-%H%M%S).yaml
             
       - name: Deploy to Production
         run: |
-          kubectl set image deployment/silat-agent-executor \
+          kubectl set image deployment/gamelan-agent-executor \
             agent-executor=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }} \
-            -n silat-production
+            -n gamelan-production
             
       - name: Wait for rollout
         run: |
-          kubectl rollout status deployment/silat-agent-executor \
-            -n silat-production \
+          kubectl rollout status deployment/gamelan-agent-executor \
+            -n gamelan-production \
             --timeout=10m
             
       - name: Run production smoke tests
         run: |
-          ./scripts/smoke-tests.sh https://agent.silat.dev
+          ./scripts/smoke-tests.sh https://agent.gamelan.dev
           
       - name: Monitor error rates
         run: |
@@ -245,7 +245,7 @@ jobs:
             -H "DD-API-KEY: ${{ secrets.DATADOG_API_KEY }}" \
             -d @- << EOF
           {
-            "title": "Silat Agent Executor Deployed",
+            "title": "Gamelan Agent Executor Deployed",
             "text": "Version ${{ github.event.release.tag_name }} deployed to production",
             "priority": "normal",
             "tags": ["environment:production", "service:agent-executor"],
@@ -275,8 +275,8 @@ jobs:
       - name: Rollback on failure
         if: failure()
         run: |
-          kubectl rollout undo deployment/silat-agent-executor \
-            -n silat-production
+          kubectl rollout undo deployment/gamelan-agent-executor \
+            -n gamelan-production
 
   # ==================== PERFORMANCE TESTS ====================
   performance:
@@ -330,7 +330,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN groupadd -r silat && useradd -r -g silat silat
+RUN groupadd -r gamelan && useradd -r -g gamelan gamelan
 
 WORKDIR /app
 
@@ -341,10 +341,10 @@ COPY --from=build /app/target/quarkus-app/app/ /app/app/
 COPY --from=build /app/target/quarkus-app/quarkus/ /app/quarkus/
 
 # Set ownership
-RUN chown -R silat:silat /app
+RUN chown -R gamelan:gamelan /app
 
 # Switch to non-root user
-USER silat
+USER gamelan
 
 # Expose ports
 EXPOSE 8080 9090
@@ -384,7 +384,7 @@ terraform {
   }
   
   backend "s3" {
-    bucket = "silat-terraform-state"
+    bucket = "gamelan-terraform-state"
     key    = "agent-executor/terraform.tfstate"
     region = "us-east-1"
   }
@@ -400,7 +400,7 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.0"
   
-  cluster_name    = "silat-${var.environment}-cluster"
+  cluster_name    = "gamelan-${var.environment}-cluster"
   cluster_version = "1.28"
   
   vpc_id     = module.vpc.vpc_id
@@ -467,7 +467,7 @@ module "eks" {
 module "db" {
   source = "terraform-aws-modules/rds/aws"
   
-  identifier = "silat-${var.environment}-postgres"
+  identifier = "gamelan-${var.environment}-postgres"
   
   engine               = "postgres"
   engine_version       = "16.1"
@@ -478,8 +478,8 @@ module "db" {
   allocated_storage     = 100
   max_allocated_storage = 500
   
-  db_name  = "silat"
-  username = "silat"
+  db_name  = "gamelan"
+  username = "gamelan"
   port     = 5432
   
   multi_az               = var.environment == "production"
@@ -502,7 +502,7 @@ module "db" {
 module "redis" {
   source = "terraform-aws-modules/elasticache/aws"
   
-  cluster_id           = "silat-${var.environment}-redis"
+  cluster_id           = "gamelan-${var.environment}-redis"
   engine               = "redis"
   engine_version       = "7.0"
   node_type            = var.redis_node_type
@@ -522,7 +522,7 @@ module "redis" {
 # ==================== SECRETS MANAGER ====================
 
 resource "aws_secretsmanager_secret" "api_keys" {
-  name = "silat/${var.environment}/api-keys"
+  name = "gamelan/${var.environment}/api-keys"
   
   tags = {
     Environment = var.environment
@@ -557,12 +557,12 @@ output "redis_endpoint" {
 ## Helm Chart
 
 ```yaml
-# helm/silat-agent-executor/values.yaml
+# helm/gamelan-agent-executor/values.yaml
 
 replicaCount: 3
 
 image:
-  repository: ghcr.io/your-org/silat-agent-executor
+  repository: ghcr.io/your-org/gamelan-agent-executor
   pullPolicy: IfNotPresent
   tag: "latest"
 
@@ -578,14 +578,14 @@ ingress:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
   hosts:
-    - host: agent.silat.dev
+    - host: agent.gamelan.dev
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: agent-silat-tls
+    - secretName: agent-gamelan-tls
       hosts:
-        - agent.silat.dev
+        - agent.gamelan.dev
 
 resources:
   limits:
@@ -621,22 +621,22 @@ affinity:
               - key: app
                 operator: In
                 values:
-                  - silat-agent-executor
+                  - gamelan-agent-executor
           topologyKey: kubernetes.io/hostname
 
 env:
   - name: ENVIRONMENT
     value: "production"
   - name: DB_HOST
-    value: "postgres.silat.svc.cluster.local"
+    value: "postgres.gamelan.svc.cluster.local"
   - name: REDIS_HOST
-    value: "redis.silat.svc.cluster.local"
+    value: "redis.gamelan.svc.cluster.local"
 
 envFrom:
   - secretRef:
-      name: silat-api-keys
+      name: gamelan-api-keys
   - configMapRef:
-      name: silat-config
+      name: gamelan-config
 
 probes:
   liveness:
@@ -667,8 +667,8 @@ serviceMonitor:
 set -e
 
 DURATION=$1
-NAMESPACE="silat-production"
-DEPLOYMENT="silat-agent-executor"
+NAMESPACE="gamelan-production"
+DEPLOYMENT="gamelan-agent-executor"
 
 echo "Monitoring deployment for $DURATION..."
 
@@ -710,11 +710,11 @@ This complete CI/CD setup provides:
 The system is now **100% production-ready**! 🚀
 
 
-# Silat Agent Executor - Complete Production System
+# Gamelan Agent Executor - Complete Production System
 
 ## 🎉 What We've Built
 
-A **complete, enterprise-grade, production-ready AI agent executor system** for the Silat Workflow Engine with:
+A **complete, enterprise-grade, production-ready AI agent executor system** for the Gamelan Workflow Engine with:
 
 ### ✅ Core Agent System
 - **CommonAgentExecutor** - Full LLM integration with tool calling

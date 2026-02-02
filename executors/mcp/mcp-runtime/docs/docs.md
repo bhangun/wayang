@@ -1,8 +1,8 @@
-# Silat MCP Server - Complete Usage Guide
+# Gamelan MCP Server - Complete Usage Guide
 
 ## 🎯 Overview
 
-The Silat MCP (Model Context Protocol) Server automatically transforms **any** API specification into safe, executable MCP tools for agentic AI workflows.
+The Gamelan MCP (Model Context Protocol) Server automatically transforms **any** API specification into safe, executable MCP tools for agentic AI workflows.
 
 ### ✅ Supported Specification Formats
 
@@ -396,7 +396,7 @@ POST /api/v1/mcp/auth-profiles
 
 ---
 
-## 🔄 Integration with Silat Workflows
+## 🔄 Integration with Gamelan Workflows
 
 ### Use MCP Tool in Workflow
 
@@ -610,8 +610,8 @@ Response:
 ## 📖 API Reference
 
 Full API documentation available at:
-- Swagger UI: `https://silat.example.com/swagger-ui`
-- OpenAPI Spec: `https://silat.example.com/openapi.json`
+- Swagger UI: `https://gamelan.example.com/swagger-ui`
+- OpenAPI Spec: `https://gamelan.example.com/openapi.json`
 
 ---
 
@@ -621,7 +621,7 @@ Full API documentation available at:
 - [ ] Generate tools from your API spec
 - [ ] Test tool execution with sample data
 - [ ] Configure guardrails (rate limits, timeouts)
-- [ ] Integrate with Silat workflow or AI agent
+- [ ] Integrate with Gamelan workflow or AI agent
 - [ ] Monitor invocations and performance
 - [ ] Set up auto-refresh for spec updates
 

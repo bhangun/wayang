@@ -1,12 +1,12 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
-import tech.kayys.silat.core.domain.*;
-import tech.kayys.silat.core.engine.NodeExecutionResult;
-import tech.kayys.silat.core.engine.NodeExecutionTask;
+import tech.kayys.gamelan.core.domain.*;
+import tech.kayys.gamelan.core.engine.NodeExecutionResult;
+import tech.kayys.gamelan.core.engine.NodeExecutionTask;
 
 import java.time.Instant;
 import java.util.List;
@@ -36,23 +36,23 @@ public class MemoryExecutorTest {
         String content = "Test memory content";
 
         String memoryId = embeddingService.embed(content)
-            .flatMap(embedding -> {
-                Memory memory = Memory.builder()
-                    .namespace("test")
-                    .content(content)
-                    .embedding(embedding)
-                    .type(MemoryType.EPISODIC)
-                    .importance(0.8)
-                    .build();
+                .flatMap(embedding -> {
+                    Memory memory = Memory.builder()
+                            .namespace("test")
+                            .content(content)
+                            .embedding(embedding)
+                            .type(MemoryType.EPISODIC)
+                            .importance(0.8)
+                            .build();
 
-                return memoryStore.store(memory);
-            })
-            .await().indefinitely();
+                    return memoryStore.store(memory);
+                })
+                .await().indefinitely();
 
         assertNotNull(memoryId);
 
         Memory retrieved = memoryStore.retrieve(memoryId)
-            .await().indefinitely();
+                .await().indefinitely();
 
         assertNotNull(retrieved);
         assertEquals(content, retrieved.getContent());
@@ -66,31 +66,27 @@ public class MemoryExecutorTest {
 
         // Store some test memories
         List<String> contents = List.of(
-            "Customer had issue with product quality",
-            "Payment processing failed due to network error",
-            "User requested refund for damaged item"
-        );
+                "Customer had issue with product quality",
+                "Payment processing failed due to network error",
+                "User requested refund for damaged item");
 
         Uni.join().all(
-            contents.stream()
-                .map(content -> storeTestMemory(content, embeddingService))
-                .toList()
-        ).andFailFast()
-        .await().indefinitely();
+                contents.stream()
+                        .map(content -> storeTestMemory(content, embeddingService))
+                        .toList())
+                .andFailFast()
+                .await().indefinitely();
 
         // Search for similar
         String query = "Product quality complaint";
 
         List<ScoredMemory> results = embeddingService.embed(query)
-            .flatMap(queryEmbedding ->
-                memoryStore.search(
-                    queryEmbedding,
-                    3,
-                    0.0,
-                    Map.of("namespace", "test")
-                )
-            )
-            .await().indefinitely();
+                .flatMap(queryEmbedding -> memoryStore.search(
+                        queryEmbedding,
+                        3,
+                        0.0,
+                        Map.of("namespace", "test")))
+                .await().indefinitely();
 
         assertNotNull(results);
         assertFalse(results.isEmpty());
@@ -105,30 +101,29 @@ public class MemoryExecutorTest {
 
         // Store knowledge base
         List<String> knowledge = List.of(
-            "To process refund: verify order, check policy, execute payment reversal",
-            "Standard refund policy allows returns within 30 days",
-            "Premium customers get expedited refund processing"
-        );
+                "To process refund: verify order, check policy, execute payment reversal",
+                "Standard refund policy allows returns within 30 days",
+                "Premium customers get expedited refund processing");
 
         Uni.join().all(
-            knowledge.stream()
-                .map(k -> storeTestMemory(k, embeddingService))
-                .toList()
-        ).andFailFast()
-        .await().indefinitely();
+                knowledge.stream()
+                        .map(k -> storeTestMemory(k, embeddingService))
+                        .toList())
+                .andFailFast()
+                .await().indefinitely();
 
         // Build context
         String query = "How to handle refund request?";
 
         ContextConfig config = ContextConfig.builder()
-            .maxMemories(3)
-            .systemPrompt("You are a support assistant")
-            .includeMetadata(false)
-            .build();
+                .maxMemories(3)
+                .systemPrompt("You are a support assistant")
+                .includeMetadata(false)
+                .build();
 
         EngineerContext context = contextService
-            .buildContext(query, "test", config)
-            .await().indefinitely();
+                .buildContext(query, "test", config)
+                .await().indefinitely();
 
         assertNotNull(context);
         assertTrue(context.getTotalTokens() > 0);
@@ -144,27 +139,25 @@ public class MemoryExecutorTest {
         EmbeddingService embeddingService = embeddingFactory.getEmbeddingService();
 
         Memory memory = embeddingService.embed("Test with metadata")
-            .map(embedding ->
-                Memory.builder()
-                    .namespace("test")
-                    .content("Test with metadata")
-                    .embedding(embedding)
-                    .type(MemoryType.SEMANTIC)
-                    .importance(0.7)
-                    .addMetadata("category", "testing")
-                    .addMetadata("priority", "high")
-                    .build()
-            )
-            .await().indefinitely();
+                .map(embedding -> Memory.builder()
+                        .namespace("test")
+                        .content("Test with metadata")
+                        .embedding(embedding)
+                        .type(MemoryType.SEMANTIC)
+                        .importance(0.7)
+                        .addMetadata("category", "testing")
+                        .addMetadata("priority", "high")
+                        .build())
+                .await().indefinitely();
 
         String memoryId = memoryStore.store(memory)
-            .await().indefinitely();
+                .await().indefinitely();
 
         // Update metadata
         Map<String, Object> newMetadata = Map.of("status", "processed");
 
         Memory updated = memoryStore.updateMetadata(memoryId, newMetadata)
-            .await().indefinitely();
+                .await().indefinitely();
 
         assertNotNull(updated);
         assertEquals("processed", updated.getMetadata().get("status"));
@@ -177,15 +170,14 @@ public class MemoryExecutorTest {
         EmbeddingService embeddingService = embeddingFactory.getEmbeddingService();
 
         Uni.join().all(
-            storeTestMemory("Episodic 1", MemoryType.EPISODIC, embeddingService),
-            storeTestMemory("Episodic 2", MemoryType.EPISODIC, embeddingService),
-            storeTestMemory("Semantic 1", MemoryType.SEMANTIC, embeddingService),
-            storeTestMemory("Working 1", MemoryType.WORKING, embeddingService)
-        ).andFailFast()
-        .await().indefinitely();
+                storeTestMemory("Episodic 1", MemoryType.EPISODIC, embeddingService),
+                storeTestMemory("Episodic 2", MemoryType.EPISODIC, embeddingService),
+                storeTestMemory("Semantic 1", MemoryType.SEMANTIC, embeddingService),
+                storeTestMemory("Working 1", MemoryType.WORKING, embeddingService)).andFailFast()
+                .await().indefinitely();
 
         MemoryStatistics stats = memoryStore.getStatistics("test")
-            .await().indefinitely();
+                .await().indefinitely();
 
         assertNotNull(stats);
         assertTrue(stats.getTotalMemories() >= 4);
@@ -206,16 +198,16 @@ public class MemoryExecutorTest {
             EmbeddingService embeddingService) {
 
         return embeddingService.embed(content)
-            .flatMap(embedding -> {
-                Memory memory = Memory.builder()
-                    .namespace("test")
-                    .content(content)
-                    .embedding(embedding)
-                    .type(type)
-                    .importance(0.6)
-                    .build();
+                .flatMap(embedding -> {
+                    Memory memory = Memory.builder()
+                            .namespace("test")
+                            .content(content)
+                            .embedding(embedding)
+                            .type(type)
+                            .importance(0.6)
+                            .build();
 
-                return memoryStore.store(memory);
-            });
+                    return memoryStore.store(memory);
+                });
     }
 }

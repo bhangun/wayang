@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -14,7 +14,7 @@ public class EmbeddingServiceFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(EmbeddingServiceFactory.class);
 
-    @ConfigProperty(name = "silat.embedding.provider", defaultValue = "local")
+    @ConfigProperty(name = "gamelan.embedding.provider", defaultValue = "local")
     String provider;
 
     @Inject

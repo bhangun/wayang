@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.slf4j.Logger;
@@ -28,59 +28,56 @@ public class PromptTemplateManager {
     private void initializeDefaultTemplates() {
         // Question answering template
         templates.put("qa", new PromptTemplate(
-            "qa",
-            """
-            You are a helpful AI assistant. Use the following context to answer the user's question.
-            If you cannot find the answer in the context, say so honestly.
+                "qa",
+                """
+                        You are a helpful AI assistant. Use the following context to answer the user's question.
+                        If you cannot find the answer in the context, say so honestly.
 
-            Context:
-            {context}
+                        Context:
+                        {context}
 
-            Question: {query}
+                        Question: {query}
 
-            Answer:
-            """,
-            List.of("context", "query")
-        ));
+                        Answer:
+                        """,
+                List.of("context", "query")));
 
         // Task execution template
         templates.put("task", new PromptTemplate(
-            "task",
-            """
-            You are an AI agent capable of executing tasks. Based on the context and your capabilities,
-            execute the following task.
+                "task",
+                """
+                        You are an AI agent capable of executing tasks. Based on the context and your capabilities,
+                        execute the following task.
 
-            Available Context:
-            {context}
+                        Available Context:
+                        {context}
 
-            Task: {query}
+                        Task: {query}
 
-            Please provide your response in the following format:
-            1. Analysis: Brief analysis of the task
-            2. Action: The action you will take
-            3. Result: Expected or actual result
-            """,
-            List.of("context", "query")
-        ));
+                        Please provide your response in the following format:
+                        1. Analysis: Brief analysis of the task
+                        2. Action: The action you will take
+                        3. Result: Expected or actual result
+                        """,
+                List.of("context", "query")));
 
         // Conversational template
         templates.put("chat", new PromptTemplate(
-            "chat",
-            """
-            You are a friendly AI assistant having a conversation with a user.
-            Use the conversation history and any relevant context to provide helpful responses.
+                "chat",
+                """
+                        You are a friendly AI assistant having a conversation with a user.
+                        Use the conversation history and any relevant context to provide helpful responses.
 
-            {conversation_history}
+                        {conversation_history}
 
-            Relevant Context:
-            {context}
+                        Relevant Context:
+                        {context}
 
-            User: {query}
+                        User: {query}
 
-            Assistant:
-            """,
-            List.of("conversation_history", "context", "query")
-        ));
+                        Assistant:
+                        """,
+                List.of("conversation_history", "context", "query")));
 
         LOG.info("Initialized {} prompt templates", templates.size());
     }

@@ -1,6 +1,6 @@
-package tech.kayys.silat.core.engine;
+package tech.kayys.gamelan.core.engine;
 
-import tech.kayys.silat.core.domain.*;
+import tech.kayys.gamelan.core.domain.*;
 
 import java.util.Map;
 
@@ -8,14 +8,13 @@ import java.util.Map;
  * Result from executor after task execution
  */
 public record NodeExecutionResult(
-    WorkflowRunId runId,
-    NodeId nodeId,
-    int attempt,
-    NodeExecutionStatus status,
-    Map<String, Object> output,
-    ErrorInfo error,
-    ExecutionToken executionToken
-) {
+        WorkflowRunId runId,
+        NodeId nodeId,
+        int attempt,
+        NodeExecutionStatus status,
+        Map<String, Object> output,
+        ErrorInfo error,
+        ExecutionToken executionToken) {
     /**
      * Create successful result
      */
@@ -27,14 +26,13 @@ public record NodeExecutionResult(
             ExecutionToken token) {
 
         return new NodeExecutionResult(
-            runId,
-            nodeId,
-            attempt,
-            NodeExecutionStatus.COMPLETED,
-            output,
-            null,
-            token
-        );
+                runId,
+                nodeId,
+                attempt,
+                NodeExecutionStatus.COMPLETED,
+                output,
+                null,
+                token);
     }
 
     /**
@@ -48,14 +46,13 @@ public record NodeExecutionResult(
             ExecutionToken token) {
 
         return new NodeExecutionResult(
-            runId,
-            nodeId,
-            attempt,
-            NodeExecutionStatus.FAILED,
-            Map.of(),
-            error,
-            token
-        );
+                runId,
+                nodeId,
+                attempt,
+                NodeExecutionStatus.FAILED,
+                Map.of(),
+                error,
+                token);
     }
 
     /**

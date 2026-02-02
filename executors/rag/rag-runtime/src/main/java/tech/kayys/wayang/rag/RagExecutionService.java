@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.rag.langchain;
+package tech.kayys.gamelan.executor.rag.langchain;
 
 import dev.langchain4j.data.document.DocumentSplitter;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
@@ -12,8 +12,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.client.SilatClient;
-import tech.kayys.silat.executor.rag.domain.*;
+import tech.kayys.gamelan.client.GamelanClient;
+import tech.kayys.gamelan.executor.rag.domain.*;
 
 import java.nio.file.Path;
 import java.time.Instant;
@@ -34,7 +34,7 @@ public class RagExecutionService {
     LangChain4jEmbeddingStoreFactory storeFactory;
 
     @Inject
-    SilatClient silatClient;
+    GamelanClient gamelanClient;
 
     public Uni<RagResponse> executeRagWorkflow(RagWorkflowInput input) {
         LOG.info("Executing RAG workflow for tenant: {}", input.tenantId());
@@ -50,16 +50,16 @@ public class RagExecutionService {
 
             // 3. Build response with metadata
             return new RagResponse(
-                input.query(),
-                response.content().text(),
-                relevantDocs,
-                List.of(), // citations
-                null, // metrics
-                null, // context
-                Instant.now(),
-                Map.of(), // metadata
-                List.of(), // sources
-                Optional.empty() // error
+                    input.query(),
+                    response.content().text(),
+                    relevantDocs,
+                    List.of(), // citations
+                    null, // metrics
+                    null, // context
+                    Instant.now(),
+                    Map.of(), // metadata
+                    List.of(), // sources
+                    Optional.empty() // error
             );
         });
     }
@@ -71,22 +71,22 @@ public class RagExecutionService {
 
     private String buildPrompt(String query, List<TextSegment> relevantDocs, GenerationConfig genConfig) {
         StringBuilder prompt = new StringBuilder();
-        
+
         if (genConfig.systemPrompt() != null) {
             prompt.append(genConfig.systemPrompt()).append("\n\n");
         }
-        
+
         prompt.append("Context:\n");
         for (int i = 0; i < relevantDocs.size(); i++) {
             prompt.append("[")
-                  .append(i + 1)
-                  .append("] ")
-                  .append(relevantDocs.get(i).text())
-                  .append("\n\n");
+                    .append(i + 1)
+                    .append("] ")
+                    .append(relevantDocs.get(i).text())
+                    .append("\n\n");
         }
-        
+
         prompt.append("Question: ").append(query);
-        
+
         return prompt.toString();
     }
 }

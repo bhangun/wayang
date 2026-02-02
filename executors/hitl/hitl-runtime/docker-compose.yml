@@ -4,26 +4,26 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: silat-postgres
+    container_name: gamelan-postgres
     environment:
-      POSTGRES_DB: silat_db
-      POSTGRES_USER: silat
-      POSTGRES_PASSWORD: silat_password
+      POSTGRES_DB: gamelan_db
+      POSTGRES_USER: gamelan
+      POSTGRES_PASSWORD: gamelan_password
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
     networks:
-      - silat-network
+      - gamelan-network
 
-  silat-app:
+  gamelan-app:
     build: .
-    container_name: silat-human-task
+    container_name: gamelan-human-task
     environment:
-      QUARKUS_DATASOURCE_REACTIVE_URL: postgresql://postgres:5432/silat_db
-      QUARKUS_DATASOURCE_USERNAME: silat
-      QUARKUS_DATASOURCE_PASSWORD: silat_password
+      QUARKUS_DATASOURCE_REACTIVE_URL: postgresql://postgres:5432/gamelan_db
+      QUARKUS_DATASOURCE_USERNAME: gamelan
+      QUARKUS_DATASOURCE_PASSWORD: gamelan_password
       SMTP_USERNAME: ${SMTP_USERNAME}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
     ports:
@@ -31,11 +31,11 @@ services:
     depends_on:
       - postgres
     networks:
-      - silat-network
+      - gamelan-network
 
 volumes:
   postgres_data:
 
 networks:
-  silat-network:
+  gamelan-network:
     driver: bridge

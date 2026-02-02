@@ -1,0 +1,180 @@
+package tech.kayys.wayang.agent.executor;
+
+import io.smallrye.mutiny.Uni;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tech.kayys.gamelan.engine.node.NodeExecutionResult;
+import tech.kayys.gamelan.engine.node.NodeExecutionTask;
+import tech.kayys.gamelan.sdk.executor.core.WorkflowExecutor;
+import tech.kayys.wayang.agent.type.AgentType;
+
+import java.time.Instant;
+import java.util.Map;
+
+/**
+ * Abstract base class for all agent executors
+ * Implements the WorkflowExecutor interface from gamelan-sdk-executor-core
+ */
+public abstract class AbstractAgentExecutor implements WorkflowExecutor {
+
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
+
+    /**
+     * Execute a node task by delegating to agent-specific implementation
+     */
+    @Override
+    public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
+        logger.info("Executing task: runId={}, nodeId={}, executorType={}",
+                task.runId(), task.nodeId(), getExecutorType());
+
+        return beforeExecute(task)
+                .chain(() -> doExecute(task))
+                .invoke(result -> logger.info("Task completed successfully: runId={}, nodeId={}",
+                        task.runId(), task.nodeId()))
+                .call(result -> afterExecute(task, result))
+                .onFailure().invoke(error -> {
+                    logger.error("Task execution failed: runId={}, nodeId={}, error={}",
+                            task.runId(), task.nodeId(), error.getMessage(), error);
+                    onError(task, error).subscribe().with(
+                            v -> {
+                            },
+                            e -> logger.error("Error in onError handler", e));
+                });
+    }
+
+    /**
+     * Agent-specific execution logic
+     * Subclasses must implement this method
+     * 
+     * @param task The task to execute
+     * @return Result of execution
+     */
+    protected abstract Uni<NodeExecutionResult> doExecute(NodeExecutionTask task);
+
+    /**
+     * Get the agent type this executor handles
+     */
+    protected abstract AgentType getAgentType();
+
+    /**
+     * Validate if this executor can handle the task
+     * Default implementation checks if task contains required agent configuration
+     */
+    @Override
+    public boolean canHandle(NodeExecutionTask task) {
+        Map<String, Object> context = task.context();
+
+        // Check if task has agent configuration
+        if (!context.containsKey("agentType")) {
+            return false;
+        }
+
+        String taskAgentType = (String) context.get("agentType");
+        return getExecutorType().equals(taskAgentType);
+    }
+
+    /**
+     * Get supported node types
+     * By default, supports all node types
+     */
+    @Override
+    public String[] getSupportedNodeTypes() {
+        return new String[] { "agent-task", "agent-coordination" };
+    }
+
+    /**
+     * Called before execution starts
+     * Can be overridden for custom pre-execution logic
+     */
+    @Override
+    public Uni<Void> beforeExecute(NodeExecutionTask task) {
+        return Uni.createFrom().voidItem();
+    }
+
+    /**
+     * Called after execution completes (success or failure)
+     * Can be overridden for custom post-execution logic
+     */
+    @Override
+    public Uni<Void> afterExecute(NodeExecutionTask task, NodeExecutionResult result) {
+        return Uni.createFrom().voidItem();
+    }
+
+    /**
+     * Called when execution fails with an exception
+     * Can be overridden for custom error handling
+     */
+    @Override
+    public Uni<Void> onError(NodeExecutionTask task, Throwable error) {
+        return Uni.createFrom().voidItem();
+    }
+
+    /**
+     * Initialize the executor
+     * Can be overridden for custom initialization
+     */
+    @Override
+    public Uni<Void> initialize() {
+        logger.info("Initializing executor: {}", getExecutorType());
+        return Uni.createFrom().voidItem();
+    }
+
+    /**
+     * Cleanup the executor
+     * Can be overridden for custom cleanup
+     */
+    @Override
+    public Uni<Void> cleanup() {
+        logger.info("Cleaning up executor: {}", getExecutorType());
+        return Uni.createFrom().voidItem();
+    }
+
+    /**
+     * Check if the executor is ready
+     */
+    @Override
+    public boolean isReady() {
+        return true;
+    }
+
+    /**
+     * Get maximum concurrent tasks
+     * Can be overridden by subclasses
+     */
+    @Override
+    public int getMaxConcurrentTasks() {
+        return 10; // Default to 10 concurrent tasks
+    }
+
+    /**
+     * Helper method to create a success result
+     */
+    protected NodeExecutionResult createSuccessResult(
+            NodeExecutionTask task,
+            Map<String, Object> output) {
+        return new tech.kayys.gamelan.engine.node.DefaultNodeExecutionResult(
+                task.runId(),
+                task.nodeId(),
+                task.attempt(),
+                tech.kayys.gamelan.engine.node.NodeExecutionStatus.COMPLETED,
+                output,
+                null,
+                task.token());
+    }
+
+    /**
+     * Helper method to create a failure result
+     */
+    protected NodeExecutionResult createFailureResult(
+            NodeExecutionTask task,
+            Throwable error) {
+        return new tech.kayys.gamelan.engine.node.DefaultNodeExecutionResult(
+                task.runId(),
+                task.nodeId(),
+                task.attempt(),
+                tech.kayys.gamelan.engine.node.NodeExecutionStatus.FAILED,
+                Map.of(),
+                tech.kayys.gamelan.engine.error.ErrorInfo.of(error),
+                task.token());
+    }
+}

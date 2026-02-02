@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory.examples;
+package tech.kayys.gamelan.executor.memory.examples;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -24,12 +24,12 @@ public class ExampleRunner {
         LOG.info("Starting Memory Executor Examples...\n");
 
         return examples.example1_BasicMemoryOperations()
-            .chain(() -> examples.example2_SemanticSearch())
-            .chain(() -> examples.example3_ContextEngineering())
-            .chain(() -> examples.example4_HybridSearch())
-            .chain(() -> examples.example5_TemporalDecay())
-            .chain(() -> examples.example6_BatchOperations())
-            .chain(() -> examples.example7_MemoryStatistics())
-            .invoke(() -> LOG.info("\n=== All Examples Completed Successfully ==="));
+                .chain(() -> examples.example2_SemanticSearch())
+                .chain(() -> examples.example3_ContextEngineering())
+                .chain(() -> examples.example4_HybridSearch())
+                .chain(() -> examples.example5_TemporalDecay())
+                .chain(() -> examples.example6_BatchOperations())
+                .chain(() -> examples.example7_MemoryStatistics())
+                .invoke(() -> LOG.info("\n=== All Examples Completed Successfully ==="));
     }
 }

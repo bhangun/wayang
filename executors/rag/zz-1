@@ -1,7 +1,7 @@
-package tech.kayys.silat.examples.rag;
+package tech.kayys.gamelan.examples.rag;
 
-import tech.kayys.silat.client.SilatClient;
-import tech.kayys.silat.api.dto.*;
+import tech.kayys.gamelan.client.GamelanClient;
+import tech.kayys.gamelan.api.dto.*;
 import io.smallrye.mutiny.Uni;
 
 import java.util.*;
@@ -13,7 +13,7 @@ import java.time.Duration;
  * ============================================================================
  * 
  * This example demonstrates a complete RAG (Retrieval-Augmented Generation)
- * workflow using Silat's modular RAG executors.
+ * workflow using Gamelan's modular RAG executors.
  * 
  * Workflow Steps:
  * 1. Document Ingestion - Load and chunk documents
@@ -27,7 +27,7 @@ import java.time.Duration;
  * - Research assistants
  * - Technical documentation assistants
  * 
- * @author Silat Team
+ * @author Gamelan Team
  * @version 1.0.0
  * @since 2024-01
  */
@@ -35,7 +35,7 @@ public class CompleteRAGWorkflowExample {
     
     public static void main(String[] args) {
         // Initialize client
-        SilatClient client = SilatClient.builder()
+        GamelanClient client = GamelanClient.builder()
             .restEndpoint("http://localhost:8080")
             .tenantId("acme-corp")
             .apiKey("your-api-key")
@@ -72,7 +72,7 @@ public class CompleteRAGWorkflowExample {
      * - Generates embeddings
      * - Stores in vector database
      */
-    public static void defineAndExecuteIngestionWorkflow(SilatClient client) {
+    public static void defineAndExecuteIngestionWorkflow(GamelanClient client) {
         // Define ingestion workflow
         WorkflowDefinitionResponse workflow = client.workflows()
             .create("rag-knowledge-base-ingestion")
@@ -174,7 +174,7 @@ public class CompleteRAGWorkflowExample {
      * - Retrieves relevant context
      * - Generates AI response
      */
-    public static void executeQueryWorkflow(SilatClient client) {
+    public static void executeQueryWorkflow(GamelanClient client) {
         // Define query workflow
         WorkflowDefinitionResponse workflow = client.workflows()
             .create("rag-query-pipeline")
@@ -267,7 +267,7 @@ public class CompleteRAGWorkflowExample {
      * This workflow combines ingestion and query in a single pipeline.
      * Useful for dynamic document processing with immediate querying.
      */
-    public static void executeEndToEndRAG(SilatClient client) {
+    public static void executeEndToEndRAG(GamelanClient client) {
         // Use the RAG orchestrator for simplified execution
         RunResponse run = client.runs()
             .create("rag-orchestrator") // Special orchestrator executor
@@ -324,7 +324,7 @@ public class CompleteRAGWorkflowExample {
      * - Reranking
      * - Citation tracking
      */
-    public static void executeAdvancedRAG(SilatClient client) {
+    public static void executeAdvancedRAG(GamelanClient client) {
         // Define advanced RAG workflow
         WorkflowDefinitionResponse workflow = client.workflows()
             .create("advanced-rag-pipeline")
@@ -424,7 +424,7 @@ public class CompleteRAGWorkflowExample {
     /**
      * Monitor workflow execution
      */
-    private static void monitorWorkflow(SilatClient client, String runId) {
+    private static void monitorWorkflow(GamelanClient client, String runId) {
         System.out.println("\nMonitoring workflow execution...");
         
         while (true) {
@@ -458,7 +458,7 @@ public class CompleteRAGWorkflowExample {
     /**
      * Wait for workflow completion
      */
-    private static RunResponse waitForCompletion(SilatClient client, String runId) {
+    private static RunResponse waitForCompletion(GamelanClient client, String runId) {
         while (true) {
             try {
                 Thread.sleep(1000);
@@ -494,7 +494,7 @@ public class CompleteRAGWorkflowExample {
  */
 class CustomerSupportChatbotExample {
     
-    public static void createSupportBot(SilatClient client) {
+    public static void createSupportBot(GamelanClient client) {
         // Define support bot workflow
         WorkflowDefinitionResponse workflow = client.workflows()
             .create("customer-support-rag-bot")
@@ -607,7 +607,7 @@ class CustomerSupportChatbotExample {
     }
     
     private static void executeCustomerQuery(
-            SilatClient client, 
+            GamelanClient client, 
             String workflowId,
             String message,
             String sessionId) {
@@ -657,50 +657,50 @@ class RAGConfigurationExample {
         # ==================== RAG Configuration ====================
         
         # Document Ingestion
-        silat.rag.ingestion.chunk-size=500
-        silat.rag.ingestion.chunk-overlap=50
-        silat.rag.ingestion.max-batch-size=100
-        silat.rag.ingestion.temp-dir=/tmp/silat-rag
+        gamelan.rag.ingestion.chunk-size=500
+        gamelan.rag.ingestion.chunk-overlap=50
+        gamelan.rag.ingestion.max-batch-size=100
+        gamelan.rag.ingestion.temp-dir=/tmp/gamelan-rag
         
         # Embedding Generation
-        silat.rag.embedding.provider=openai
-        silat.rag.embedding.model=text-embedding-3-small
-        silat.rag.embedding.batch-size=50
-        silat.rag.embedding.dimension=1536
-        silat.rag.embedding.rate-limit=3000
-        silat.rag.embedding.timeout=30
-        silat.rag.embedding.use-cache=true
+        gamelan.rag.embedding.provider=openai
+        gamelan.rag.embedding.model=text-embedding-3-small
+        gamelan.rag.embedding.batch-size=50
+        gamelan.rag.embedding.dimension=1536
+        gamelan.rag.embedding.rate-limit=3000
+        gamelan.rag.embedding.timeout=30
+        gamelan.rag.embedding.use-cache=true
         
         # Retrieval
-        silat.rag.retrieval.top-k=20
-        silat.rag.retrieval.final-k=5
-        silat.rag.retrieval.min-score=0.7
-        silat.rag.retrieval.strategy=hybrid
-        silat.rag.retrieval.rerank=true
-        silat.rag.retrieval.diversity=true
-        silat.rag.retrieval.query-expansion=false
+        gamelan.rag.retrieval.top-k=20
+        gamelan.rag.retrieval.final-k=5
+        gamelan.rag.retrieval.min-score=0.7
+        gamelan.rag.retrieval.strategy=hybrid
+        gamelan.rag.retrieval.rerank=true
+        gamelan.rag.retrieval.diversity=true
+        gamelan.rag.retrieval.query-expansion=false
         
         # Response Generation
-        silat.rag.generation.provider=openai
-        silat.rag.generation.model=gpt-4-turbo
-        silat.rag.generation.temperature=0.7
-        silat.rag.generation.max-tokens=1000
-        silat.rag.generation.include-citations=true
-        silat.rag.generation.use-cache=true
-        silat.rag.generation.timeout=60
+        gamelan.rag.generation.provider=openai
+        gamelan.rag.generation.model=gpt-4-turbo
+        gamelan.rag.generation.temperature=0.7
+        gamelan.rag.generation.max-tokens=1000
+        gamelan.rag.generation.include-citations=true
+        gamelan.rag.generation.use-cache=true
+        gamelan.rag.generation.timeout=60
         
         # Vector Store
-        silat.rag.store.default-type=pgvector
-        silat.rag.store.pgvector.url=jdbc:postgresql://localhost:5432/silat
-        silat.rag.store.redis.url=redis://localhost:6379
-        silat.rag.store.pinecone.api-key=${PINECONE_API_KEY}
+        gamelan.rag.store.default-type=pgvector
+        gamelan.rag.store.pgvector.url=jdbc:postgresql://localhost:5432/gamelan
+        gamelan.rag.store.redis.url=redis://localhost:6379
+        gamelan.rag.store.pinecone.api-key=${PINECONE_API_KEY}
         
         # OpenAI API
         openai.api-key=${OPENAI_API_KEY}
         """;
 }
 
-package tech.kayys.silat.executor.rag.infrastructure;
+package tech.kayys.gamelan.executor.rag.infrastructure;
 
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -718,8 +718,8 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.executor.rag.retrieval.RetrievalConfig;
-import tech.kayys.silat.executor.rag.retrieval.ScoredDocument;
+import tech.kayys.gamelan.executor.rag.retrieval.RetrievalConfig;
+import tech.kayys.gamelan.executor.rag.retrieval.ScoredDocument;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -748,7 +748,7 @@ import java.util.stream.Collectors;
  * - Automatic cleanup
  * - Configuration-driven store creation
  * 
- * @author Silat Team
+ * @author Gamelan Team
  * @version 1.0.0
  * @since 2024-01
  */
@@ -761,16 +761,16 @@ public class EmbeddingStoreRegistry {
     private final Map<String, Map<String, EmbeddingStore<TextSegment>>> stores = 
         new ConcurrentHashMap<>();
     
-    @ConfigProperty(name = "silat.rag.store.default-type", defaultValue = "in-memory")
+    @ConfigProperty(name = "gamelan.rag.store.default-type", defaultValue = "in-memory")
     String defaultStoreType;
     
-    @ConfigProperty(name = "silat.rag.store.pgvector.url", defaultValue = "")
+    @ConfigProperty(name = "gamelan.rag.store.pgvector.url", defaultValue = "")
     Optional<String> pgvectorUrl;
     
-    @ConfigProperty(name = "silat.rag.store.redis.url", defaultValue = "")
+    @ConfigProperty(name = "gamelan.rag.store.redis.url", defaultValue = "")
     Optional<String> redisUrl;
     
-    @ConfigProperty(name = "silat.rag.store.pinecone.api-key", defaultValue = "")
+    @ConfigProperty(name = "gamelan.rag.store.pinecone.api-key", defaultValue = "")
     Optional<String> pineconeApiKey;
     
     /**
@@ -819,7 +819,7 @@ public class EmbeddingStoreRegistry {
         return PgVectorEmbeddingStore.builder()
             .host("localhost")
             .port(5432)
-            .database("silat")
+            .database("gamelan")
             .user("postgres")
             .password("password")
             .table("embeddings_" + sanitizeTenantId(tenantId))
@@ -857,7 +857,7 @@ public class EmbeddingStoreRegistry {
         // In production, create actual Pinecone store
         return PineconeEmbeddingStore.builder()
             .apiKey(pineconeApiKey.get())
-            .indexName("silat-" + sanitizeTenantId(tenantId))
+            .indexName("gamelan-" + sanitizeTenantId(tenantId))
             .nameSpace(tenantId)
             .build();
     }
@@ -1226,33 +1226,33 @@ class QueryExpansionService {
  * This is a convenience executor for simple RAG workflows.
  * For complex workflows, use individual executors.
  */
-@tech.kayys.silat.executor.Executor(
+@tech.kayys.gamelan.executor.Executor(
     executorType = "rag-orchestrator",
-    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
+    communicationType = tech.kayys.gamelan.core.scheduler.CommunicationType.GRPC,
     maxConcurrentTasks = 5,
     supportedNodeTypes = {"TASK", "RAG_PIPELINE"},
     version = "1.0.0"
 )
 @ApplicationScoped
-class RAGOrchestratorExecutor extends tech.kayys.silat.executor.AbstractWorkflowExecutor {
+class RAGOrchestratorExecutor extends tech.kayys.gamelan.executor.AbstractWorkflowExecutor {
     
     private static final Logger LOG = LoggerFactory.getLogger(RAGOrchestratorExecutor.class);
     
     @Inject
-    tech.kayys.silat.executor.rag.ingestion.DocumentIngestionExecutor ingestionExecutor;
+    tech.kayys.gamelan.executor.rag.ingestion.DocumentIngestionExecutor ingestionExecutor;
     
     @Inject
-    tech.kayys.silat.executor.rag.embedding.EmbeddingGenerationExecutor embeddingExecutor;
+    tech.kayys.gamelan.executor.rag.embedding.EmbeddingGenerationExecutor embeddingExecutor;
     
     @Inject
-    tech.kayys.silat.executor.rag.retrieval.RetrievalExecutor retrievalExecutor;
+    tech.kayys.gamelan.executor.rag.retrieval.RetrievalExecutor retrievalExecutor;
     
     @Inject
-    tech.kayys.silat.executor.rag.generation.ResponseGenerationExecutor generationExecutor;
+    tech.kayys.gamelan.executor.rag.generation.ResponseGenerationExecutor generationExecutor;
     
     @Override
-    public io.smallrye.mutiny.Uni<tech.kayys.silat.core.engine.NodeExecutionResult> execute(
-            tech.kayys.silat.core.engine.NodeExecutionTask task) {
+    public io.smallrye.mutiny.Uni<tech.kayys.gamelan.core.engine.NodeExecutionResult> execute(
+            tech.kayys.gamelan.core.engine.NodeExecutionTask task) {
         
         LOG.info("Starting RAG orchestration for run: {}, node: {}", 
             task.runId().value(), task.nodeId().value());
@@ -1265,11 +1265,11 @@ class RAGOrchestratorExecutor extends tech.kayys.silat.executor.AbstractWorkflow
             case "query" -> orchestrateQuery(task);
             case "full" -> orchestrateFullPipeline(task);
             default -> io.smallrye.mutiny.Uni.createFrom().item(
-                tech.kayys.silat.core.engine.NodeExecutionResult.failure(
+                tech.kayys.gamelan.core.engine.NodeExecutionResult.failure(
                     task.runId(),
                     task.nodeId(),
                     task.attempt(),
-                    new tech.kayys.silat.core.domain.ErrorInfo(
+                    new tech.kayys.gamelan.core.domain.ErrorInfo(
                         "INVALID_MODE",
                         "Invalid RAG mode: " + mode,
                         "",
@@ -1284,13 +1284,13 @@ class RAGOrchestratorExecutor extends tech.kayys.silat.executor.AbstractWorkflow
     /**
      * Orchestrate ingestion only
      */
-    private io.smallrye.mutiny.Uni<tech.kayys.silat.core.engine.NodeExecutionResult> orchestrateIngestion(
-            tech.kayys.silat.core.engine.NodeExecutionTask task) {
+    private io.smallrye.mutiny.Uni<tech.kayys.gamelan.core.engine.NodeExecutionResult> orchestrateIngestion(
+            tech.kayys.gamelan.core.engine.NodeExecutionTask task) {
         
         // 1. Ingest documents
         return ingestionExecutor.execute(task)
             .flatMap(result -> {
-                if (result.status() != tech.kayys.silat.core.domain.NodeExecutionStatus.COMPLETED) {
+                if (result.status() != tech.kayys.gamelan.core.domain.NodeExecutionStatus.COMPLETED) {
                     return io.smallrye.mutiny.Uni.createFrom().item(result);
                 }
                 
@@ -1298,8 +1298,8 @@ class RAGOrchestratorExecutor extends tech.kayys.silat.executor.AbstractWorkflow
                 Map<String, Object> embeddingContext = new HashMap<>(task.context());
                 embeddingContext.put("segments", result.output().get("segments"));
                 
-                tech.kayys.silat.core.engine.NodeExecutionTask embeddingTask = 
-                    new tech.kayys.silat.core.engine.NodeExecutionTask(
+                tech.kayys.gamelan.core.engine.NodeExecutionTask embeddingTask = 
+                    new tech.kayys.gamelan.core.engine.NodeExecutionTask(
                         task.runId(),
                         task.nodeId(),
                         task.attempt(),
@@ -1314,13 +1314,13 @@ class RAGOrchestratorExecutor extends tech.kayys.silat.executor.AbstractWorkflow
     /**
      * Orchestrate query only (assumes data already ingested)
      */
-    private io.smallrye.mutiny.Uni<tech.kayys.silat.core.engine.NodeExecutionResult> orchestrateQuery(
-            tech.kayys.silat.core.engine.NodeExecutionTask task) {
+    private io.smallrye.mutiny.Uni<tech.kayys.gamelan.core.engine.NodeExecutionResult> orchestrateQuery(
+            tech.kayys.gamelan.core.engine.NodeExecutionTask task) {
         
         // 1. Retrieve context
         return retrievalExecutor.execute(task)
             .flatMap(result -> {
-                if (result.status() != tech.kayys.silat.core.domain.NodeExecutionStatus.COMPLETED) {
+                if (result.status() != tech.kayys.gamelan.core.domain.NodeExecutionStatus.COMPLETED) {
                     return io.smallrye.mutiny.Uni.createFrom().item(result);
                 }
                 
@@ -1329,8 +1329,8 @@ class RAGOrchestratorExecutor extends tech.kayys.silat.executor.AbstractWorkflow
                 generationContext.put("contexts", result.output().get("contexts"));
                 generationContext.put("metadata", result.output().get("metadata"));
                 
-                tech.kayys.silat.core.engine.NodeExecutionTask generationTask = 
-                    new tech.kayys.silat.core.engine.NodeExecutionTask(
+                tech.kayys.gamelan.core.engine.NodeExecutionTask generationTask = 
+                    new tech.kayys.gamelan.core.engine.NodeExecutionTask(
                         task.runId(),
                         task.nodeId(),
                         task.attempt(),
@@ -1345,12 +1345,12 @@ class RAGOrchestratorExecutor extends tech.kayys.silat.executor.AbstractWorkflow
     /**
      * Orchestrate full pipeline
      */
-    private io.smallrye.mutiny.Uni<tech.kayys.silat.core.engine.NodeExecutionResult> orchestrateFullPipeline(
-            tech.kayys.silat.core.engine.NodeExecutionTask task) {
+    private io.smallrye.mutiny.Uni<tech.kayys.gamelan.core.engine.NodeExecutionResult> orchestrateFullPipeline(
+            tech.kayys.gamelan.core.engine.NodeExecutionTask task) {
         
         return orchestrateIngestion(task)
             .flatMap(result -> {
-                if (result.status() != tech.kayys.silat.core.domain.NodeExecutionStatus.COMPLETED) {
+                if (result.status() != tech.kayys.gamelan.core.domain.NodeExecutionStatus.COMPLETED) {
                     return io.smallrye.mutiny.Uni.createFrom().item(result);
                 }
                 
@@ -1359,7 +1359,7 @@ class RAGOrchestratorExecutor extends tech.kayys.silat.executor.AbstractWorkflow
     }
 }
 
-package tech.kayys.silat.executor.rag.generation;
+package tech.kayys.gamelan.executor.rag.generation;
 
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
@@ -1375,11 +1375,11 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.core.domain.ErrorInfo;
-import tech.kayys.silat.core.engine.NodeExecutionResult;
-import tech.kayys.silat.core.engine.NodeExecutionTask;
-import tech.kayys.silat.executor.Executor;
-import tech.kayys.silat.executor.AbstractWorkflowExecutor;
+import tech.kayys.gamelan.core.domain.ErrorInfo;
+import tech.kayys.gamelan.core.engine.NodeExecutionResult;
+import tech.kayys.gamelan.core.engine.NodeExecutionTask;
+import tech.kayys.gamelan.executor.Executor;
+import tech.kayys.gamelan.executor.AbstractWorkflowExecutor;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -1409,12 +1409,12 @@ import java.util.stream.Collectors;
  * - Chain of Responsibility for post-processing
  * 
  * Configuration:
- * - silat.rag.generation.provider: LLM provider (openai, anthropic, azure)
- * - silat.rag.generation.model: Model name
- * - silat.rag.generation.temperature: Generation temperature (default: 0.7)
- * - silat.rag.generation.max-tokens: Maximum response tokens (default: 1000)
- * - silat.rag.generation.include-citations: Include source citations (default: true)
- * - silat.rag.generation.stream: Enable streaming (default: false)
+ * - gamelan.rag.generation.provider: LLM provider (openai, anthropic, azure)
+ * - gamelan.rag.generation.model: Model name
+ * - gamelan.rag.generation.temperature: Generation temperature (default: 0.7)
+ * - gamelan.rag.generation.max-tokens: Maximum response tokens (default: 1000)
+ * - gamelan.rag.generation.include-citations: Include source citations (default: true)
+ * - gamelan.rag.generation.stream: Enable streaming (default: false)
  * 
  * Usage in Workflow:
  * ```java
@@ -1435,13 +1435,13 @@ import java.util.stream.Collectors;
  * );
  * ```
  * 
- * @author Silat Team
+ * @author Gamelan Team
  * @version 1.0.0
  * @since 2024-01
  */
 @Executor(
     executorType = "rag-response-generation",
-    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
+    communicationType = tech.kayys.gamelan.core.scheduler.CommunicationType.GRPC,
     maxConcurrentTasks = 15,
     supportedNodeTypes = {"TASK", "RAG_GENERATION"},
     version = "1.0.0"
@@ -1473,25 +1473,25 @@ public class ResponseGenerationExecutor extends AbstractWorkflowExecutor {
     
     // ==================== CONFIGURATION ====================
     
-    @ConfigProperty(name = "silat.rag.generation.provider", defaultValue = "openai")
+    @ConfigProperty(name = "gamelan.rag.generation.provider", defaultValue = "openai")
     String defaultProvider;
     
-    @ConfigProperty(name = "silat.rag.generation.model", defaultValue = "gpt-4-turbo")
+    @ConfigProperty(name = "gamelan.rag.generation.model", defaultValue = "gpt-4-turbo")
     String defaultModel;
     
-    @ConfigProperty(name = "silat.rag.generation.temperature", defaultValue = "0.7")
+    @ConfigProperty(name = "gamelan.rag.generation.temperature", defaultValue = "0.7")
     double defaultTemperature;
     
-    @ConfigProperty(name = "silat.rag.generation.max-tokens", defaultValue = "1000")
+    @ConfigProperty(name = "gamelan.rag.generation.max-tokens", defaultValue = "1000")
     int defaultMaxTokens;
     
-    @ConfigProperty(name = "silat.rag.generation.include-citations", defaultValue = "true")
+    @ConfigProperty(name = "gamelan.rag.generation.include-citations", defaultValue = "true")
     boolean defaultIncludeCitations;
     
-    @ConfigProperty(name = "silat.rag.generation.use-cache", defaultValue = "true")
+    @ConfigProperty(name = "gamelan.rag.generation.use-cache", defaultValue = "true")
     boolean defaultUseCache;
     
-    @ConfigProperty(name = "silat.rag.generation.timeout", defaultValue = "60")
+    @ConfigProperty(name = "gamelan.rag.generation.timeout", defaultValue = "60")
     int timeoutSeconds;
     
     // ==================== EXECUTION ====================
@@ -2117,7 +2117,7 @@ class RetrievalMetricsCollector {
     }
 }
 
-package tech.kayys.silat.executor.rag.retrieval;
+package tech.kayys.gamelan.executor.rag.retrieval;
 
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -2137,11 +2137,11 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.core.domain.ErrorInfo;
-import tech.kayys.silat.core.engine.NodeExecutionResult;
-import tech.kayys.silat.core.engine.NodeExecutionTask;
-import tech.kayys.silat.executor.Executor;
-import tech.kayys.silat.executor.AbstractWorkflowExecutor;
+import tech.kayys.gamelan.core.domain.ErrorInfo;
+import tech.kayys.gamelan.core.engine.NodeExecutionResult;
+import tech.kayys.gamelan.core.engine.NodeExecutionTask;
+import tech.kayys.gamelan.executor.Executor;
+import tech.kayys.gamelan.executor.AbstractWorkflowExecutor;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -2171,12 +2171,12 @@ import java.util.stream.Collectors;
  * - Template Method for retrieval workflow
  * 
  * Configuration:
- * - silat.rag.retrieval.top-k: Initial retrieval count (default: 20)
- * - silat.rag.retrieval.final-k: Final result count after reranking (default: 5)
- * - silat.rag.retrieval.min-score: Minimum similarity threshold (default: 0.7)
- * - silat.rag.retrieval.strategy: Retrieval strategy (dense, hybrid, keyword)
- * - silat.rag.retrieval.rerank: Enable reranking (default: true)
- * - silat.rag.retrieval.diversity: Enable diversity filtering (default: true)
+ * - gamelan.rag.retrieval.top-k: Initial retrieval count (default: 20)
+ * - gamelan.rag.retrieval.final-k: Final result count after reranking (default: 5)
+ * - gamelan.rag.retrieval.min-score: Minimum similarity threshold (default: 0.7)
+ * - gamelan.rag.retrieval.strategy: Retrieval strategy (dense, hybrid, keyword)
+ * - gamelan.rag.retrieval.rerank: Enable reranking (default: true)
+ * - gamelan.rag.retrieval.diversity: Enable diversity filtering (default: true)
  * 
  * Usage in Workflow:
  * ```java
@@ -2197,13 +2197,13 @@ import java.util.stream.Collectors;
  * );
  * ```
  * 
- * @author Silat Team
+ * @author Gamelan Team
  * @version 1.0.0
  * @since 2024-01
  */
 @Executor(
     executorType = "rag-retrieval",
-    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
+    communicationType = tech.kayys.gamelan.core.scheduler.CommunicationType.GRPC,
     maxConcurrentTasks = 20,
     supportedNodeTypes = {"TASK", "RAG_RETRIEVAL"},
     version = "1.0.0"
@@ -2235,25 +2235,25 @@ public class RetrievalExecutor extends AbstractWorkflowExecutor {
     
     // ==================== CONFIGURATION ====================
     
-    @ConfigProperty(name = "silat.rag.retrieval.top-k", defaultValue = "20")
+    @ConfigProperty(name = "gamelan.rag.retrieval.top-k", defaultValue = "20")
     int defaultTopK;
     
-    @ConfigProperty(name = "silat.rag.retrieval.final-k", defaultValue = "5")
+    @ConfigProperty(name = "gamelan.rag.retrieval.final-k", defaultValue = "5")
     int defaultFinalK;
     
-    @ConfigProperty(name = "silat.rag.retrieval.min-score", defaultValue = "0.7")
+    @ConfigProperty(name = "gamelan.rag.retrieval.min-score", defaultValue = "0.7")
     double defaultMinScore;
     
-    @ConfigProperty(name = "silat.rag.retrieval.strategy", defaultValue = "hybrid")
+    @ConfigProperty(name = "gamelan.rag.retrieval.strategy", defaultValue = "hybrid")
     String defaultStrategy;
     
-    @ConfigProperty(name = "silat.rag.retrieval.rerank", defaultValue = "true")
+    @ConfigProperty(name = "gamelan.rag.retrieval.rerank", defaultValue = "true")
     boolean defaultEnableReranking;
     
-    @ConfigProperty(name = "silat.rag.retrieval.diversity", defaultValue = "true")
+    @ConfigProperty(name = "gamelan.rag.retrieval.diversity", defaultValue = "true")
     boolean defaultEnableDiversity;
     
-    @ConfigProperty(name = "silat.rag.retrieval.query-expansion", defaultValue = "false")
+    @ConfigProperty(name = "gamelan.rag.retrieval.query-expansion", defaultValue = "false")
     boolean defaultQueryExpansion;
     
     // ==================== EXECUTION ====================
@@ -2766,7 +2766,7 @@ record ScoredDocument(
 
 // To be continued in next artifact...
 
-package tech.kayys.silat.executor.rag.embedding;
+package tech.kayys.gamelan.executor.rag.embedding;
 
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -2782,11 +2782,11 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.core.domain.ErrorInfo;
-import tech.kayys.silat.core.engine.NodeExecutionResult;
-import tech.kayys.silat.core.engine.NodeExecutionTask;
-import tech.kayys.silat.executor.Executor;
-import tech.kayys.silat.executor.AbstractWorkflowExecutor;
+import tech.kayys.gamelan.core.domain.ErrorInfo;
+import tech.kayys.gamelan.core.engine.NodeExecutionResult;
+import tech.kayys.gamelan.core.engine.NodeExecutionTask;
+import tech.kayys.gamelan.executor.Executor;
+import tech.kayys.gamelan.executor.AbstractWorkflowExecutor;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -2818,12 +2818,12 @@ import java.util.stream.Collectors;
  * - Async processing with virtual threads
  * 
  * Configuration:
- * - silat.rag.embedding.provider: Model provider (openai, azure, cohere, local)
- * - silat.rag.embedding.model: Model name/ID
- * - silat.rag.embedding.batch-size: Max segments per batch (default: 20)
- * - silat.rag.embedding.dimension: Expected embedding dimension
- * - silat.rag.embedding.rate-limit: Max requests per minute
- * - silat.rag.embedding.timeout: API timeout in seconds
+ * - gamelan.rag.embedding.provider: Model provider (openai, azure, cohere, local)
+ * - gamelan.rag.embedding.model: Model name/ID
+ * - gamelan.rag.embedding.batch-size: Max segments per batch (default: 20)
+ * - gamelan.rag.embedding.dimension: Expected embedding dimension
+ * - gamelan.rag.embedding.rate-limit: Max requests per minute
+ * - gamelan.rag.embedding.timeout: API timeout in seconds
  * 
  * Usage in Workflow:
  * ```java
@@ -2842,13 +2842,13 @@ import java.util.stream.Collectors;
  * );
  * ```
  * 
- * @author Silat Team
+ * @author Gamelan Team
  * @version 1.0.0
  * @since 2024-01
  */
 @Executor(
     executorType = "rag-embedding-generation",
-    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
+    communicationType = tech.kayys.gamelan.core.scheduler.CommunicationType.GRPC,
     maxConcurrentTasks = 10,
     supportedNodeTypes = {"TASK", "RAG_EMBEDDING"},
     version = "1.0.0"
@@ -2877,25 +2877,25 @@ public class EmbeddingGenerationExecutor extends AbstractWorkflowExecutor {
     
     // ==================== CONFIGURATION ====================
     
-    @ConfigProperty(name = "silat.rag.embedding.provider", defaultValue = "openai")
+    @ConfigProperty(name = "gamelan.rag.embedding.provider", defaultValue = "openai")
     String defaultProvider;
     
-    @ConfigProperty(name = "silat.rag.embedding.model", defaultValue = "text-embedding-3-small")
+    @ConfigProperty(name = "gamelan.rag.embedding.model", defaultValue = "text-embedding-3-small")
     String defaultModel;
     
-    @ConfigProperty(name = "silat.rag.embedding.batch-size", defaultValue = "20")
+    @ConfigProperty(name = "gamelan.rag.embedding.batch-size", defaultValue = "20")
     int defaultBatchSize;
     
-    @ConfigProperty(name = "silat.rag.embedding.dimension", defaultValue = "1536")
+    @ConfigProperty(name = "gamelan.rag.embedding.dimension", defaultValue = "1536")
     int defaultDimension;
     
-    @ConfigProperty(name = "silat.rag.embedding.rate-limit", defaultValue = "3000")
+    @ConfigProperty(name = "gamelan.rag.embedding.rate-limit", defaultValue = "3000")
     int rateLimit; // requests per minute
     
-    @ConfigProperty(name = "silat.rag.embedding.timeout", defaultValue = "30")
+    @ConfigProperty(name = "gamelan.rag.embedding.timeout", defaultValue = "30")
     int timeoutSeconds;
     
-    @ConfigProperty(name = "silat.rag.embedding.use-cache", defaultValue = "true")
+    @ConfigProperty(name = "gamelan.rag.embedding.use-cache", defaultValue = "true")
     boolean useCache;
     
     // ==================== EXECUTION ====================
@@ -3441,7 +3441,7 @@ class EmbeddingMetricsCollector {
     }
 }
 
-package tech.kayys.silat.executor.rag.ingestion;
+package tech.kayys.gamelan.executor.rag.ingestion;
 
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentParser;
@@ -3460,11 +3460,11 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.core.domain.ErrorInfo;
-import tech.kayys.silat.core.engine.NodeExecutionResult;
-import tech.kayys.silat.core.engine.NodeExecutionTask;
-import tech.kayys.silat.executor.Executor;
-import tech.kayys.silat.executor.AbstractWorkflowExecutor;
+import tech.kayys.gamelan.core.domain.ErrorInfo;
+import tech.kayys.gamelan.core.engine.NodeExecutionResult;
+import tech.kayys.gamelan.core.engine.NodeExecutionTask;
+import tech.kayys.gamelan.executor.Executor;
+import tech.kayys.gamelan.executor.AbstractWorkflowExecutor;
 
 import java.io.InputStream;
 import java.nio.file.Path;
@@ -3491,13 +3491,13 @@ import java.util.concurrent.CompletableFuture;
  * - Uses LangChain4j document processing pipeline
  * - Pluggable document parsers via factory pattern
  * - Async processing with Mutiny
- * - Integration with Silat workflow engine
+ * - Integration with Gamelan workflow engine
  * 
  * Configuration:
- * - silat.rag.ingestion.chunk-size: Default chunk size (default: 500)
- * - silat.rag.ingestion.chunk-overlap: Chunk overlap (default: 50)
- * - silat.rag.ingestion.max-batch-size: Max documents per batch (default: 100)
- * - silat.rag.ingestion.parsers: Comma-separated list of enabled parsers
+ * - gamelan.rag.ingestion.chunk-size: Default chunk size (default: 500)
+ * - gamelan.rag.ingestion.chunk-overlap: Chunk overlap (default: 50)
+ * - gamelan.rag.ingestion.max-batch-size: Max documents per batch (default: 100)
+ * - gamelan.rag.ingestion.parsers: Comma-separated list of enabled parsers
  * 
  * Usage in Workflow:
  * ```java
@@ -3516,13 +3516,13 @@ import java.util.concurrent.CompletableFuture;
  * );
  * ```
  * 
- * @author Silat Team
+ * @author Gamelan Team
  * @version 1.0.0
  * @since 2024-01
  */
 @Executor(
     executorType = "rag-document-ingestion",
-    communicationType = tech.kayys.silat.core.scheduler.CommunicationType.GRPC,
+    communicationType = tech.kayys.gamelan.core.scheduler.CommunicationType.GRPC,
     maxConcurrentTasks = 5,
     supportedNodeTypes = {"TASK", "RAG_INGESTION"},
     version = "1.0.0"
@@ -3545,16 +3545,16 @@ public class DocumentIngestionExecutor extends AbstractWorkflowExecutor {
     
     // ==================== CONFIGURATION ====================
     
-    @ConfigProperty(name = "silat.rag.ingestion.chunk-size", defaultValue = "500")
+    @ConfigProperty(name = "gamelan.rag.ingestion.chunk-size", defaultValue = "500")
     int defaultChunkSize;
     
-    @ConfigProperty(name = "silat.rag.ingestion.chunk-overlap", defaultValue = "50")
+    @ConfigProperty(name = "gamelan.rag.ingestion.chunk-overlap", defaultValue = "50")
     int defaultChunkOverlap;
     
-    @ConfigProperty(name = "silat.rag.ingestion.max-batch-size", defaultValue = "100")
+    @ConfigProperty(name = "gamelan.rag.ingestion.max-batch-size", defaultValue = "100")
     int maxBatchSize;
     
-    @ConfigProperty(name = "silat.rag.ingestion.temp-dir", defaultValue = "/tmp/silat-ingestion")
+    @ConfigProperty(name = "gamelan.rag.ingestion.temp-dir", defaultValue = "/tmp/gamelan-ingestion")
     String tempDirectory;
     
     // ==================== EXECUTION ====================

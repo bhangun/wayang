@@ -1,4 +1,4 @@
-package tech.kayys.silat.executor.memory;
+package tech.kayys.gamelan.executor.memory;
 
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Silat Memory Executor - Main Application
+ * Gamelan Memory Executor - Main Application
  */
 @QuarkusMain
 public class MemoryExecutorApplication implements QuarkusApplication {
@@ -17,14 +17,14 @@ public class MemoryExecutorApplication implements QuarkusApplication {
     private static final Logger LOG = LoggerFactory.getLogger(MemoryExecutorApplication.class);
 
     public static void main(String[] args) {
-        LOG.info("Starting Silat Memory Executor...");
+        LOG.info("Starting Gamelan Memory Executor...");
         Quarkus.run(MemoryExecutorApplication.class, args);
     }
 
     @Override
     public int run(String... args) throws Exception {
         LOG.info("=".repeat(60));
-        LOG.info("  Silat Memory Executor Started");
+        LOG.info("  Gamelan Memory Executor Started");
         LOG.info("  Version: 1.0.0");
         LOG.info("  Ready to process memory-aware workflow tasks");
         LOG.info("=".repeat(60));
@@ -58,8 +58,8 @@ class MemoryExecutorInitializer {
         // Initialize embedding service
         EmbeddingService embeddingService = embeddingServiceFactory.getEmbeddingService();
         LOG.info("Embedding service initialized: {} (dimension: {})",
-            embeddingService.getProvider(),
-            embeddingService.getDimension());
+                embeddingService.getProvider(),
+                embeddingService.getDimension());
 
         LOG.info("Memory Executor initialization complete");
     }

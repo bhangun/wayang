@@ -1,11 +1,11 @@
 # ============================================================================
-# SILAT GLiNER2 EXECUTOR CONFIGURATION
+# GAMELAN GLiNER2 EXECUTOR CONFIGURATION
 # ============================================================================
 
 # Application Configuration (application.yml)
 quarkus:
   application:
-    name: silat-gliner-executors
+    name: gamelan-gliner-executors
   
   # HTTP Configuration
   http:
@@ -15,11 +15,11 @@ quarkus:
   log:
     level: INFO
     category:
-      "tech.kayys.silat.executor.nlp.gliner":
+      "tech.kayys.gamelan.executor.nlp.gliner":
         level: DEBUG
 
 # GLiNER Service Configuration
-silat:
+gamelan:
   gliner:
     # Python bridge endpoint
     endpoint: http://localhost:8000
@@ -100,10 +100,10 @@ schema:
     # Database configuration for schema storage
     datasource:
       db-kind: postgresql
-      username: silat
-      password: silat_password
+      username: gamelan
+      password: gamelan_password
       jdbc:
-        url: jdbc:postgresql://localhost:5432/silat_schemas
+        url: jdbc:postgresql://localhost:5432/gamelan_schemas
     
     # Cache configuration
     cache:
@@ -318,10 +318,10 @@ workflowDefinition:
 
 # File: examples/ContractAnalysisExample.java
 /*
-package tech.kayys.silat.examples;
+package tech.kayys.gamelan.examples;
 
-import tech.kayys.silat.client.SilatClient;
-import tech.kayys.silat.api.dto.RunResponse;
+import tech.kayys.gamelan.client.GamelanClient;
+import tech.kayys.gamelan.api.dto.RunResponse;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -329,8 +329,8 @@ import java.util.Map;
 public class ContractAnalysisExample {
     
     public static void main(String[] args) throws Exception {
-        // Create Silat client
-        SilatClient client = SilatClient.builder()
+        // Create Gamelan client
+        GamelanClient client = GamelanClient.builder()
             .restEndpoint("http://localhost:8080")
             .tenantId("acme-corp")
             .apiKey("your-api-key")
@@ -532,7 +532,7 @@ services:
     build:
       context: ./gliner-bridge
       dockerfile: Dockerfile
-    image: silat/gliner-bridge:latest
+    image: gamelan/gliner-bridge:latest
     ports:
       - "8000:8000"
       - "50051:50051"
@@ -550,16 +550,16 @@ services:
               count: 1
               capabilities: [gpu]
   
-  # Silat Workflow Engine
-  silat-engine:
-    image: silat/engine:latest
+  # Gamelan Workflow Engine
+  gamelan-engine:
+    image: gamelan/engine:latest
     ports:
       - "8080:8080"
       - "9090:9090"
     environment:
-      - QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://postgres:5432/silat
-      - QUARKUS_DATASOURCE_USERNAME=silat
-      - QUARKUS_DATASOURCE_PASSWORD=silat_password
+      - QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://postgres:5432/gamelan
+      - QUARKUS_DATASOURCE_USERNAME=gamelan
+      - QUARKUS_DATASOURCE_PASSWORD=gamelan_password
     depends_on:
       - postgres
       - kafka
@@ -569,23 +569,23 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.executors
-    image: silat/gliner-executors:latest
+    image: gamelan/gliner-executors:latest
     ports:
       - "8081:8081"
     environment:
-      - SILAT_GLINER_ENDPOINT=http://gliner-service:8000
-      - SILAT_EXECUTOR_ENGINE_GRPC_ENDPOINT=silat-engine:9090
+      - GAMELAN_GLINER_ENDPOINT=http://gliner-service:8000
+      - GAMELAN_EXECUTOR_ENGINE_GRPC_ENDPOINT=gamelan-engine:9090
     depends_on:
       - gliner-service
-      - silat-engine
+      - gamelan-engine
   
   # PostgreSQL
   postgres:
     image: postgres:15
     environment:
-      - POSTGRES_DB=silat
-      - POSTGRES_USER=silat
-      - POSTGRES_PASSWORD=silat_password
+      - POSTGRES_DB=gamelan
+      - POSTGRES_USER=gamelan
+      - POSTGRES_PASSWORD=gamelan_password
     ports:
       - "5432:5432"
     volumes:

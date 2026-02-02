@@ -1,4 +1,4 @@
-package tech.kayys.silat.mcp.parser;
+package tech.kayys.gamelan.mcp.parser;
 
 import io.quarkus.hibernate.reactive.panache.Panache;
 import io.smallrye.mutiny.Uni;
@@ -13,7 +13,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.silat.mcp.domain.*;
+import tech.kayys.gamelan.mcp.domain.*;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -408,7 +408,7 @@ public class OpenApiToolGenerator {
         
         // Headers
         Map<String, String> headers = new HashMap<>();
-        headers.put("User-Agent", "Silat-MCP/1.0");
+        headers.put("User-Agent", "Gamelan-MCP/1.0");
         config.setHeaders(headers);
         
         // Content type
@@ -734,7 +734,7 @@ class OpenApiParseException extends RuntimeException {
     }
 }
 
-package tech.kayys.silat.mcp.api;
+package tech.kayys.gamelan.mcp.api;
 
 import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Uni;
@@ -745,11 +745,11 @@ import jakarta.ws.rs.core.*;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.resteasy.reactive.RestResponse;
-import tech.kayys.silat.mcp.domain.*;
-import tech.kayys.silat.mcp.parser.OpenApiToolGenerator;
-import tech.kayys.silat.mcp.parser.GenerateToolsRequest;
-import tech.kayys.silat.mcp.runtime.McpToolExecutor;
-import tech.kayys.silat.mcp.runtime.ToolExecutionRequest;
+import tech.kayys.gamelan.mcp.domain.*;
+import tech.kayys.gamelan.mcp.parser.OpenApiToolGenerator;
+import tech.kayys.gamelan.mcp.parser.GenerateToolsRequest;
+import tech.kayys.gamelan.mcp.runtime.McpToolExecutor;
+import tech.kayys.gamelan.mcp.runtime.ToolExecutionRequest;
 
 import java.util.*;
 
@@ -784,7 +784,7 @@ public class McpToolResource {
     McpToolExecutor toolExecutor;
     
     @Inject
-    tech.kayys.silat.api.security.TenantContext tenantContext;
+    tech.kayys.gamelan.api.security.TenantContext tenantContext;
     
     /**
      * Generate tools from OpenAPI specification
@@ -1029,10 +1029,10 @@ public class McpToolResource {
 public class AuthProfileResource {
     
     @Inject
-    tech.kayys.silat.api.security.TenantContext tenantContext;
+    tech.kayys.gamelan.api.security.TenantContext tenantContext;
     
     @Inject
-    tech.kayys.silat.mcp.security.VaultSecretManager vaultManager;
+    tech.kayys.gamelan.mcp.security.VaultSecretManager vaultManager;
     
     /**
      * Create auth profile
@@ -1060,7 +1060,7 @@ public class AuthProfileResource {
             profile.setConfig(config);
             
             // Store secret in Vault
-            String vaultPath = "silat/mcp/" + tenantId + "/" + profile.getProfileId();
+            String vaultPath = "gamelan/mcp/" + tenantId + "/" + profile.getProfileId();
             
             return vaultManager.storeSecret(vaultPath, request.secretValue())
                 .flatMap(v -> {
@@ -1186,7 +1186,7 @@ record AuthProfileResponse(
 
 // ==================== SECURITY COMPONENTS ====================
 
-package tech.kayys.silat.mcp.security;
+package tech.kayys.gamelan.mcp.security;
 
 
 
@@ -1263,7 +1263,7 @@ class AuthenticationException extends RuntimeException {
     }
 }
 
-package tech.kayys.silat.mcp.parser;
+package tech.kayys.gamelan.mcp.parser;
 
 
 // ==================== OPENAPI PARSER ====================
@@ -1300,7 +1300,7 @@ record ToolGenerationResult(
 
 
 
-package tech.kayys.silat.mcp.domain;
+package tech.kayys.gamelan.mcp.domain;
 
 
 // ==================== HTTP EXECUTION CONFIG ====================

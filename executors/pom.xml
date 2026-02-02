@@ -11,7 +11,13 @@
     <artifactId>wayang-executor-parent</artifactId>
     <packaging>pom</packaging>
     <modules>
-        <module>integration</module>
         <module>agent</module>
+        <module>eip</module>
+        <module>guardrail</module>
+        <module>hitl</module>
+        <module>mcp</module>
+        <module>memory</module>
+        <module>nlp</module>
+        <module>rag</module>
     </modules>
 </project>

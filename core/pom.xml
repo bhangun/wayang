@@ -1,4 +1,6 @@
-<project>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>tech.kayys.wayang</groupId>
@@ -18,7 +20,9 @@
     <module>wayang-plugin-registry</module>
     <module>wayang-plugin-spi</module>
     <module>wayang-vault-manager</module>
-    <module>wayang-orchestration-engine</module>
+    <module>wayang-orchestrator-core</module>
+    <module>wayang-orchestrator-local</module>
+    <module>wayang-orchestrator-remote</module>
   </modules>
 
 

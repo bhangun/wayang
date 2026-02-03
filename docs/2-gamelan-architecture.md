@@ -6,7 +6,7 @@
 ## Gamelan Internal Modules
 
 - ✔ Orchestrator
-- ✔ Router & Policies
+- ✔ Executor Selection & Dispatch
 - ✔ Node Executors
 - ✔ State & History
 - ✔ Error handling
@@ -33,9 +33,9 @@ Component(nodeRegistry, "Node Registry", "Plugin SPI", "Registers available node
 
 Component(nodeExecutor, "Node Executor", "SPI", "Executes individual workflow nodes")
 
-Component(taskRouter, "Task Router", "Routing Engine", "Chooses target executor or inference endpoint")
+Component(executorSelector, "Executor Selection", "Dispatch Engine", "Chooses target executor from registry")
 
-Component(routingPolicy, "Routing Policies", "RoundRobin, LeastLoad, Weighted", "Pluggable routing strategy")
+Component(dispatchPolicy, "Dispatch Policies", "RoundRobin, LeastLoad, Weighted", "Pluggable dispatch strategy")
 
 Component(stateStore, "State Store", "Redis/DB", "Persists workflow runtime state")
 
@@ -53,9 +53,9 @@ Rel(orchestrator, defParser, "Loads")
 Rel(orchestrator, tokenMgr, "Manages")
 Rel(orchestrator, nodeRegistry, "Looks up nodes")
 Rel(orchestrator, nodeExecutor, "Invokes")
-Rel(orchestrator, taskRouter, "Asks for routing")
+Rel(orchestrator, executorSelector, "Selects executor")
 
-Rel(taskRouter, routingPolicy, "Uses")
+Rel(executorSelector, dispatchPolicy, "Uses")
 
 Rel(orchestrator, stateStore, "Persists state")
 Rel(orchestrator, historyStore, "Writes history")
@@ -94,12 +94,12 @@ Rel(orchestrator, eventBus, "Emits lifecycle events")
 * NLP nodes
 * Time-series nodes
 
-**Task Router + Policies**
+**Executor Selection + Dispatch Policies**
 → decides:
 
 * local executor
 * remote executor
-* inference backend
+* executor instance
 
 **State Store**
 → runtime snapshot
@@ -146,9 +146,9 @@ flowchart TD
 
     F --> G[Select Node Executor]
 
-    G --> H[Task Router]
+    G --> H[Executor Selection]
 
-    H --> I{Routing Policy}
+    H --> I{Dispatch Policy}
     I -- RoundRobin --> I1[Pick Next Target]
     I -- LeastLoad --> I2[Pick Least Busy Target]
     I -- Weighted --> I3[Pick Weighted Target]
@@ -183,6 +183,27 @@ flowchart TD
 ```
 
 ---
+
+## 🔁 Composite Node (Sub-Workflow) — Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant ORCH as Orchestrator
+    participant SUB as Sub-Workflow Manager
+    participant REG as Executor Registry
+    participant EX as Executor
+
+    ORCH ->> SUB: start(subWorkflowId)
+    SUB ->> SUB: create execution token
+    loop sub-workflow nodes
+        SUB ->> REG: select executor
+        REG -->> SUB: executor target
+        SUB ->> EX: dispatchTask
+        EX -->> SUB: taskResult
+        SUB ->> SUB: persist + next node
+    end
+    SUB -->> ORCH: sub-workflow result
+```
 
 ## 🧠 How to read this
 
@@ -306,3 +327,84 @@ Running → Suspended → Running
 
 ---
 
+## 🧭 Current Implementation Mapping (Repo)
+
+* **Gamelan Engine** → `workflow-gamelan/core/gamelan-engine`
+* **Executor Registry** → `workflow-gamelan/core/gamelan-executor-registry`
+* **Runtime API (REST/gRPC/Kafka)** → `workflow-gamelan/core/gamelan-runtime-core`, `workflow-gamelan/protocol/`
+* **SDK Client** → `workflow-gamelan/sdk/gamelan-sdk-client-*`
+* **Executor SDKs** → `workflow-gamelan/sdk/gamelan-sdk-executor-*`
+
+---
+
+## 🧩 Gamelan SDK Mechanism (Client + Executor)
+
+```mermaid
+flowchart TB
+    subgraph SDKC["Client SDK"]
+        CLocal["Local Client SDK"]
+        CRemote["Remote Client SDK"]
+        CGrpc["Remote Transport: gRPC"]
+        CKafka["Remote Transport: Kafka"]
+        CRest["Remote Transport: REST"]
+    end
+
+    subgraph SDKE["Executor SDK"]
+        ELocal["Local Executor SDK"]
+        ERemote["Remote Executor SDK"]
+        EGrpc["Remote Transport: gRPC"]
+        EKafka["Remote Transport: Kafka"]
+        ERest["Remote Transport: REST"]
+    end
+
+    subgraph CORE["Gamelan Core"]
+        Engine["Gamelan Engine"]
+        Runtime["Gamelan Runtime API"]
+        Registry["Executor Registry"]
+    end
+
+    CLocal --> Engine
+    CRemote --> Runtime
+    CRemote --> CGrpc
+    CRemote --> CKafka
+    CRemote --> CRest
+    CGrpc --> Runtime
+    CKafka --> Runtime
+    CRest --> Runtime
+
+    ELocal --> Engine
+    ERemote --> Registry
+    ERemote --> Runtime
+    ERemote --> EGrpc
+    ERemote --> EKafka
+    ERemote --> ERest
+    EGrpc --> Runtime
+    EKafka --> Runtime
+    ERest --> Runtime
+```
+
+---
+
+## 🔁 Gamelan Execution — Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant RT as Gamelan Runtime API
+    participant ORCH as Orchestrator
+    participant REG as Executor Registry
+    participant EX as Executor
+
+    RT ->> ORCH: submitWorkflow
+    ORCH ->> ORCH: schedule node
+    ORCH ->> REG: select executor
+    REG -->> ORCH: executor target
+    ORCH ->> EX: dispatchTask
+    EX -->> ORCH: taskResult(status, output)
+    alt task error/timeout
+        ORCH ->> ORCH: retry/compensate/fail
+        ORCH -->> RT: event(node.failed)
+    else success
+        ORCH ->> ORCH: persist + next node
+        ORCH -->> RT: event(node.completed)
+    end
+```

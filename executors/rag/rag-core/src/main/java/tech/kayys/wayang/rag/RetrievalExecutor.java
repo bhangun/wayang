@@ -25,6 +25,7 @@ import tech.kayys.gamelan.executor.Executor;
 import tech.kayys.gamelan.executor.AbstractWorkflowExecutor;
 import tech.kayys.gamelan.executor.rag.infrastructure.EmbeddingStoreRegistry;
 import tech.kayys.gamelan.executor.rag.embedding.EmbeddingModelFactory;
+import tech.kayys.wayang.error.ErrorCode;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
  * RAG RETRIEVAL & RERANKING EXECUTOR - FULL IMPLEMENTATION
  * ============================================================================
  * 
- * Complete working implementation with real LangChain4j integration.
+ * Complete working implementation with real integration.
  * No placeholders - all methods fully implemented.
  */
 @Executor(executorType = "rag-retrieval", communicationType = tech.kayys.gamelan.core.scheduler.CommunicationType.GRPC, maxConcurrentTasks = 20, supportedNodeTypes = {
@@ -103,10 +104,12 @@ public class RetrievalExecutor extends AbstractWorkflowExecutor {
                                 task.nodeId(),
                                 task.attempt(),
                                 new ErrorInfo(
-                                        "INVALID_CONFIGURATION",
+                                        ErrorCode.CONFIG_INVALID.getCode(),
                                         "Invalid retrieval configuration",
                                         "",
-                                        Map.of("config", config)),
+                                        Map.of(
+                                                "config", config,
+                                                "retryable", ErrorCode.CONFIG_INVALID.isRetryable())),
                                 task.token()));
                     }
 
@@ -140,11 +143,16 @@ public class RetrievalExecutor extends AbstractWorkflowExecutor {
                             })
                             .onFailure().recoverWithItem(error -> {
                                 LOG.error("Retrieval failed", error);
+                                ErrorCode errorCode = ErrorCode.RAG_RETRIEVAL_FAILED;
                                 return NodeExecutionResult.failure(
                                         task.runId(),
                                         task.nodeId(),
                                         task.attempt(),
-                                        ErrorInfo.of(error),
+                                        new ErrorInfo(
+                                                errorCode.getCode(),
+                                                error.getMessage(),
+                                                "",
+                                                Map.of("retryable", errorCode.isRetryable())),
                                         task.token());
                             });
                 });

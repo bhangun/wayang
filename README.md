@@ -4,26 +4,25 @@ Based on the comprehensive blueprint, I'll provide a **production-ready, modular
 
 ---
 
-## 🏗️ **Architecture Overview**
 
-### **Microservices Structure**
+### **FEATURES**
 
-```
-wayang-platform/
-├── wayang-common/              # Shared libraries & contracts
-├── wayang-gateway/             # API Gateway & Auth
-├── wayang-designer/            # Workflow Designer Service
-├── wayang-orchestrator/        # Workflow Orchestrator
-├── wayang-executor/            # Node Executor Service
-├── wayang-planner/             # Planning Engine
-├── wayang-tools/               # Tool Gateway (MCP)
-├── wayang-rag/                 # RAG & Memory Service
-├── wayang-models/              # Model Router & LLM Runtime
-├── wayang-guardrails/          # Safety & Compliance
-├── wayang-observability/       # Metrics & Tracing
-├── wayang-codegen/             # Standalone Agent Generator
-└── wayang-plugins/             # Plugin Manager
-```
+=
+
+# Shared libraries & contracts
+# API Gateway & Auth
+# Workflow Designer Service
+# Workflow Orchestrator
+# Node Executor Service
+# Planning Engine
+# Tool Gateway (MCP)
+# RAG & Memory Service
+# Model Router & LLM Runtime
+# Safety & Compliance
+# Metrics & Tracing
+# Standalone Agent Generator
+# Plugin Manager
+
 
 # Wayang Platform - Modular Architecture for Dynamic Loading
 

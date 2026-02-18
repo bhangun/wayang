@@ -12,11 +12,11 @@
 
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
-        <quarkus.platform.version>3.8.3</quarkus.platform.version>
+        <quarkus.platform.version>3.31.2</quarkus.platform.version>
     </properties>
 
     <dependencyManagement>
@@ -35,6 +35,11 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-error-spi</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>io.smallrye.reactive</groupId>

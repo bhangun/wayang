@@ -1,4 +1,4 @@
-package main.java.tech.kayys.wayang.rag;
+package tech.kayys.wayang.rag;
 
 @ApplicationScoped
 class CitationService {

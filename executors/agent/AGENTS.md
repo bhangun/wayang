@@ -14,7 +14,7 @@ The Wayang Agent executor provides a comprehensive framework for executing intel
 
 ### Integration with GAMELAN Framework
 
-The agent executors implement the [WorkflowExecutor](file:///Users/bhangun/Workspace/workkayys/Products/Wayang/wayang-platform/workflow-gamelan/core/gamelan-sdk-executor-core/src/main/java/tech/kayys/gamelan/sdk/executor/core/WorkflowExecutor.java) interface from `gamelan-sdk-executor-core`:
+The agent executors implement the [WorkflowExecutor](file://~/Workspace/workkayys/Products/Wayang/wayang-platform/workflow-gamelan/core/gamelan-sdk-executor-core/src/main/java/tech/kayys/gamelan/sdk/executor/core/WorkflowExecutor.java) interface from `gamelan-sdk-executor-core`:
 
 ```java
 @Executor(
@@ -369,7 +369,7 @@ Agents debate solutions
 </dependency>
 <dependency>
     <groupId>tech.kayys.gamelan</groupId>
-    <artifactId>gamelan-engine-api</artifactId>
+    <artifactId>gamelan-engine-spi</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 </dependency>
 ```
@@ -521,9 +521,9 @@ Integration tests cover:
 
 ## Related Modules
 
-- [`agent-core`](file:///Users/bhangun/Workspace/workkayys/Products/Wayang/wayang-platform/wayang/executors/agent/agent-core) - Domain models
-- [`gamelan-sdk-executor-core`](file:///Users/bhangun/Workspace/workkayys/Products/Wayang/wayang-platform/workflow-gamelan/core/gamelan-sdk-executor-core) - Executor SDK
-- [`gamelan-engine-api`](file:///Users/bhangun/Workspace/workkayys/Products/Wayang/wayang-platform/workflow-gamelan/core/gamelan-engine-api) - Engine API
+- [`agent-core`](file://~/Workspace/workkayys/Products/Wayang/wayang-platform/wayang/executors/agent/agent-core) - Domain models
+- [`gamelan-sdk-executor-core`](file://~/Workspace/workkayys/Products/Wayang/wayang-platform/workflow-gamelan/core/gamelan-sdk-executor-core) - Executor SDK
+- [`gamelan-engine-spi`](file://~/Workspace/workkayys/Products/Wayang/wayang-platform/workflow-gamelan/core/gamelan-engine-spi) - Engine API
 
 ---
 

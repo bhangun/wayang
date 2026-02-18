@@ -6,52 +6,45 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.kayys.gamelan.client.GamelanClient;
-import tech.kayys.gamelan.executor.rag.domain.*;
+import tech.kayys.gamelan.executor.rag.domain.GenerationConfig;
+import tech.kayys.gamelan.executor.rag.domain.RagResponse;
+import tech.kayys.gamelan.executor.rag.domain.RagWorkflowInput;
+import tech.kayys.gamelan.executor.rag.domain.RetrievalConfig;
+import tech.kayys.gamelan.executor.rag.examples.RagQueryService;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class RagExecutionServiceTest {
 
     @Mock
-    private LangChain4jModelFactory modelFactory;
-
-    @Mock
-    private LangChain4jEmbeddingStoreFactory storeFactory;
-
-    @Mock
-    private GamelanClient gamelanClient;
+    private RagQueryService ragQueryService;
 
     private RagExecutionService ragExecutionService;
 
     @BeforeEach
     void setUp() {
         ragExecutionService = new RagExecutionService();
-        // Note: In a real scenario, we would use reflection or constructor injection to
-        // set the mocks
+        ragExecutionService.ragQueryService = ragQueryService;
     }
 
     @Test
     void testExecuteRagWorkflow_Success() {
-        // Given
-        RagWorkflowInput input = new RagWorkflowInput(
-                "test-tenant",
-                "test-query",
-                RetrievalConfig.defaults(),
-                GenerationConfig.defaults());
+        when(ragQueryService.query(anyString(), anyString(), anyString()))
+                .thenReturn(Uni.createFrom().item(new RagResponse(
+                        "q", "a", List.of(), List.of(), null, null, Instant.now(), Map.of(), List.of(), Optional.empty())));
 
-        // When
-        Uni<RagResponse> result = ragExecutionService.executeRagWorkflow(input);
+        RagResponse response = ragExecutionService.executeRagWorkflow(
+                new RagWorkflowInput("tenant", "q", RetrievalConfig.defaults(), GenerationConfig.defaults()))
+                .await().indefinitely();
 
-        // Then
-        assertNotNull(result);
-        // Additional assertions would require mocking the internal behavior
+        assertEquals("a", response.answer());
     }
 }

@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build native image on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: wayang-standalone-linux-x86_64
+          - os: macos-latest
+            artifact_name: wayang-standalone-osx-aarch_64
+          - os: windows-latest
+            artifact_name: wayang-standalone-windows-x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Build with Maven
+        run: |
+          mvn clean package -Pnative -DskipTests -pl runtime/wayang-runtime-standalone -am
+
+      - name: Rename and Upload Artifact
+        shell: bash
+        run: |
+          BIN_NAME="wayang-runtime-standalone-1.0.0-SNAPSHOT-runner"
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            mv "runtime/wayang-runtime-standalone/target/${BIN_NAME}.exe" "${{ matrix.artifact_name }}.exe"
+            echo "ARTIFACT_PATH=${{ matrix.artifact_name }}.exe" >> $GITHUB_ENV
+          else
+            mv "runtime/wayang-runtime-standalone/target/${BIN_NAME}" "${{ matrix.artifact_name }}"
+            chmod +x "${{ matrix.artifact_name }}"
+            echo "ARTIFACT_PATH=${{ matrix.artifact_name }}" >> $GITHUB_ENV
+          fi
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ env.ARTIFACT_PATH }}
+
+  release:
+    name: Release with JReleaser
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Run JReleaser
+        shell: bash
+        run: |
+          # JReleaser expects artifacts in specific paths or we point to them
+          # In jreleaser.yml we pointed to artifacts/
+          mvn jreleaser:full-release
+        env:
+          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # JRELEASER_DOCKER_DOCKER_IO_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          # JRELEASER_CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}

@@ -1,114 +1,149 @@
+## rag-runtime (Native Wayang RAG)
 
-## 📦 Complete LangChain4j Integration
+`rag-runtime` is the orchestration/runtime layer that wires Wayang-owned components for ingestion and query flows.
 
-### 1. **Main Executor** (`gamelan_rag_langchain4j`)
-- Full RAG pipeline using LangChain4j components
-- Multi-provider support (OpenAI, Anthropic, Azure OpenAI)
-- Advanced retrieval with query transformation
-- Multiple vector stores (PgVector, Pinecone, Weaviate)
-- Custom query transformers and routers
-- Metrics collection and caching
+### Scope
+- Runtime services: `DocumentIngestionService`, `RagQueryService`, `RagExecutionService`
+- Native pipeline bridge: `NativeRagCoreService`
+- Vector backend provider: `RagVectorStoreProvider`
+- Owned embedding abstractions: `RagEmbeddingModel`, `RagEmbeddingStore`
+  - Plugin extension system: `RagPipelinePlugin` + `RagPluginManager`
+    - `RagPluginCatalog` handles plugin discovery/sorting.
+    - `RagPluginTenantStrategyResolver` handles tenant strategy resolution and active selection.
+  - Contracts are published in `rag-plugin-api`
+  - Built-ins are packaged as separate artifacts:
+    - `rag-plugin-normalize-query`
+    - `rag-plugin-safety-filter`
+    - `rag-plugin-lexical-rerank`
 
-### 2. **Document Ingestion Service** (`gamelan_rag_langchain4j_usage`)
-- PDF document ingestion with Apache PDFBox
-- Text document ingestion
-- URL scraping support
-- Batch ingestion from multiple sources
-- Custom chunking strategies
-- Metadata management
+### Current behavior
+- Ingestion path uses PDFBox + owned chunk/index flow from `rag-core`.
+- Query path uses owned retrieval and generation (`NativeGenerationService`).
+- Vector store backend can be in-memory or pgvector through `VectorStoreFactory`.
+- Admin endpoint:
+  - `GET /admin/embedding/config` to inspect active embedding config.
+  - `POST /admin/embedding/config/reload` to force reload config snapshot.
+  - `GET /admin/embedding/schema/{tenantId}` to inspect active tenant embedding schema contract.
+  - `GET /admin/embedding/schema/{tenantId}/history?limit=20` to inspect migration audit history.
+  - `POST /admin/embedding/schema/{tenantId}/history/compact` to compact audit history (`maxEvents`, `maxAgeDays`, `dryRun`).
+  - `GET /admin/embedding/schema/history/compaction/status` to inspect auto-compaction runtime status.
+  - `POST /admin/embedding/schema/migrate` to migrate schema contract (`dryRun` supported).
+  - Set `rag.runtime.embedding.schema.history.path` to persist migration history as NDJSON across restarts.
+  - Optional scheduled auto-compaction:
+    - `rag.runtime.embedding.schema.history.compaction.enabled`
+    - `rag.runtime.embedding.schema.history.compaction.interval`
+    - `rag.runtime.embedding.schema.history.compaction.max-events`
+    - `rag.runtime.embedding.schema.history.compaction.max-age-days`
+    - `rag.runtime.embedding.schema.history.compaction.dry-run`
+    - `rag.runtime.embedding.schema.history.compaction.tenants`
+  - Micrometer metrics exposed for compactor:
+    - `wayang.rag.embedding.schema.compaction.cycle.count`
+    - `wayang.rag.embedding.schema.compaction.tenants_processed.count`
+    - `wayang.rag.embedding.schema.compaction.removed.count`
+    - `wayang.rag.embedding.schema.compaction.failure.count`
+    - `wayang.rag.embedding.schema.compaction.last_cycle.*` gauges
+  - `GET /admin/observability/slo` and `GET|PUT|POST /admin/observability/slo/config` for SLO status/config.
+  - `GET|PUT|POST /admin/rag/plugins/config` for plugin toggles/order/tuning status, live update, and reload.
+    - Supports `selectionStrategy` (`config` default).
+    - `PUT` validates tenant override syntax and returns `400` for malformed entries.
+    - Validation `400` payload includes: `code`, `field`, `tenantId`, `value`, `message`.
+  - Startup fails fast when `rag.runtime.rag.plugins.selection-strategy`,
+    `rag.runtime.rag.plugins.tenant-enabled`, or
+    `rag.runtime.rag.plugins.tenant-order` is invalid.
+  - `GET /admin/rag/plugins?tenantId=...` to inspect discovered plugins and effective active order for a tenant.
+    - Response includes tenant strategy resolution (`strategyId`, `matchedTenant*Override`, `effectiveEnabledIds`, `effectiveOrder`).
+  - `GET /admin/observability/slo/alerts` to evaluate alert state with severity filter + cooldown suppression.
+  - `GET /admin/observability/slo/alerts/snooze` to inspect active alert snooze state.
+  - `POST /admin/observability/slo/alerts/snooze` to snooze current alert fingerprint (`scope=all|guardrail`, `durationMs`).
+  - `POST /admin/observability/slo/alerts/snooze/clear` to clear active snooze.
+  - Optional persistence: `rag.runtime.slo.alert.snooze.path` keeps snooze state across restarts.
+  - `POST /admin/eval/retrieval` to run offline retrieval evaluation (Recall@K, MRR, latency p95) from inline dataset or fixture file path.
+  - `GET /admin/eval/retrieval/history?tenantId=&datasetName=&limit=20` to inspect stored eval runs.
+  - `GET /admin/eval/retrieval/trend?tenantId=&datasetName=&window=20` to compare latest run against previous run.
+  - `GET /admin/eval/retrieval/guardrails?tenantId=&datasetName=&window=20` to evaluate regression guardrails against trend deltas.
+  - `GET|PUT|POST /admin/eval/retrieval/guardrails/config` to inspect/update/reload guardrail thresholds live.
+  - SLO now also evaluates compactor health with:
+    - `wayang.rag.slo.compaction-failure-rate`
+    - `wayang.rag.slo.compaction-cycle-staleness-ms`
+  - SLO now also surfaces retrieval-eval guardrail regressions as breaches
+    (`eval_guardrail_*` metrics), so `/admin/observability/slo/alerts` includes them.
+  - Each SLO breach includes a `severity` field (`warning` or `critical`).
+  - Severity multipliers are configurable:
+    - `wayang.rag.slo.severity.warning-multiplier` (default `1.0`)
+    - `wayang.rag.slo.severity.critical-multiplier` (default `2.0`)
+    - Per-metric overrides:
+      - `wayang.rag.slo.severity.warning-by-metric` (e.g. `index_lag_ms=1.2`)
+      - `wayang.rag.slo.severity.critical-by-metric` (e.g. `index_lag_ms=2.5`)
+  - Alert policy knobs:
+    - `wayang.rag.slo.alert.enabled` (default `true`)
+    - `wayang.rag.slo.alert.min-severity` (`warning|critical`, default `warning`)
+    - `wayang.rag.slo.alert.cooldown-ms` (default `300000`)
+  - Retrieval eval request supports:
+    - `dataset` (inline query fixtures), or `fixturePath` (`classpath:...` or file path)
+    - `matchField`: `documentId` (default), `chunkId`, `source`, or `metadata:<key>`
+    - Returns aggregate `recallAtK`, `mrr`, `latencyP95Ms`, and per-case results.
+  - Retrieval eval run history:
+    - `rag.runtime.eval.retrieval.history.path` for NDJSON persistence across restarts
+    - `rag.runtime.eval.retrieval.history.max-events` retention cap (default `1000`)
+  - Retrieval eval guardrails:
+    - `rag.runtime.eval.retrieval.guardrail.enabled`
+    - `rag.runtime.eval.retrieval.guardrail.window-size`
+    - `rag.runtime.eval.retrieval.guardrail.recall-drop-max`
+    - `rag.runtime.eval.retrieval.guardrail.mrr-drop-max`
+    - `rag.runtime.eval.retrieval.guardrail.latency-p95-increase-max-ms`
+    - `rag.runtime.eval.retrieval.guardrail.latency-avg-increase-max-ms`
+  - Metrics emitted for eval runs and guardrails:
+    - `wayang.rag.eval.retrieval.run.count`
+    - `wayang.rag.eval.retrieval.query.count`
+    - `wayang.rag.eval.retrieval.hit.count`
+    - `wayang.rag.eval.retrieval.recall_at_k`
+    - `wayang.rag.eval.retrieval.mrr`
+    - `wayang.rag.eval.retrieval.latency_p95_ms`
+    - `wayang.rag.eval.retrieval.latency_avg_ms`
+    - `wayang.rag.eval.retrieval.guardrail.check.count`
+    - `wayang.rag.eval.retrieval.guardrail.breach.count`
+  - RAG plugin system:
+    - Implement `RagPipelinePlugin` as CDI bean to extend hooks:
+      - `beforeQuery(context)`
+      - `afterRetrieve(context, chunks)`
+      - `afterResult(context, result)`
+    - Built-in plugins included (external modules):
+      - `normalize-query`: trims/collapses whitespace, optional lowercase + max length cap.
+      - `safety-filter`: redacts blocked terms in query/answer and removes matching chunks.
+      - `lexical-rerank`: reorders retrieved chunks using lexical overlap + original score blend.
+    - Plugin controls:
+      - `rag.runtime.rag.plugins.selection-strategy` (`config` by default)
+      - `rag.runtime.rag.plugins.enabled` (`*` or CSV plugin ids)
+      - `rag.runtime.rag.plugins.order` (CSV explicit execution order)
+      - `rag.runtime.rag.plugins.tenant-enabled` (`tenant=csv_plugins;tenant2=*`)
+      - `rag.runtime.rag.plugins.tenant-order` (`tenant=csv_plugins_in_order;tenant2=...`)
+    - Built-in plugin tuning:
+      - `rag.runtime.rag.plugins.normalize-query.lowercase`
+      - `rag.runtime.rag.plugins.normalize-query.max-query-length`
+      - `rag.runtime.rag.plugins.lexical-rerank.original-weight`
+      - `rag.runtime.rag.plugins.lexical-rerank.lexical-weight`
+      - `rag.runtime.rag.plugins.lexical-rerank.annotate-metadata`
+      - `rag.runtime.rag.plugins.safety-filter.blocked-terms`
+      - `rag.runtime.rag.plugins.safety-filter.mask`
+  - Require header: `x-admin-key` matching `rag.runtime.admin.api-key` or
+    `rag.runtime.admin.api-key-secondary` (for key rotation).
+  - Response includes `X-Admin-Key-Slot: primary|secondary` for rotation observability.
 
-### 3. **Query Service**
-- Simple RAG queries
-- Advanced queries with full configuration
-- Conversational RAG with history
-- Multi-turn dialogue support
-
-### 4. **Complete Examples**
-- Example 1: Simple document ingestion and query
-- Example 2: Advanced RAG with custom configuration
-- Example 3: Conversational RAG with context
-- Example 4: Batch document ingestion
-
-## ✨ Key Features
-
-### LangChain4j Components Used:
-- ✅ **ChatLanguageModel** - OpenAI, Anthropic, Azure OpenAI
-- ✅ **EmbeddingModel** - Multiple providers
-- ✅ **EmbeddingStore** - PgVector, Pinecone, Weaviate
-- ✅ **DocumentSplitter** - Recursive, sentence-based
-- ✅ **DocumentParser** - PDF, text, custom formats
-- ✅ **ContentRetriever** - Advanced retrieval with filters
-- ✅ **RetrievalAugmentor** - Query transformation and routing
-- ✅ **QueryTransformer** - Multi-query generation
-- ✅ **QueryRouter** - Collection-based routing
-- ✅ **EmbeddingStoreIngestor** - Batch ingestion
-
-### Advanced Capabilities:
-- **Multi-tenant isolation** with namespace separation
-- **Hybrid search** combining vector and keyword
-- **Query transformation** for better retrieval
-- **Conversation history** for multi-turn dialogues
-- **Metadata filtering** for precise retrieval
-- **Citation tracking** with multiple styles
-- **Comprehensive metrics** for observability
-- **Redis caching** for performance
-- **Streaming responses** (ready for implementation)
-
-### Comparison with Custom Implementation:
-
-| Feature | Custom RAG | LangChain4j RAG |
-|---------|-----------|-----------------|
-| **Setup Complexity** | High | Medium |
-| **Code Maintenance** | Manual | Framework-handled |
-| **Document Parsing** | Custom | Built-in parsers |
-| **Provider Support** | Manual REST clients | Native integrations |
-| **Vector Stores** | Custom implementations | Native support |
-| **Query Enhancement** | Manual | Built-in transformers |
-| **Extensibility** | High | Very High |
-| **Community Support** | Internal | LangChain4j ecosystem |
-
-## 🚀 Usage
-
+### Example
 ```java
-// 1. Ingest documents
 DocumentIngestionService ingestion = ...;
-ingestion.ingestPdfDocuments(
-    "acme-corp",
-    List.of(Path.of("/docs/manual.pdf")),
-    Map.of("collection", "docs")
+ingestion.ingestTextDocuments(
+    "tenant-a",
+    List.of("Wayang supports native embedding and RAG modules."),
+    Map.of("collection", "docs"),
+    ChunkingConfig.defaults()
 ).await().indefinitely();
 
-// 2. Query
-RagQueryService queryService = ...;
-RagResponse response = queryService.query(
-    "acme-corp",
-    "How do I reset my password?",
-    "docs"
-).await().indefinitely();
-
-System.out.println(response.answer());
+RagQueryService query = ...;
+RagResponse response = query.query("tenant-a", "What modules are supported?", "docs")
+    .await().indefinitely();
 ```
 
-## 📚 Dependencies
-
-Add to your `pom.xml`:
-```xml
-<!-- LangChain4j Core + Providers -->
-<dependency>
-    <groupId>dev.langchain4j</groupId>
-    <artifactId>langchain4j</artifactId>
-    <version>0.35.0</version>
-</dependency>
-<dependency>
-    <groupId>dev.langchain4j</groupId>
-    <artifactId>langchain4j-open-ai</artifactId>
-    <version>0.35.0</version>
-</dependency>
-<dependency>
-    <groupId>dev.langchain4j</groupId>
-    <artifactId>langchain4j-pgvector</artifactId>
-    <version>0.35.0</version>
-</dependency>
-```
-
-This implementation gives you the **best of both worlds**: the power and flexibility of LangChain4j combined with Gamelan's workflow orchestration capabilities! 🎉
+### Notes
+- This module is native-first and does not require `dev.langchain4j` for runtime compilation.
+- A legacy scratch file exists at `src/main/java/tech/kayys/wayang/rag/zzz` and is not part of compiled sources.

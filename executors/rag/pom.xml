@@ -10,16 +10,25 @@
     </parent>
     <artifactId>wayang-rag-parent</artifactId>
     <packaging>pom</packaging>
+
+    <properties>
+        <quarkus.platform.version>3.31.2</quarkus.platform.version>
+    </properties>
+
     <modules>
+        <module>rag-plugin-api</module>
+        <module>rag-plugin-normalize-query</module>
+        <module>rag-plugin-safety-filter</module>
+        <module>rag-plugin-lexical-rerank</module>
         <module>rag-runtime</module>
         <module>rag-core</module>
-        <module>rag-core</module>
+        <module>rag-executor</module>
     </modules>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>io.quarkus</groupId>
+                <groupId>io.quarkus.platform</groupId>
                 <artifactId>quarkus-bom</artifactId>
                 <version>${quarkus.platform.version}</version>
                 <type>pom</type>

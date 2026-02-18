@@ -10,6 +10,9 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+import tech.kayys.wayang.error.ErrorCode;
+import tech.kayys.wayang.error.ErrorResponse;
+import tech.kayys.wayang.error.WayangException;
 
 import java.time.Duration;
 import java.util.List;
@@ -47,7 +50,10 @@ public class AdvancedMemoryResource {
             .onItem().transform(analytics -> Response.ok(analytics).build())
             .onFailure().recoverWithItem(throwable -> 
                 Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse(throwable.getMessage()))
+                    .entity(ErrorResponse.from(new WayangException(
+                            ErrorCode.INTERNAL_ERROR,
+                            throwable.getMessage(),
+                            throwable)))
                     .build());
     }
 
@@ -61,7 +67,10 @@ public class AdvancedMemoryResource {
             .onItem().transform(insights -> Response.ok(insights).build())
             .onFailure().recoverWithItem(throwable -> 
                 Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse(throwable.getMessage()))
+                    .entity(ErrorResponse.from(new WayangException(
+                            ErrorCode.INTERNAL_ERROR,
+                            throwable.getMessage(),
+                            throwable)))
                     .build());
     }
 
@@ -73,7 +82,10 @@ public class AdvancedMemoryResource {
             .onItem().transform(backup -> Response.ok(backup).build())
             .onFailure().recoverWithItem(throwable -> 
                 Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse(throwable.getMessage()))
+                    .entity(ErrorResponse.from(new WayangException(
+                            ErrorCode.INTERNAL_ERROR,
+                            throwable.getMessage(),
+                            throwable)))
                     .build());
     }
 
@@ -90,7 +102,10 @@ public class AdvancedMemoryResource {
             )).build())
             .onFailure().recoverWithItem(throwable -> 
                 Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse(throwable.getMessage()))
+                    .entity(ErrorResponse.from(new WayangException(
+                            ErrorCode.INTERNAL_ERROR,
+                            throwable.getMessage(),
+                            throwable)))
                     .build());
     }
 
@@ -104,7 +119,10 @@ public class AdvancedMemoryResource {
             .onItem().transform(result -> Response.ok(result).build())
             .onFailure().recoverWithItem(throwable -> 
                 Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse(throwable.getMessage()))
+                    .entity(ErrorResponse.from(new WayangException(
+                            ErrorCode.INTERNAL_ERROR,
+                            throwable.getMessage(),
+                            throwable)))
                     .build());
     }
 
@@ -120,7 +138,10 @@ public class AdvancedMemoryResource {
             .onItem().transform(result -> Response.ok(result).build())
             .onFailure().recoverWithItem(throwable -> 
                 Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse(throwable.getMessage()))
+                    .entity(ErrorResponse.from(new WayangException(
+                            ErrorCode.INTERNAL_ERROR,
+                            throwable.getMessage(),
+                            throwable)))
                     .build());
     }
 
@@ -138,7 +159,10 @@ public class AdvancedMemoryResource {
                     .replaceWith(Response.ok(Map.of("status", "sanitized")).build()))
             .onFailure().recoverWithItem(throwable -> 
                 Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse(throwable.getMessage()))
+                    .entity(ErrorResponse.from(new WayangException(
+                            ErrorCode.INTERNAL_ERROR,
+                            throwable.getMessage(),
+                            throwable)))
                     .build());
     }
 
@@ -152,11 +176,5 @@ public class AdvancedMemoryResource {
         public void setSessionIds(List<String> sessionIds) { this.sessionIds = sessionIds; }
     }
 
-    public static class ErrorResponse {
-        public final String error;
-
-        public ErrorResponse(String error) {
-            this.error = error;
-        }
-    }
+ 
 }

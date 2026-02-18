@@ -13,17 +13,20 @@
 
     <artifactId>wayang-eip-parent</artifactId>
     <packaging>pom</packaging>
-    <name>Wayang :: eip :: Parent</name>
+    <name>Wayang :: EIP :: Parent</name>
 
     <modules>
-        <module>modules</module>
-        <module>wayang-eip-core</module>
         <module>wayang-eip-runtime</module>
+        <module>executors</module>
+        <module>eip-api</module>
     </modules>
 
     <properties>
-        <quarkus.version>3.2.0.Final</quarkus.version>
+        <quarkus.version>3.31.2</quarkus.version>
         <camel.quarkus.version>3.2.0</camel.quarkus.version>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencyManagement>

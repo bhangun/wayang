@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>tech.kayys.kulit</groupId>
+        <artifactId>kulit-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>kulit-features-parent</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Kulit MCP</name>
+    <description>Kulit Features</description>
+
+
+    <properties>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+    </properties>
+    <modules>
+        <module>kulit-mcp</module>
+        <module>kulit-memory</module>
+        <module>kulit-tool</module>
+        <module>kulit-resource</module>
+        <module>kulit-function</module>
+    </modules>
+</project>

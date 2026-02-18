@@ -1,13 +1,15 @@
 package tech.kayys.gamelan.executor.rag.examples;
 
-import dev.langchain4j.data.segment.TextSegment;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.gamelan.client.GamelanClient;
 import tech.kayys.gamelan.executor.rag.domain.*;
+import tech.kayys.gamelan.executor.rag.langchain.RagObservabilityMetrics;
+import tech.kayys.gamelan.executor.rag.langchain.NativeRagCoreService;
+import tech.kayys.wayang.rag.core.model.RagResult;
+import tech.kayys.wayang.rag.core.model.RagScoredChunk;
 
 import java.time.Instant;
 import java.util.*;
@@ -21,7 +23,10 @@ public class RagQueryService {
     private static final Logger LOG = LoggerFactory.getLogger(RagQueryService.class);
 
     @Inject
-    GamelanClient gamelanClient;
+    NativeRagCoreService nativeRagCoreService;
+
+    @Inject
+    RagObservabilityMetrics metricsRecorder = new RagObservabilityMetrics();
 
     /**
      * Execute simple RAG query
@@ -98,66 +103,59 @@ public class RagQueryService {
 
         LOG.info("Executing RAG workflow for tenant: {}, query: {}", tenantId, query);
 
-        // Build workflow input
-        Map<String, Object> input = new HashMap<>();
-        input.put("query", query);
-        input.put("tenantId", tenantId);
-        input.put("ragMode", mode.name());
-        input.put("searchStrategy", strategy.name());
-        input.put("retrievalConfig", serializeRetrievalConfig(retrievalConfig));
-        input.put("generationConfig", serializeGenerationConfig(generationConfig));
-        input.put("collections", collections);
-        input.put("filters", filters);
+        return Uni.createFrom().item(() -> {
+            long started = System.currentTimeMillis();
+            Map<String, Object> nativeFilters = new HashMap<>();
+            if (filters != null) {
+                nativeFilters.putAll(filters);
+            }
+            if (collections != null && !collections.isEmpty()) {
+                nativeFilters.put("collection", collections.get(0));
+            }
 
-        // Execute workflow
-        return gamelanClient.runs()
-                .create("rag-langchain4j-workflow")
-                .input("query", query)
-                .input("tenantId", tenantId)
-                .input("ragMode", mode.name())
-                .input("searchStrategy", strategy.name())
-                .input("retrievalConfig", serializeRetrievalConfig(retrievalConfig))
-                .input("generationConfig", serializeGenerationConfig(generationConfig))
-                .input("collections", collections)
-                .input("filters", filters)
-                .executeAndStart()
-                .map(run -> {
-                    // Poll for completion
-                    return pollForCompletion(run.runId());
-                })
-                .flatMap(runId -> getRagResponse(runId));
-    }
+            RagResult result = nativeRagCoreService.query(
+                    tenantId,
+                    query,
+                    retrievalConfig,
+                    generationConfig,
+                    nativeFilters);
 
-    private String pollForCompletion(String runId) {
-        // Simplified - in production use reactive polling
-        return runId;
-    }
+            metricsRecorder.recordSearchSuccess(
+                    tenantId,
+                    System.currentTimeMillis() - started,
+                    result.chunks() == null ? 0 : result.chunks().size());
 
-    private Uni<RagResponse> getRagResponse(String runId) {
-        return gamelanClient.runs()
-                .get(runId)
-                .map(run -> {
-                    // Extract RAG response from run output
-                    Map<String, Object> output = (Map<String, Object>) run;
-                    return parseRagResponse(output);
-                });
-    }
+            List<SourceDocument> sourceDocuments = result.chunks().stream()
+                    .map(this::toSourceDocument)
+                    .toList();
 
-    private RagResponse parseRagResponse(Map<String, Object> output) {
-        // Parse response from workflow output
-        String answer = (String) output.get("answer");
+            RagMetrics metrics = new RagMetrics(
+                    0L,
+                    sourceDocuments.size(),
+                    0,
+                    averageScore(result.chunks()),
+                    result.chunks().size(),
+                    0,
+                    true);
 
-        return new RagResponse(
-                "", // query
-                answer,
-                List.of(),
-                List.of(),
-                null,
-                null,
-                Instant.now(),
-                Map.of(),
-                List.of(),
-                Optional.empty());
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("ragMode", mode.name());
+            metadata.put("searchStrategy", strategy.name());
+            metadata.put("generationConfig", serializeGenerationConfig(generationConfig));
+            metadata.put("retrievalConfig", serializeRetrievalConfig(retrievalConfig));
+
+            return new RagResponse(
+                    query,
+                    result.answer(),
+                    sourceDocuments,
+                    List.of(),
+                    metrics,
+                    result.answer(),
+                    Instant.now(),
+                    metadata,
+                    collections == null ? List.of() : collections,
+                    Optional.empty());
+        }).onFailure().invoke(ignored -> metricsRecorder.recordSearchFailure(tenantId));
     }
 
     private String enhanceQueryWithHistory(
@@ -201,5 +199,30 @@ public class RagQueryService {
         map.put("maxTokens", config.maxTokens());
         map.put("systemPrompt", config.systemPrompt());
         return map;
+    }
+
+    private SourceDocument toSourceDocument(RagScoredChunk scoredChunk) {
+        Map<String, String> metadata = new HashMap<>();
+        scoredChunk.chunk().metadata()
+                .forEach((key, value) -> metadata.put(key, String.valueOf(value)));
+
+        String source = metadata.getOrDefault("source", scoredChunk.chunk().documentId());
+        return new SourceDocument(
+                scoredChunk.chunk().id(),
+                source,
+                scoredChunk.chunk().text(),
+                source,
+                metadata,
+                (float) scoredChunk.score(),
+                -1,
+                "");
+    }
+
+    private float averageScore(List<RagScoredChunk> chunks) {
+        if (chunks == null || chunks.isEmpty()) {
+            return 0f;
+        }
+        double sum = chunks.stream().mapToDouble(RagScoredChunk::score).sum();
+        return (float) (sum / chunks.size());
     }
 }

@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package tech.kayys.wayang.schema.grpc;
+
+option java_multiple_files = true;
+option java_package = "tech.kayys.wayang.schema.grpc";
+option java_outer_classname = "SchemaProto";
+
+// Schema validation request
+message SchemaValidationRequest {
+  string schema = 1;
+  string data = 2;  // JSON string representing the data to validate
+}
+
+// Schema validation response
+message SchemaValidationResponse {
+  bool valid = 1;
+  string message = 2;
+  repeated ValidationIssue issues = 3;
+}
+
+// Validation issue
+message ValidationIssue {
+  string field = 1;
+  string message = 2;
+  string severity = 3;  // ERROR, WARNING, INFO
+}
+
+// Agent configuration validation request
+message AgentConfigValidationRequest {
+  string agent_config = 1;  // JSON string of agent configuration
+}
+
+// Workflow validation request
+message WorkflowValidationRequest {
+  string workflow = 1;  // JSON string of workflow
+}
+
+// Plugin configuration validation request
+message PluginConfigValidationRequest {
+  string plugin_config = 1;  // JSON string of plugin configuration
+}
+
+// Generic response message
+message ValidationResponse {
+  bool valid = 1;
+  string message = 2;
+  repeated ValidationIssue issues = 3;
+}
+
+// Schema service definition
+service SchemaService {
+  // Validate data against a JSON schema
+  rpc ValidateSchema(SchemaValidationRequest) returns (SchemaValidationResponse);
+  
+  // Validate agent configuration
+  rpc ValidateAgentConfig(AgentConfigValidationRequest) returns (ValidationResponse);
+  
+  // Validate workflow
+  rpc ValidateWorkflow(WorkflowValidationRequest) returns (ValidationResponse);
+  
+  // Validate plugin configuration
+  rpc ValidatePluginConfig(PluginConfigValidationRequest) returns (ValidationResponse);
+  
+  // Validate schema with custom rules
+  rpc ValidateWithRules(SchemaValidationRequest) returns (SchemaValidationResponse);
+}

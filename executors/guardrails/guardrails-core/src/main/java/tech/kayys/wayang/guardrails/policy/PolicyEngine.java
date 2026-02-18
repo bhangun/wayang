@@ -2,6 +2,7 @@ package tech.kayys.wayang.guardrails.policy;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import dev.cel.common.CelAbstractSyntaxTree;
 import dev.cel.common.CelValidationException;
@@ -10,13 +11,21 @@ import dev.cel.compiler.CelCompiler;
 import dev.cel.compiler.CelCompilerFactory;
 import dev.cel.runtime.CelRuntime;
 import dev.cel.runtime.CelRuntimeFactory;
+import tech.kayys.wayang.guardrails.detector.CheckPhase;
+import tech.kayys.wayang.guardrails.plugin.GuardrailDetectorPlugin;
+import tech.kayys.wayang.guardrails.plugin.GuardrailPolicyPlugin;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
+@ApplicationScoped
 public class PolicyEngine {
 
     @Inject
     PolicyRepository policyRepository;
+    
+    @Inject
+    Instance<GuardrailPolicyPlugin> policyPlugins;
 
     private final CelCompiler celCompiler;
     private final CelRuntime celRuntime;
@@ -34,16 +43,84 @@ public class PolicyEngine {
 
     public Uni<PolicyEvaluationResult> evaluatePolicies(
             NodeContext context,
+            tech.kayys.wayang.guardrails.detector.CheckPhase phase) {
+        return Uni.combine().all()
+                .unis(
+                    evaluateTraditionalPolicies(context, convertCheckPhase(phase)),
+                    evaluatePluginPolicies(context, phase)
+                )
+                .combinedWith(results -> {
+                    List<PolicyCheckResult> traditionalResults = (List<PolicyCheckResult>) results.get(0);
+                    List<PolicyCheckResult> pluginResults = (List<PolicyCheckResult>) results.get(1);
+                    
+                    List<PolicyCheckResult> allResults = new ArrayList<>();
+                    allResults.addAll(traditionalResults);
+                    allResults.addAll(pluginResults);
+                    
+                    return aggregateResults(allResults);
+                });
+    }
+
+    private Uni<List<PolicyCheckResult>> evaluateTraditionalPolicies(
+            NodeContext context,
             CheckPhase phase) {
         return policyRepository.findActivePolices(context.tenantId(), phase)
-                .flatMap(policies -> {
+                .map(policies -> {
                     List<Uni<PolicyCheckResult>> evaluations = policies.stream()
                             .map(policy -> evaluatePolicy(policy, context))
                             .toList();
 
-                    return Uni.join().all(evaluations).andFailFast()
-                            .map(results -> aggregateResults(results));
-                });
+                    return Uni.join().all(evaluations).andFailFast().collectItems().asList();
+                })
+                .flatMap(uni -> uni);
+    }
+
+    private Uni<List<PolicyCheckResult>> evaluatePluginPolicies(
+            NodeContext context,
+            tech.kayys.wayang.guardrails.detector.CheckPhase phase) {
+        
+        List<GuardrailPolicyPlugin> applicablePlugins = getPolicyPluginsForPhase(phase);
+        
+        if (applicablePlugins.isEmpty()) {
+            return Uni.createFrom().item(new ArrayList<>());
+        }
+        
+        List<Uni<PolicyCheckResult>> pluginEvaluations = applicablePlugins.stream()
+                .map(plugin -> plugin.evaluate(context))
+                .collect(Collectors.toList());
+                
+        return Uni.join().all(pluginEvaluations).collectItems().asList();
+    }
+    
+    private List<GuardrailPolicyPlugin> getPolicyPluginsForPhase(tech.kayys.wayang.guardrails.detector.CheckPhase phase) {
+        List<GuardrailPolicyPlugin> plugins = new ArrayList<>();
+        
+        if (policyPlugins.isResolvable()) {
+            for (GuardrailPolicyPlugin plugin : policyPlugins) {
+                for (GuardrailDetectorPlugin.CheckPhase pluginPhase : plugin.applicablePhases()) {
+                    if (convertToInternalPhase(pluginPhase) == phase) {
+                        plugins.add(plugin);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        return plugins;
+    }
+    
+    private CheckPhase convertCheckPhase(tech.kayys.wayang.guardrails.detector.CheckPhase externalPhase) {
+        return switch (externalPhase) {
+            case PRE_EXECUTION -> CheckPhase.PRE_EXECUTION;
+            case POST_EXECUTION -> CheckPhase.POST_EXECUTION;
+        };
+    }
+    
+    private tech.kayys.wayang.guardrails.detector.CheckPhase convertToInternalPhase(GuardrailDetectorPlugin.CheckPhase pluginPhase) {
+        return switch (pluginPhase) {
+            case PRE_EXECUTION -> tech.kayys.wayang.guardrails.detector.CheckPhase.PRE_EXECUTION;
+            case POST_EXECUTION -> tech.kayys.wayang.guardrails.detector.CheckPhase.POST_EXECUTION;
+        };
     }
 
     private Uni<PolicyCheckResult> evaluatePolicy(Policy policy, NodeContext context) {

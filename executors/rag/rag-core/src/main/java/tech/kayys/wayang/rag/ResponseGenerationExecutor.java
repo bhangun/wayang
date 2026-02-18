@@ -19,6 +19,7 @@ import tech.kayys.gamelan.core.engine.NodeExecutionResult;
 import tech.kayys.gamelan.core.engine.NodeExecutionTask;
 import tech.kayys.gamelan.executor.Executor;
 import tech.kayys.gamelan.executor.AbstractWorkflowExecutor;
+import tech.kayys.wayang.error.ErrorCode;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -87,8 +88,11 @@ public class ResponseGenerationExecutor extends AbstractWorkflowExecutor {
                     if (!valid) {
                         return Uni.createFrom().item(NodeExecutionResult.failure(
                                 task.runId(), task.nodeId(), task.attempt(),
-                                new ErrorInfo("INVALID_CONFIGURATION",
-                                        "Invalid generation configuration", "", Map.of()),
+                                new ErrorInfo(
+                                        ErrorCode.CONFIG_INVALID.getCode(),
+                                        "Invalid generation configuration",
+                                        "",
+                                        Map.of("retryable", ErrorCode.CONFIG_INVALID.isRetryable())),
                                 task.token()));
                     }
 
@@ -132,9 +136,15 @@ public class ResponseGenerationExecutor extends AbstractWorkflowExecutor {
                             })
                             .onFailure().recoverWithItem(error -> {
                                 LOG.error("Response generation failed", error);
+                                ErrorCode errorCode = ErrorCode.INFERENCE_REQUEST_FAILED;
                                 return NodeExecutionResult.failure(
                                         task.runId(), task.nodeId(), task.attempt(),
-                                        ErrorInfo.of(error), task.token());
+                                        new ErrorInfo(
+                                                errorCode.getCode(),
+                                                error.getMessage(),
+                                                "",
+                                                Map.of("retryable", errorCode.isRetryable())),
+                                        task.token());
                             });
                 });
     }

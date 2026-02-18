@@ -1,6 +1,6 @@
 package tech.kayys.gamelan.executor.rag.domain;
 
-enum RagMode {
+public enum RagMode {
     STANDARD,
     AGENT,
     MULTI_HOP,

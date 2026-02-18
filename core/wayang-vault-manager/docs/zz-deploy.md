@@ -7,7 +7,7 @@
 dependencies:
   # Quarkus Core
   - groupId: io.quarkus
-    artifactId: quarkus-resteasy-reactive-jackson
+    artifactId: quarkus-rest-jackson
   - groupId: io.quarkus
     artifactId: quarkus-hibernate-reactive-panache
   - groupId: io.quarkus

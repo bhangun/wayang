@@ -11,6 +11,8 @@ import jakarta.ws.rs.core.SecurityContext;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.resteasy.reactive.RestResponse;
+import tech.kayys.wayang.error.ErrorCode;
+import tech.kayys.wayang.error.WayangException;
 import tech.kayys.wayang.hitl.dto.*;
 import tech.kayys.wayang.hitl.service.EscalationService;
 import tech.kayys.wayang.hitl.service.HumanTaskService;
@@ -199,9 +201,8 @@ public class HumanTaskResource {
             })
             .map(this::toDomainDto)
             .map(RestResponse::ok)
-            .onFailure().recoverWithItem(error ->
-                RestResponse.status(RestResponse.Status.BAD_REQUEST)
-            );
+            .onFailure().transform(error ->
+                new WayangException(ErrorCode.VALIDATION_FAILED, error.getMessage(), error));
     }
 
     @POST
@@ -217,9 +218,8 @@ public class HumanTaskResource {
             })
             .map(this::toDomainDto)
             .map(RestResponse::ok)
-            .onFailure().recoverWithItem(error ->
-                RestResponse.status(RestResponse.Status.BAD_REQUEST)
-            );
+            .onFailure().transform(error ->
+                new WayangException(ErrorCode.VALIDATION_FAILED, error.getMessage(), error));
     }
 
     @POST
@@ -242,9 +242,8 @@ public class HumanTaskResource {
             })
             .map(this::toDomainDto)
             .map(RestResponse::ok)
-            .onFailure().recoverWithItem(error ->
-                RestResponse.status(RestResponse.Status.BAD_REQUEST)
-            );
+            .onFailure().transform(error ->
+                new WayangException(ErrorCode.VALIDATION_FAILED, error.getMessage(), error));
     }
 
     @POST
@@ -262,9 +261,8 @@ public class HumanTaskResource {
                 return repository.save(task);
             })
             .map(v -> RestResponse.<Void>ok())
-            .onFailure().recoverWithItem(error ->
-                RestResponse.status(RestResponse.Status.BAD_REQUEST)
-            );
+            .onFailure().transform(error ->
+                new WayangException(ErrorCode.VALIDATION_FAILED, error.getMessage(), error));
     }
 
     @POST
@@ -282,9 +280,8 @@ public class HumanTaskResource {
                 return repository.save(task);
             })
             .map(v -> RestResponse.<Void>ok())
-            .onFailure().recoverWithItem(error ->
-                RestResponse.status(RestResponse.Status.BAD_REQUEST)
-            );
+            .onFailure().transform(error ->
+                new WayangException(ErrorCode.VALIDATION_FAILED, error.getMessage(), error));
     }
 
     @POST
@@ -306,9 +303,8 @@ public class HumanTaskResource {
                 return repository.save(task);
             })
             .map(v -> RestResponse.<Void>ok())
-            .onFailure().recoverWithItem(error ->
-                RestResponse.status(RestResponse.Status.BAD_REQUEST)
-            );
+            .onFailure().transform(error ->
+                new WayangException(ErrorCode.VALIDATION_FAILED, error.getMessage(), error));
     }
 
     @POST
@@ -326,9 +322,8 @@ public class HumanTaskResource {
                 return repository.save(task);
             })
             .map(v -> RestResponse.<Void>ok())
-            .onFailure().recoverWithItem(error ->
-                RestResponse.status(RestResponse.Status.BAD_REQUEST)
-            );
+            .onFailure().transform(error ->
+                new WayangException(ErrorCode.VALIDATION_FAILED, error.getMessage(), error));
     }
 
     // ==================== HELPER METHODS ====================

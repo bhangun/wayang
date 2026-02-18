@@ -941,7 +941,7 @@ wayang-helm/
     <name>Wayang AI Agent Platform</name>
     
     <properties>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <quarkus.version>3.6.4</quarkus.version>
         <pgvector.version>0.1.4</pgvector.version>

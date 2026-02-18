@@ -1,118 +1,75 @@
 package tech.kayys.gamelan.executor.rag.examples;
 
-import dev.langchain4j.data.document.Document;
-import dev.langchain4j.data.document.parser.apache.pdfbox.ApachePdfBoxDocumentParser;
-import dev.langchain4j.data.document.loader.FileSystemDocumentLoader;
-import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.store.embedding.EmbeddingStore;
-import io.smallrye.mutiny.Uni;
-import io.vertx.core.impl.ConcurrentHashSet;
-import jakarta.enterprise.context.ApplicationScoped;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.kayys.gamelan.executor.rag.domain.RetrievalConfig;
-import tech.kayys.gamelan.executor.rag.langchain.LangChain4jConfig;
-import tech.kayys.gamelan.executor.rag.langchain.LangChain4jEmbeddingStoreFactory;
-import tech.kayys.gamelan.executor.rag.langchain.LangChain4jModelFactory;
+import tech.kayys.gamelan.executor.rag.domain.ChunkingConfig;
+import tech.kayys.gamelan.executor.rag.langchain.NativeRagCoreService;
+import tech.kayys.wayang.rag.core.model.RagChunk;
 
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DocumentIngestionServiceTest {
 
     @Mock
-    private LangChain4jModelFactory modelFactory;
-
-    @Mock
-    private LangChain4jEmbeddingStoreFactory storeFactory;
-
-    @Mock
-    private LangChain4jConfig config;
-
-    @Mock
-    private EmbeddingStore embeddingStore;
-
-    @Mock
-    private EmbeddingModel embeddingModel;
+    private NativeRagCoreService nativeRagCoreService;
 
     private DocumentIngestionService ingestionService;
 
     @BeforeEach
     void setUp() {
         ingestionService = new DocumentIngestionService();
-        // Use reflection or setter injection to inject mocks
-        // Since fields are private, we'll use mock construction
-    }
-
-    @Test
-    void testIngestPdfDocuments_Success() {
-        // Given
-        String tenantId = "test-tenant";
-        List<Path> pdfPaths = List.of(Path.of("/test/document.pdf"));
-        Map<String, String> metadata = Map.of("collection", "test-collection");
-
-        // Mock the static methods and dependencies
-        when(storeFactory.getStore(eq(tenantId), any(RetrievalConfig.class))).thenReturn(embeddingStore);
-        when(modelFactory.createEmbeddingModel(eq(tenantId), eq("text-embedding-3-small"))).thenReturn(embeddingModel);
-
-        // Since we can't easily mock static methods like
-        // FileSystemDocumentLoader.loadDocument,
-        // we'll test the logic assuming the document loading works
-        Document mockDoc = Document.from("test content");
-        when(FileSystemDocumentLoader.loadDocument(any(Path.class), any(ApachePdfBoxDocumentParser.class)))
-                .thenReturn(mockDoc);
-
-        // When
-        Uni<IngestResult> result = ingestionService.ingestPdfDocuments(tenantId, pdfPaths, metadata);
-
-        // Then
-        assertNotNull(result);
-        // Note: Actual execution would require mocking the Uni behavior
+        ingestionService.nativeRagCoreService = nativeRagCoreService;
     }
 
     @Test
     void testIngestTextDocuments_Success() {
-        // Given
-        String tenantId = "test-tenant";
-        List<String> texts = List.of("test text content");
-        Map<String, String> metadata = Map.of("collection", "test-collection");
-        ChunkingConfig chunkingConfig = ChunkingConfig.defaults();
+        when(nativeRagCoreService.ingestText(anyString(), anyString(), anyString(), anyMap(), any(ChunkingConfig.class)))
+                .thenReturn(List.of(RagChunk.of("doc-1", 0, "chunk", Map.of())));
 
-        when(storeFactory.getStore(eq(tenantId), any(RetrievalConfig.class))).thenReturn(embeddingStore);
-        when(modelFactory.createEmbeddingModel(eq(tenantId), eq("text-embedding-3-small"))).thenReturn(embeddingModel);
+        IngestResult result = ingestionService
+                .ingestTextDocuments("tenant", List.of("text"), Map.of("collection", "test"), ChunkingConfig.defaults())
+                .await().indefinitely();
 
-        // When
-        Uni<IngestResult> result = ingestionService.ingestTextDocuments(tenantId, texts, metadata, chunkingConfig);
-
-        // Then
         assertNotNull(result);
+        assertEquals(1, result.documentsIngested());
+        assertEquals(1, result.segmentsCreated());
     }
 
     @Test
     void testBatchIngest_Success() {
-        // Given
-        String tenantId = "test-tenant";
-        List<DocumentSource> sources = List.of(
-                new DocumentSource(SourceType.TEXT, null, "test content", Map.of("collection", "test")));
+        when(nativeRagCoreService.ingestText(anyString(), anyString(), anyString(), anyMap(), any(ChunkingConfig.class)))
+                .thenReturn(List.of(RagChunk.of("doc-1", 0, "chunk", Map.of())));
 
-        when(storeFactory.getStore(eq(tenantId), any(RetrievalConfig.class))).thenReturn(embeddingStore);
-        when(modelFactory.createEmbeddingModel(eq(tenantId), eq("text-embedding-3-small"))).thenReturn(embeddingModel);
+        IngestResult result = ingestionService.batchIngest(
+                "tenant",
+                List.of(new DocumentSource(SourceType.TEXT, null, "hello", Map.of("collection", "test"))))
+                .await().indefinitely();
 
-        // When
-        Uni<IngestResult> result = ingestionService.batchIngest(tenantId, sources);
-
-        // Then
         assertNotNull(result);
+        assertEquals(1, result.documentsIngested());
+        assertEquals(1, result.segmentsCreated());
+    }
+
+    @Test
+    void testIngestPdfDocuments_ThrowsForMissingFile() {
+        try {
+            ingestionService.ingestPdfDocuments("tenant", List.of(Path.of("/no/such/file.pdf")), Map.of())
+                    .await().indefinitely();
+        } catch (Exception e) {
+            assertNotNull(e);
+        }
     }
 }

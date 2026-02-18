@@ -1,3 +1,20 @@
+/*
+ * PolyForm Noncommercial License 1.0.0
+ *
+ * Copyright (c) 2026 Kayys.tech
+ *
+ * This software is licensed for non-commercial use only.
+ * You may use, modify, and distribute this software for personal,
+ * educational, or research purposes.
+ *
+ * Commercial use, including SaaS or revenue-generating services,
+ * requires a separate commercial license from Kayys.tech.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+ *
+ * @author Bhangun
+ */
+
 package tech.kayys.wayang.plugin.multi;
 
 import java.util.HashSet;
@@ -14,8 +31,6 @@ import tech.kayys.wayang.plugin.ControlPlaneNodeRegistry;
 import tech.kayys.wayang.plugin.LoadedPlugin;
 import tech.kayys.wayang.plugin.PluginRegistration;
 import tech.kayys.wayang.plugin.PluginResourceLoader;
-import tech.kayys.wayang.plugin.SchemaReference;
-import tech.kayys.wayang.plugin.SchemaValidator;
 import tech.kayys.wayang.plugin.SharedResources;
 import tech.kayys.wayang.plugin.UIReference;
 import tech.kayys.wayang.plugin.execution.ExecutionMode;
@@ -24,6 +39,8 @@ import tech.kayys.wayang.plugin.executor.ExecutorManifest;
 import tech.kayys.wayang.plugin.executor.ExecutorRegistration;
 import tech.kayys.wayang.plugin.node.NodeDefinition;
 import tech.kayys.wayang.plugin.node.NodeManifest;
+import tech.kayys.wayang.schema.validator.SchemaReference;
+import tech.kayys.wayang.schema.validator.SchemaValidator;
 
 /**
  * Loads and registers plugins with multiple nodes

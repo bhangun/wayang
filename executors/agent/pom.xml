@@ -13,17 +13,18 @@
     <description>Enterprise-grade workflow engine for agentic AI and business automation</description>
 
     <properties>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <quarkus.platform.version>3.15.1</quarkus.platform.version>
+        <quarkus.platform.version>3.31.2</quarkus.platform.version>
         <grpc.version>1.60.0</grpc.version>
         <protobuf.version>3.25.1</protobuf.version>
         <testcontainers.version>1.19.3</testcontainers.version>
+        <lombok.version>1.18.30</lombok.version>
     </properties>
 
     <modules>
-        <module>agent-core</module>
-        <module>agent-executor</module>
+        <module>core</module>
+        <module>agents</module>
     </modules>
 
     <dependencyManagement>

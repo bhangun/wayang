@@ -1,3 +1,20 @@
+/*
+ * PolyForm Noncommercial License 1.0.0
+ *
+ * Copyright (c) 2026 Kayys.tech
+ *
+ * This software is licensed for non-commercial use only.
+ * You may use, modify, and distribute this software for personal,
+ * educational, or research purposes.
+ *
+ * Commercial use, including SaaS or revenue-generating services,
+ * requires a separate commercial license from Kayys.tech.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+ *
+ * @author Bhangun
+ */
+
 package tech.kayys.wayang.plugin.node;
 
 import java.util.ArrayList;
@@ -8,11 +25,11 @@ import org.jboss.logging.Logger;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import tech.kayys.wayang.plugin.CommunicationProtocol;
-import tech.kayys.wayang.plugin.SchemaValidator;
 import tech.kayys.wayang.plugin.UIReference;
 import tech.kayys.wayang.plugin.execution.ExecutionMode;
 import tech.kayys.wayang.plugin.executor.ExecutorBinding;
 import tech.kayys.wayang.plugin.multi.MultiNodePlugin;
+import tech.kayys.wayang.schema.validator.SchemaValidator;
 
 /**
  * Discovers nodes from annotations

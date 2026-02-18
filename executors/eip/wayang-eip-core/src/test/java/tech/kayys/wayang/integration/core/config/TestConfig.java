@@ -1,4 +1,4 @@
-package tech.kayys.wayang.integration.core.config;
+package tech.kayys.wayang.eip.config;
 
 import io.vertx.mutiny.core.Vertx;
 import io.vertx.mutiny.ext.web.client.WebClient;

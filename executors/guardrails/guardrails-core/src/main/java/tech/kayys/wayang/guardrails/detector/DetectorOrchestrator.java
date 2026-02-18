@@ -4,6 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import tech.kayys.execution.ExecutionResult;
+import tech.kayys.wayang.guardrails.plugin.GuardrailPluginRegistry;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -12,35 +13,20 @@ import java.util.stream.Collectors;
 public class DetectorOrchestrator {
 
     @Inject
-    PIIDetector piiDetector;
-
-    @Inject
-    ToxicityDetector toxicityDetector;
-
-    @Inject
-    BiasDetector biasDetector;
-
-    @Inject
-    HallucinationDetector hallucinationDetector;
+    GuardrailPluginRegistry pluginRegistry;
 
     public Uni<DetectionResults> detectInputIssues(NodeContext context) {
         String inputText = extractText(context.inputs());
 
-        return Uni.combine().all().unis(
-                piiDetector.detect(inputText),
-                toxicityDetector.detect(inputText),
-                biasDetector.detect(inputText))
-                .combinedWith((pii, toxicity, bias) -> new DetectionResults(List.of(pii, toxicity, bias)));
+        return pluginRegistry.runDetectorsForPhase(inputText, CheckPhase.PRE_EXECUTION)
+                .map(DetectionResults::new);
     }
 
     public Uni<DetectionResults> detectOutputIssues(ExecutionResult result) {
         String outputText = extractText(result.outputs());
 
-        return Uni.combine().all().unis(
-                piiDetector.detect(outputText),
-                toxicityDetector.detect(outputText),
-                hallucinationDetector.detect(outputText, result.metadata())).combinedWith(
-                        (pii, toxicity, hallucination) -> new DetectionResults(List.of(pii, toxicity, hallucination)));
+        return pluginRegistry.runDetectorsForPhase(outputText, CheckPhase.POST_EXECUTION)
+                .map(DetectionResults::new);
     }
 
     private String extractText(Map<String, Object> data) {

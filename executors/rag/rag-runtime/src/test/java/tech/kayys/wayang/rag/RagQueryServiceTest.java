@@ -1,86 +1,97 @@
 package tech.kayys.gamelan.executor.rag.examples;
 
-import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.kayys.gamelan.client.GamelanClient;
 import tech.kayys.gamelan.executor.rag.domain.*;
+import tech.kayys.gamelan.executor.rag.langchain.NativeRagCoreService;
+import tech.kayys.wayang.rag.core.model.RagChunk;
+import tech.kayys.wayang.rag.core.model.RagQuery;
+import tech.kayys.wayang.rag.core.model.RagResult;
+import tech.kayys.wayang.rag.core.model.RagScoredChunk;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class RagQueryServiceTest {
 
     @Mock
-    private GamelanClient gamelanClient;
+    private NativeRagCoreService nativeRagCoreService;
 
     private RagQueryService ragQueryService;
 
     @BeforeEach
     void setUp() {
         ragQueryService = new RagQueryService();
-        // Note: Since we can't directly inject the mock due to private field,
-        // we would typically use reflection or constructor injection in a real scenario
+        ragQueryService.nativeRagCoreService = nativeRagCoreService;
     }
 
     @Test
     void testQuery_Success() {
-        // Given
-        String tenantId = "test-tenant";
-        String query = "test query";
-        String collectionName = "test-collection";
+        when(nativeRagCoreService.query(anyString(), anyString(), any(RetrievalConfig.class), any(GenerationConfig.class), anyMap()))
+                .thenReturn(fakeResult("answer-1"));
 
-        // When
-        Uni<RagResponse> result = ragQueryService.query(tenantId, query, collectionName);
+        RagResponse response = ragQueryService.query("tenant", "question", "col").await().indefinitely();
 
-        // Then
-        assertNotNull(result);
-        // Additional assertions would require mocking the gamelanClient behavior
+        assertNotNull(response);
+        assertEquals("answer-1", response.answer());
+        assertEquals(1, response.sourceDocuments().size());
     }
 
     @Test
     void testAdvancedQuery_Success() {
-        // Given
+        when(nativeRagCoreService.query(anyString(), anyString(), any(RetrievalConfig.class), any(GenerationConfig.class), anyMap()))
+                .thenReturn(fakeResult("answer-2"));
+
         RagQueryRequest request = new RagQueryRequest(
-                "test-tenant",
-                "test query",
+                "tenant",
+                "question",
                 RagMode.STANDARD,
                 SearchStrategy.HYBRID,
                 RetrievalConfig.defaults(),
                 GenerationConfig.defaults(),
-                List.of("test-collection"),
-                Map.of());
+                List.of("docs"),
+                Map.of("collection", "docs"));
 
-        // When
-        Uni<RagResponse> result = ragQueryService.advancedQuery(request);
+        RagResponse response = ragQueryService.advancedQuery(request).await().indefinitely();
 
-        // Then
-        assertNotNull(result);
+        assertNotNull(response);
+        assertEquals("answer-2", response.answer());
     }
 
     @Test
     void testConversationalQuery_Success() {
-        // Given
-        String tenantId = "test-tenant";
-        String query = "test query";
-        String sessionId = "session-123";
-        List<ConversationTurn> history = List.of(
-                new ConversationTurn("user msg", "assistant msg", Instant.now()));
+        when(nativeRagCoreService.query(anyString(), anyString(), any(RetrievalConfig.class), any(GenerationConfig.class), anyMap()))
+                .thenReturn(fakeResult("answer-3"));
 
-        // When
-        Uni<RagResponse> result = ragQueryService.conversationalQuery(tenantId, query, sessionId, history);
+        RagResponse response = ragQueryService.conversationalQuery(
+                "tenant",
+                "question",
+                "session-1",
+                List.of(new ConversationTurn("u", "a", Instant.now())))
+                .await().indefinitely();
 
-        // Then
-        assertNotNull(result);
+        assertNotNull(response);
+        assertEquals("answer-3", response.answer());
+    }
+
+    private RagResult fakeResult(String answer) {
+        RagChunk chunk = RagChunk.of("doc-1", 0, "content", Map.of("source", "s1"));
+        return new RagResult(
+                RagQuery.of("q"),
+                List.of(new RagScoredChunk(chunk, 0.9)),
+                answer,
+                Map.of());
     }
 }

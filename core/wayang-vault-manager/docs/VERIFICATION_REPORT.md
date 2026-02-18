@@ -236,7 +236,7 @@ All components of the Wayang Secret Vault implementation have been verified and 
 ## 🎯 Build Command
 
 ```bash
-cd /Users/bhangun/Workspace/workkayys/Products/Wayang/wayang-platform/wayang-enterprise/support/secret-vault
+cd ~/Workspace/workkayys/Products/Wayang/wayang-platform/wayang-enterprise/support/secret-vault
 mvn clean compile
 ```
 

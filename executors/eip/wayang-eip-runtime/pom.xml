@@ -6,60 +6,48 @@
 
     <parent>
         <groupId>tech.kayys.wayang</groupId>
-        <artifactId>wayang</artifactId>
+        <artifactId>wayang-eip-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>wayang-integration-runtime</artifactId>
-    <name>Wayang :: Executors :: Integration :: Runtime</name>
+    <artifactId>wayang-eip-runtime</artifactId>
+    <name>Wayang :: EIP :: Runtime</name>
 
     <dependencies>
-        <!-- Integration Modules -->
         <dependency>
-            <groupId>io.wayang</groupId>
-            <artifactId>wayang-integration-aws</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.wayang</groupId>
-            <artifactId>wayang-integration-salesforce</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.wayang</groupId>
-            <artifactId>wayang-integration-azure</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.wayang</groupId>
-            <artifactId>wayang-integration-gcp</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.wayang</groupId>
-            <artifactId>wayang-integration-kafka</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.wayang</groupId>
-            <artifactId>wayang-integration-mongodb</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.wayang</groupId>
-            <artifactId>wayang-integration-postgresql</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.wayang</groupId>
-            <artifactId>wayang-integration-redis</artifactId>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-eip-api</artifactId>
             <version>${project.version}</version>
         </dependency>
 
-        <!-- Quarkus Core -->
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-eip-grpc</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-eip-websocket</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-eip-sse</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-resteasy</artifactId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jackson</artifactId>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -69,21 +57,32 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-micrometer</artifactId>
         </dependency>
+
         <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-opentelemetry</artifactId>
+            <groupId>org.apache.camel.quarkus</groupId>
+            <artifactId>camel-quarkus-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel.quarkus</groupId>
+            <artifactId>camel-quarkus-http</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel.quarkus</groupId>
+            <artifactId>camel-quarkus-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel.quarkus</groupId>
+            <artifactId>camel-quarkus-file</artifactId>
         </dependency>
 
-        <!-- Wayang Core Dependencies -->
         <dependency>
-            <groupId>io.wayang</groupId>
-            <artifactId>wayang-core</artifactId>
-            <version>${project.version}</version>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
     <build>
-        <finalName>wayang-integration-runtime</finalName>
         <plugins>
             <plugin>
                 <groupId>io.quarkus</groupId>
@@ -97,6 +96,17 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>${maven.compiler.source}</release>
+                    <excludes>
+                        <exclude>**/modern/**</exclude>
+                    </excludes>
+                </configuration>
             </plugin>
         </plugins>
     </build>

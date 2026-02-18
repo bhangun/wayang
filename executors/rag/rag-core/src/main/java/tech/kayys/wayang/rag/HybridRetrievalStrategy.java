@@ -1,3 +1,4 @@
+package tech.kayys.wayang.rag;
 
 /**
  * HYBRID RETRIEVAL STRATEGY - FULL IMPLEMENTATION

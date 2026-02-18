@@ -74,10 +74,10 @@ end
 %% =========================
 %% GOLEK
 %% =========================
-subgraph GOLEK["Golek Inference Engine"]
-    GolekAPI["Golek API"]
+subgraph GOLEK["Gollek Inference Engine"]
+    GollekAPI["Gollek API"]
     ModelReg["Model Registry"]
-    Inference["Golek-Engine"]
+    Inference["Gollek-Engine"]
     Backends["GPU/CPU/Cloud Backends Provider"]
 end
 
@@ -159,10 +159,10 @@ Engine --> Kafka
 Kafka --> API
 
 %% Inference path
-Planner --> GolekAPI
-Orchestrator --> GolekAPI
-ML --> GolekAPI
-GolekAPI --> Inference
+Planner --> GollekAPI
+Orchestrator --> GollekAPI
+ML --> GollekAPI
+GollekAPI --> Inference
 Inference --> ModelReg
 Inference --> Backends
 Backends --> LLMProviders
@@ -194,6 +194,16 @@ Engine --> Obs
 GOLEK --> Obs
 WAYANG --> Obs
 ```
+
+## Multi-Tenancy Activation
+
+Multi-tenancy is disabled by default and enabled per component via extensions.
+
+* Gollek: `tenant-gollek-ext`
+* Gamelan: `tenant-gamelan-ext`
+* Wayang: `tenant-wayang-ext`
+
+The extensions automatically set `wayang.multitenancy.enabled=true`. See `wayang-enterprise/modules/tenant/README.md` for details.
 
 ---
 
@@ -235,9 +245,9 @@ subgraph EXEC_S["Executor Runtimes (Java)"]
     EIP_S["EIP / Integration Executor"]
 end
 
-    subgraph GOLEK_S["Golek Inference Engine"]
-        GolekAPI_S["Golek API (Local)"]
-        Inference_S["Golek-Engine"]
+    subgraph GOLEK_S["Gollek Inference Engine"]
+        GollekAPI_S["Gollek API (Local)"]
+        Inference_S["Gollek-Engine"]
         ModelReg_S["Model Registry"]
     end
 
@@ -285,9 +295,9 @@ ExecRegistry_S --> Evaluator_S
 ExecRegistry_S --> RAG_S
 ExecRegistry_S --> EIP_S
 
-Planner_S --> GolekAPI_S
-Orchestrator_S --> GolekAPI_S
-GolekAPI_S --> Inference_S
+Planner_S --> GollekAPI_S
+Orchestrator_S --> GollekAPI_S
+GollekAPI_S --> Inference_S
 Inference_S --> ModelReg_S
 Inference_S --> LLMProviders_S
 
@@ -336,7 +346,7 @@ Notes:
   ```
 * **Wayang = semantic brain**
 * **Gamelan = execution brain**
-* **Golek = inference brain**
+* **Gollek = inference brain**
 * **Iket = gateway edge**
 * **MCP = tool plane**
 
@@ -362,7 +372,7 @@ sequenceDiagram
     participant RT as Wayang Runtime
     participant GE as Gamelan Engine
     participant EX as Executor Runtime
-    participant GO as Golek Inference
+    participant GO as Gollek Inference
 
     UI ->> CP: Deploy workflow
     CP ->> RT: Start workflow
@@ -465,7 +475,7 @@ final result = from Gamelan
 3. **Wayang → UI** = visualization + policy
 4. **Retries live in Gamelan**
 5. **Routing lives in Wayang**
-6. **Inference lives in Golek**
+6. **Inference lives in Gollek**
 7. **API edge lives in Iket**
 8. **Tools live in MCP**
 
@@ -473,7 +483,7 @@ final result = from Gamelan
 
 ---
 
-## 🔁 Wayang → Gamelan → Golek — Combined Flowchart
+## 🔁 Wayang → Gamelan → Gollek — Combined Flowchart
 
 ```mermaid
 flowchart TD
@@ -516,7 +526,7 @@ flowchart TD
     T --> U{Node Needs Inference?}
 
     %% ========== GOLEK ==========
-    U -- Yes --> V[Call Golek Inference API]
+    U -- Yes --> V[Call Gollek Inference API]
 
     V --> W[Auth & Quota Check]
     W --> X{Authorized?}
@@ -566,7 +576,7 @@ Design → Validate → Package → Deploy
 Token → Node → Route → Execute → Persist → Loop
 ```
 
-### Golek (Inference Plane)
+### Gollek (Inference Plane)
 
 ```
 Auth → Model → Context → Infer → Cache → Return
@@ -596,7 +606,7 @@ This section ties diagram nodes to concrete folders in this repo so the diagram 
 * **Gamelan Engine** → `workflow-gamelan/core/gamelan-engine`
 * **Gamelan Registry & Runtime** → `workflow-gamelan/core/gamelan-executor-registry`, `workflow-gamelan/core/gamelan-runtime-core`
 * **Executor Runtimes (Java)** → `wayang/executors/` (agent, rag, tool, eip, guardrails, memory, vector, etc.)
-* **Golek API / Inference Engine** → `inference-golek/` (core, provider, adapter, runtime)
+* **Gollek API / Inference Engine** → `inference-gollek/` (core, provider, adapter, runtime)
 * **MCP API / Tool Plane** → `mcp-kulit/`
 
 This is a **very strong architecture story** for:

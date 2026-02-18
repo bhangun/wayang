@@ -11,18 +11,41 @@
   <packaging>pom</packaging>
 
   <properties>
-
-
+    <maven.compiler.source>25</maven.compiler.source>
+    <maven.compiler.target>25</maven.compiler.target>
+    <quarkus.platform.version>3.31.2</quarkus.platform.version>
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.quarkus.platform</groupId>
+        <artifactId>quarkus-bom</artifactId>
+        <version>${quarkus.platform.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>2.0.16</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <modules>
-    <module>wayang-control-plane-core</module>
+    <module>wayang-error-spi</module>
+    <module>wayang-control-core</module>
     <module>wayang-plugin-registry</module>
     <module>wayang-plugin-spi</module>
     <module>wayang-vault-manager</module>
     <module>wayang-orchestrator-core</module>
     <module>wayang-orchestrator-local</module>
     <module>wayang-orchestrator-remote</module>
+    <module>wayang-schema</module>
+    <module>wayang-schema-api</module>
+    <module>wayang-schema-grpc</module>
+    <module>wayang-control-api</module>
+    <module>wayang-control-spi</module>
   </modules>
 
 

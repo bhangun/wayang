@@ -1,6 +1,6 @@
 package tech.kayys.gamelan.executor.rag.examples;
 
-enum SourceType {
+public enum SourceType {
     PDF,
     TEXT,
     URL,

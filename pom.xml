@@ -15,26 +15,28 @@
   </scm>
 
   <modules>
-    <module>wayang-runtime</module>
-    <!-- <module>wayang-core</module>
-    <module>wayang-agent</module>
-    <module>wayang-annotations</module>
-    <module>wayang-quarkus</module>
-    <module>wayang-inference</module>
-    <module>wayang-inference-server</module>
-    <module>wayang-chatpot</module> -->
-    <!--  <module>mcp-openapi</module>
-    <module>examples/quarkus-agent-app</module> -->
-
-    <module>wayang-plugin-registry</module>
-    <module>wayang-executor</module>
-    <module>wayang-runtime-standalone</module>
+    <module>core</module>
+    <module>executors</module>
+    <module>runtime/wayang-runtime-standalone</module>
   </modules>
 
   <properties>
-    <maven.compiler.source>21</maven.compiler.source>
-    <maven.compiler.target>21</maven.compiler.target>
+    <maven.compiler.source>25</maven.compiler.source>
+    <maven.compiler.target>25</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <quarkus.platform.version>3.31.2</quarkus.platform.version>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.quarkus.platform</groupId>
+        <artifactId>quarkus-bom</artifactId>
+        <version>${quarkus.platform.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
 </project>

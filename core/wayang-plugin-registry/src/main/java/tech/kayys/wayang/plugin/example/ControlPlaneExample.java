@@ -11,7 +11,6 @@ import tech.kayys.wayang.plugin.CommunicationProtocol;
 import tech.kayys.wayang.plugin.ControlPlaneExecutorRegistry;
 import tech.kayys.wayang.plugin.ControlPlaneNodeRegistry;
 import tech.kayys.wayang.plugin.ControlPlaneWidgetRegistry;
-import tech.kayys.wayang.plugin.SchemaValidator;
 import tech.kayys.wayang.plugin.UIReference;
 import tech.kayys.wayang.plugin.execution.ExecutionContext;
 import tech.kayys.wayang.plugin.execution.ExecutionContract;
@@ -20,6 +19,7 @@ import tech.kayys.wayang.plugin.execution.ExecutionMode;
 import tech.kayys.wayang.plugin.executor.ExecutorBinding;
 import tech.kayys.wayang.plugin.executor.ExecutorRegistration;
 import tech.kayys.wayang.plugin.node.NodeDefinition;
+import tech.kayys.wayang.schema.validator.SchemaValidator;
 
 /**
  * Example: How Control Plane uses these components

@@ -1,29 +1,25 @@
 package tech.kayys.gamelan.executor.rag.examples;
 
-import dev.langchain4j.data.document.Document;
-import dev.langchain4j.data.document.DocumentSplitter;
-import dev.langchain4j.data.document.parser.apache.pdfbox.ApachePdfBoxDocumentParser;
-import dev.langchain4j.data.document.splitter.DocumentSplitters;
-import dev.langchain4j.data.document.loader.FileSystemDocumentLoader;
-import dev.langchain4j.data.segment.TextSegment;
-import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.store.embedding.EmbeddingStore;
-import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
-
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.gamelan.client.GamelanClient;
 import tech.kayys.gamelan.executor.rag.domain.*;
 import tech.kayys.gamelan.executor.rag.langchain.*;
+import tech.kayys.gamelan.executor.rag.langchain.RagObservabilityMetrics;
+import tech.kayys.wayang.rag.core.model.RagChunk;
+import tech.kayys.wayang.rag.core.model.RagDocument;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 
 /**
- * Service for ingesting documents into the vector store using LangChain4j
+ * Service for ingesting documents into the owned vector store flow.
  */
 @ApplicationScoped
 public class DocumentIngestionService {
@@ -31,13 +27,10 @@ public class DocumentIngestionService {
     private static final Logger LOG = LoggerFactory.getLogger(DocumentIngestionService.class);
 
     @Inject
-    LangChain4jModelFactory modelFactory;
+    NativeRagCoreService nativeRagCoreService;
 
     @Inject
-    LangChain4jEmbeddingStoreFactory storeFactory;
-
-    @Inject
-    LangChain4jConfig config;
+    RagObservabilityMetrics metricsRecorder = new RagObservabilityMetrics();
 
     /**
      * Ingest PDF documents into vector store
@@ -53,55 +46,41 @@ public class DocumentIngestionService {
             long startTime = System.currentTimeMillis();
 
             // 1. Load documents
-            ApachePdfBoxDocumentParser parser = new ApachePdfBoxDocumentParser();
-            List<Document> documents = new ArrayList<>();
+            List<RagDocument> documents = new ArrayList<>();
 
             for (Path path : pdfPaths) {
-                Document doc = FileSystemDocumentLoader.loadDocument(path, parser);
+                Map<String, Object> documentMetadata = new HashMap<>();
+                documentMetadata.put("tenantId", tenantId);
+                documentMetadata.put("source", path.getFileName().toString());
+                documentMetadata.put("collection", metadata.getOrDefault("collection", "default"));
+                documentMetadata.putAll(metadata);
 
-                // Add metadata
-                doc.metadata().put("tenantId", tenantId);
-                doc.metadata().put("source", path.getFileName().toString());
-                doc.metadata().put("collection", metadata.getOrDefault("collection", "default"));
-                metadata.forEach((k, v) -> doc.metadata().put(k, v));
-
-                documents.add(doc);
+                String content = readPdfText(path);
+                documents.add(RagDocument.of(path.toString(), content, documentMetadata));
             }
 
             // 2. Split documents into chunks
-            DocumentSplitter splitter = DocumentSplitters.recursive(
-                    512, // maxChunkSize
-                    50 // maxOverlapSize
-            );
-
-            List<TextSegment> segments = new ArrayList<>();
-            for (Document doc : documents) {
-                segments.addAll(splitter.split(doc));
+            List<RagChunk> chunks = new ArrayList<>();
+            for (RagDocument document : documents) {
+                chunks.addAll(nativeRagCoreService.ingestText(
+                        tenantId,
+                        document.source(),
+                        document.content(),
+                        document.metadata(),
+                        ChunkingConfig.defaults()));
             }
 
-            LOG.info("Split {} documents into {} segments", documents.size(), segments.size());
-
-            // 3. Get embedding store and model
-            EmbeddingStore<TextSegment> embeddingStore = storeFactory.getStore(tenantId, RetrievalConfig.defaults());
-
-            EmbeddingModel embeddingModel = modelFactory.createEmbeddingModel(tenantId, "text-embedding-3-small");
-
-            // 4. Ingest segments
-            EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
-                    .embeddingStore(embeddingStore)
-                    .embeddingModel(embeddingModel)
-                    .build();
-
-            ingestor.ingest(segments);
+            LOG.info("Split {} documents into {} chunks", documents.size(), chunks.size());
 
             long duration = System.currentTimeMillis() - startTime;
 
-            LOG.info("Successfully ingested {} segments in {}ms", segments.size(), duration);
+            LOG.info("Successfully ingested {} chunks in {}ms", chunks.size(), duration);
+            metricsRecorder.recordIngestion(tenantId, documents.size(), chunks.size(), duration);
 
             return new IngestResult(
                     true,
                     documents.size(),
-                    segments.size(),
+                    chunks.size(),
                     duration,
                     "Successfully ingested documents");
         });
@@ -122,41 +101,33 @@ public class DocumentIngestionService {
             long startTime = System.currentTimeMillis();
 
             // 1. Create documents
-            List<Document> documents = texts.stream()
+            List<RagDocument> documents = texts.stream()
                     .map(text -> {
-                        Document doc = Document.from(text);
-                        doc.metadata().put("tenantId", tenantId);
-                        metadata.forEach((k, v) -> doc.metadata().put(k, v));
-                        return doc;
+                        Map<String, Object> documentMetadata = new HashMap<>();
+                        documentMetadata.put("tenantId", tenantId);
+                        documentMetadata.putAll(metadata);
+                        return RagDocument.of("text", text, documentMetadata);
                     })
                     .toList();
 
-            // 2. Create splitter based on strategy
-            DocumentSplitter splitter = createSplitter(chunkingConfig);
-
-            List<TextSegment> segments = new ArrayList<>();
-            for (Document doc : documents) {
-                segments.addAll(splitter.split(doc));
+            // 2. Split using owned chunker
+            List<RagChunk> chunks = new ArrayList<>();
+            for (RagDocument document : documents) {
+                chunks.addAll(nativeRagCoreService.ingestText(
+                        tenantId,
+                        document.source(),
+                        document.content(),
+                        document.metadata(),
+                        chunkingConfig));
             }
 
-            // 3. Ingest
-            EmbeddingStore<TextSegment> embeddingStore = storeFactory.getStore(tenantId, RetrievalConfig.defaults());
-
-            EmbeddingModel embeddingModel = modelFactory.createEmbeddingModel(tenantId, "text-embedding-3-small");
-
-            EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
-                    .embeddingStore(embeddingStore)
-                    .embeddingModel(embeddingModel)
-                    .build();
-
-            ingestor.ingest(segments);
-
             long duration = System.currentTimeMillis() - startTime;
+            metricsRecorder.recordIngestion(tenantId, documents.size(), chunks.size(), duration);
 
             return new IngestResult(
                     true,
                     documents.size(),
-                    segments.size(),
+                    chunks.size(),
                     duration,
                     "Successfully ingested text documents");
         });
@@ -184,6 +155,11 @@ public class DocumentIngestionService {
                                 source.metadata(),
                                 ChunkingConfig.defaults());
                         case URL -> ingestFromUrl(tenantId, source.path(), source.metadata());
+                        case MARKDOWN, HTML -> ingestTextDocuments(
+                                tenantId,
+                                List.of(source.content() == null ? "" : source.content()),
+                                source.metadata(),
+                                ChunkingConfig.defaults());
                     };
                 })
                 .toList();
@@ -199,6 +175,8 @@ public class DocumentIngestionService {
                 totalSegments += r.segmentsCreated();
                 totalDuration += r.durationMs();
             }
+
+            metricsRecorder.recordIngestion(tenantId, totalDocs, totalSegments, totalDuration);
 
             return new IngestResult(
                     true,
@@ -219,18 +197,13 @@ public class DocumentIngestionService {
                 true, 0, 0, 0, "URL ingestion not implemented yet"));
     }
 
-    private DocumentSplitter createSplitter(ChunkingConfig config) {
-        return switch (config.strategy()) {
-            case RECURSIVE -> DocumentSplitters.recursive(
-                    config.chunkSize(),
-                    config.chunkOverlap());
-            case SENTENCE -> DocumentSplitters.recursive(
-                    config.chunkSize(),
-                    config.chunkOverlap(),
-                    new dev.langchain4j.model.chat.ChatLanguageModel[0]);
-            default -> DocumentSplitters.recursive(
-                    config.chunkSize(),
-                    config.chunkOverlap());
-        };
+    private String readPdfText(Path path) {
+        try (PDDocument document = Loader.loadPDF(path.toFile())) {
+            PDFTextStripper stripper = new PDFTextStripper();
+            return stripper.getText(document);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to parse PDF: " + path, e);
+        }
     }
+
 }

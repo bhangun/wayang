@@ -1,0 +1,68 @@
+# JReleaser configuration file
+# https://jreleaser.org/guide/latest/configuration/index.html
+
+project:
+  name: wayang
+  version: 1.0.0-SNAPSHOT
+  description: Wayang Standalone Server
+  longDescription: Wayang is a platform for building and running AI-powered applications.
+  authors:
+    - bhangun
+  license: Apache-2.0
+  links:
+    homepage: https://github.com/bhangun/wayang
+  java:
+    groupId: tech.kayys.wayang
+    version: 25
+
+release:
+  github:
+    owner: bhangun
+    overwrite: true
+    sign: true
+
+distributions:
+  wayang-standalone:
+    type: NATIVE_IMAGE
+    executable: wayang-standalone
+    artifacts:
+      - path: artifacts/wayang-standalone-linux-x86_64
+        platform: linux-x86_64
+      - path: artifacts/wayang-standalone-linux-aarch_64
+        platform: linux-aarch_64
+      - path: artifacts/wayang-standalone-osx-x86_64
+        platform: osx-x86_64
+      - path: artifacts/wayang-standalone-osx-aarch_64
+        platform: osx-aarch_64
+      - path: artifacts/wayang-standalone-windows-x86_64
+        platform: windows-x86_64
+
+    brew:
+      active: ALWAYS
+      formulaName: wayang
+      multiFormula: false
+      tap:
+        owner: bhangun
+        name: homebrew-tap
+
+    chocolatey:
+      active: ALWAYS
+      packageName: wayang
+      remoteBuild: true
+      bucket:
+        owner: bhangun
+        name: chocolatey-bucket
+
+    docker:
+      active: ALWAYS
+      repository: wayang
+      labels:
+        org.opencontainers.image.title: "Wayang Standalone"
+      registries:
+        - server: docker.io
+          username: ${{ env.DOCKER_USERNAME }}
+      specs:
+        - platform: linux/amd64
+          dockerfile: runtime/wayang-runtime-standalone/src/main/docker/Dockerfile.native-micro
+        - platform: linux/arm64
+          dockerfile: runtime/wayang-runtime-standalone/src/main/docker/Dockerfile.native-micro

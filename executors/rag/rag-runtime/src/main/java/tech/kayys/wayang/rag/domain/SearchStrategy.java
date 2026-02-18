@@ -1,6 +1,6 @@
 package tech.kayys.gamelan.executor.rag.domain;
 
-enum SearchStrategy {
+public enum SearchStrategy {
     SEMANTIC,
     HYBRID,
     SEMANTIC_RERANK,

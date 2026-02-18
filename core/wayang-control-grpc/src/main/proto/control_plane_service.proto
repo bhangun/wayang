@@ -1,0 +1,255 @@
+syntax = "proto3";
+
+package tech.kayys.wayang.control.grpc;
+
+option java_multiple_files = true;
+option java_package = "tech.kayys.wayang.control.grpc";
+option java_outer_classname = "ControlPlaneProto";
+
+// Project management service
+service ProjectService {
+  rpc CreateProject(CreateProjectRequest) returns (ProjectResponse);
+  rpc GetProject(GetProjectRequest) returns (ProjectResponse);
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+}
+
+// Workflow management service
+service WorkflowService {
+  rpc CreateWorkflowTemplate(CreateWorkflowTemplateRequest) returns (WorkflowTemplateResponse);
+  rpc GetWorkflowTemplate(GetWorkflowTemplateRequest) returns (WorkflowTemplateResponse);
+  rpc ListWorkflowTemplates(ListWorkflowTemplatesRequest) returns (ListWorkflowTemplatesResponse);
+  rpc PublishWorkflowTemplate(PublishWorkflowTemplateRequest) returns (PublishWorkflowTemplateResponse);
+}
+
+// Agent management service
+service AgentService {
+  rpc CreateAgent(CreateAgentRequest) returns (AgentResponse);
+  rpc GetAgent(GetAgentRequest) returns (AgentResponse);
+  rpc ActivateAgent(ActivateAgentRequest) returns (AgentResponse);
+  rpc DeactivateAgent(DeactivateAgentRequest) returns (AgentResponse);
+  rpc ExecuteTask(ExecuteTaskRequest) returns (ExecuteTaskResponse);
+}
+
+// Schema registry service
+service SchemaRegistryService {
+  rpc RegisterSchema(RegisterSchemaRequest) returns (SchemaRegistryResponse);
+  rpc GetSchema(GetSchemaRequest) returns (GetSchemaResponse);
+  rpc ValidateSchema(ValidateSchemaRequest) returns (ValidateSchemaResponse);
+  rpc RemoveSchema(RemoveSchemaRequest) returns (SchemaRegistryResponse);
+}
+
+// Project messages
+message CreateProjectRequest {
+  string tenant_id = 1;
+  string project_name = 2;
+  string description = 3;
+  string project_type = 4;
+  string created_by = 5;
+  map<string, string> metadata = 6;
+}
+
+message GetProjectRequest {
+  string project_id = 1;
+  string tenant_id = 2;
+}
+
+message ListProjectsRequest {
+  string tenant_id = 1;
+  string project_type = 2;
+}
+
+message DeleteProjectRequest {
+  string project_id = 1;
+  string tenant_id = 2;
+}
+
+message ProjectResponse {
+  bool success = 1;
+  string message = 2;
+  Project project = 3;
+}
+
+message ListProjectsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated Project projects = 3;
+}
+
+message DeleteProjectResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message Project {
+  string project_id = 1;
+  string tenant_id = 2;
+  string project_name = 3;
+  string description = 4;
+  string project_type = 5;
+  string created_by = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
+  bool is_active = 9;
+  map<string, string> metadata = 10;
+}
+
+// Workflow messages
+message CreateWorkflowTemplateRequest {
+  string project_id = 1;
+  string template_name = 2;
+  string description = 3;
+  string version = 4;
+  string template_type = 5;
+  string canvas_definition = 6;
+  repeated string tags = 7;
+}
+
+message GetWorkflowTemplateRequest {
+  string template_id = 1;
+}
+
+message ListWorkflowTemplatesRequest {
+  string tenant_id = 1;
+}
+
+message PublishWorkflowTemplateRequest {
+  string template_id = 1;
+}
+
+message WorkflowTemplateResponse {
+  bool success = 1;
+  string message = 2;
+  WorkflowTemplate template = 3;
+}
+
+message ListWorkflowTemplatesResponse {
+  bool success = 1;
+  string message = 2;
+  repeated WorkflowTemplate templates = 3;
+}
+
+message PublishWorkflowTemplateResponse {
+  bool success = 1;
+  string message = 2;
+  string workflow_definition_id = 3;
+}
+
+message WorkflowTemplate {
+  string template_id = 1;
+  string project_id = 2;
+  string template_name = 3;
+  string description = 4;
+  string version = 5;
+  string template_type = 6;
+  string canvas_definition = 7;
+  repeated string tags = 8;
+  int64 created_at = 9;
+  int64 updated_at = 10;
+  bool is_published = 11;
+  string workflow_definition_id = 12;
+}
+
+// Agent messages
+message CreateAgentRequest {
+  string project_id = 1;
+  string agent_name = 2;
+  string description = 3;
+  string agent_type = 4;
+  repeated string tools = 5;
+  repeated string capabilities = 6;
+  map<string, string> llm_config = 7;
+  map<string, string> memory_config = 8;
+  repeated string guardrails = 9;
+}
+
+message GetAgentRequest {
+  string agent_id = 1;
+}
+
+message ActivateAgentRequest {
+  string agent_id = 1;
+}
+
+message DeactivateAgentRequest {
+  string agent_id = 1;
+}
+
+message ExecuteTaskRequest {
+  string agent_id = 1;
+  string task_id = 2;
+  string task_description = 3;
+  map<string, string> task_parameters = 4;
+}
+
+message AgentResponse {
+  bool success = 1;
+  string message = 2;
+  Agent agent = 3;
+}
+
+message ExecuteTaskResponse {
+  bool success = 1;
+  string message = 2;
+  string task_id = 3;
+  map<string, string> results = 4;
+}
+
+message Agent {
+  string agent_id = 1;
+  string project_id = 2;
+  string agent_name = 3;
+  string description = 4;
+  string agent_type = 5;
+  repeated string tools = 6;
+  repeated string capabilities = 7;
+  map<string, string> llm_config = 8;
+  map<string, string> memory_config = 9;
+  repeated string guardrails = 10;
+  string status = 11;
+  int64 created_at = 12;
+}
+
+// Schema registry messages
+message RegisterSchemaRequest {
+  string schema_id = 1;
+  string schema = 2;
+  string schema_type = 3;
+  map<string, string> metadata = 4;
+}
+
+message GetSchemaRequest {
+  string schema_id = 1;
+}
+
+message ValidateSchemaRequest {
+  string schema_id = 1;
+  string data = 2;  // JSON string
+}
+
+message RemoveSchemaRequest {
+  string schema_id = 1;
+}
+
+message SchemaRegistryResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetSchemaResponse {
+  bool success = 1;
+  string message = 2;
+  string schema = 3;
+}
+
+message ValidateSchemaResponse {
+  bool valid = 1;
+  string message = 2;
+  repeated ValidationIssue issues = 3;
+}
+
+message ValidationIssue {
+  string field = 1;
+  string message = 2;
+  string severity = 3;  // ERROR, WARNING, INFO
+}

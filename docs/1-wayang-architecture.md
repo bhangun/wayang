@@ -10,15 +10,25 @@
 * MCP Tool Plane
 * Gamelan Workflow Engine
 * Executor Runtimes (Agent Pool, RAG, EIP)
-* Golek Inference Server
+* Gollek Inference Server
 * Model Providers (cloud & local)
 * External Systems (APIs, DBs, Knowledge)
 * Storage + Messaging
 
+## Multi-Tenancy Activation
+
+Multi-tenancy is disabled by default and enabled per component via extensions:
+
+* Gollek: `tenant-gollek-ext`
+* Gamelan: `tenant-gamelan-ext`
+* Wayang: `tenant-wayang-ext`
+
+The extensions automatically set `wayang.multitenancy.enabled=true`. See `wayang-enterprise/modules/tenant/README.md` for details.
+
 
 ```mermaid
 C4Container
-title Wayang Family Architecture (Wayang + Iket + MCP + Gamelan + Golek)
+title Wayang Family Architecture (Wayang + Iket + MCP + Gamelan + Gollek)
 
 Person(user, "User / Developer", "Designs and runs agentic workflows")
 
@@ -53,7 +63,7 @@ System_Boundary(mcp, "MCP Tool Plane") {
     Container(mcpServer, "MCP Server", "Java", "Tool registry & execution")
 }
 
-System_Boundary(golek, "Golek Inference Server") {
+System_Boundary(gollek, "Gollek Inference Server") {
     Container(inference, "Inference API", "Python/Java", "Unified LLM & model inference interface")
     Container(modelmgr, "Model Manager", "Runtime", "Loads and manages models")
 }
@@ -120,7 +130,7 @@ Rel(api, ui, "Streams results")
 * Tool registry & execution
 * Shared tool surface for agents, RAG, and integrations
 
-**Golek = Inference Plane**
+**Gollek = Inference Plane**
 
 * LLM + ML inference
 * Multi-provider abstraction
@@ -158,7 +168,7 @@ Component(configMgr, "Config Manager", "Core Service", "Profiles, environments a
 
 Component(deployMgr, "Deployment Manager", "Control Plane", "Deploys workflows to Gamelan runtimes")
 
-Component(runtimeRegistry, "Runtime Registry", "Service Registry", "Tracks available Gamelan & Golek runtimes")
+Component(runtimeRegistry, "Runtime Registry", "Service Registry", "Tracks available Gamelan & Gollek runtimes")
 
 Component(versionMgr, "Versioning & Packaging", "Artifact Service", "Workflow versions, bundles, .wy packages")
 
@@ -249,7 +259,7 @@ flowchart TD
 ## Wayang Deployment Standalone Mode
 
 
-- ✅ Wayang + Gamelan + Golek
+- ✅ Wayang + Gamelan + Gollek
 - ✅ All run **inside one JVM process**
 - ✅ No network hops
 - ✅ Uses embedded DB & local models
@@ -273,7 +283,7 @@ System_Boundary(jvm, "Single JVM Runtime (Standalone Mode)") {
 
     Container(workflow, "Gamelan Engine", "Java", "Workflow orchestration & execution")
 
-    Container(inference, "Golek Inference", "Java/Python embedded", "Local inference abstraction")
+    Container(inference, "Gollek Inference", "Java/Python embedded", "Local inference abstraction")
 
     Container(modelmgr, "Model Manager", "Runtime", "Loads local models")
 
@@ -324,7 +334,7 @@ No:
 | ---------------- | ------------------- |
 | PostgreSQL       | H2 / SQLite         |
 | Redis            | RocksDB / MapDB     |
-| Golek service    | In-process lib      |
+| Gollek service    | In-process lib      |
 | REST/gRPC        | Direct method calls |
 | Ollama/vLLM      | LiteRT / ONNX / JNI |
 
@@ -348,7 +358,7 @@ No:
 ```mermaid
 
 C4Container
-title Wayang Family Architecture (Wayang + Gamelan + Golek)
+title Wayang Family Architecture (Wayang + Gamelan + Gollek)
 
 Person(user, "User / Developer", "Designs and runs agentic workflows")
 
@@ -369,7 +379,7 @@ System_Boundary(gamelan, "Gamelan Workflow Engine") {
     ContainerDb(state, "Execution State Store", "Redis / DB", "Workflow runtime state")
 }
 
-System_Boundary(golek, "Golek Inference Server") {
+System_Boundary(gollek, "Gollek Inference Server") {
     Container(inference, "Inference API", "Python/Java", "Unified LLM & model inference interface")
     Container(modelmgr, "Model Manager", "Runtime", "Loads and manages models")
 }
@@ -411,7 +421,7 @@ Rel(api, ui, "Streams results")
 * **Gamelan Engine** → `workflow-gamelan/core/gamelan-engine`
 * **Gamelan Runtime API** → `workflow-gamelan/core/gamelan-runtime-core`
 * **Executor Runtimes (Java)** → `wayang/executors/`
-* **Golek Inference Engine** → `inference-golek/`
+* **Gollek Inference Engine** → `inference-gollek/`
 
 ---
 
@@ -440,3 +450,44 @@ sequenceDiagram
         end
     end
 ```
+
+---
+
+## ✅ Step-By-Step Build Order (Minimal → Production)
+
+1. **Boot Control Plane Core**  
+   Focus: project/workflow/agent CRUD + schema validation.  
+   Code: `wayang/core/wayang-control-plane-core`
+
+2. **Add Orchestrator Integration (Gamelan Client)**  
+   Focus: packaging + deployment to runtime.  
+   Code: `wayang/core/wayang-orchestrator-*`
+
+3. **Attach Vault / Secrets**  
+   Focus: secure credentials and config.  
+   Code: `wayang/core/wayang-vault-manager`
+
+4. **Enable Plugin Registry**  
+   Focus: plugin discovery and schema registration.  
+   Code: `wayang/core/wayang-plugin-registry`, `wayang/core/wayang-plugin-spi`
+
+5. **Add Gateway Edge**  
+   Focus: external API entry, rate limits, auth.  
+   Code: `gateway-iket/`
+
+6. **Wire UI + CLI**  
+   Focus: user-facing design & operations.  
+   Code: `wayang-ui/`
+
+---
+
+## ✅ Production Readiness Checklist (Wayang)
+
+* AuthN/AuthZ enabled at the gateway and API
+* Schema validation enforced on all workflow/agent definitions
+* Secrets stored and audited (Vault/KMS)
+* Plugin registry validation + signing policy
+* Audit log enabled for control-plane actions
+* Rate limits + quota policies in the gateway
+* Metrics + traces exported (OpenTelemetry)
+* Backup/restore for metadata DB

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>tech.kayys.wayang</groupId>
+        <artifactId>wayang-eip-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>wayang-eip-executors-parent</artifactId>
+    <packaging>pom</packaging>
+    <name>Wayang :: EIP :: Executors</name>
+
+    <modules>
+        <module>wayang-eip-builtin</module>
+        <module>wayang-eip-http</module>
+        <module>wayang-eip-kafka</module>
+        <module>wayang-eip-grpc</module>
+        <module>wayang-eip-websocket</module>
+        <module>wayang-eip-sse</module>
+        <module>wayang-eip-file</module>
+        <module>wayang-eip-database</module>
+        <module>wayang-eip-postgresql</module>
+        <module>wayang-eip-mongodb</module>
+        <module>wayang-eip-redis</module>
+        <module>wayang-eip-storage</module>
+        <module>wayang-eip-event</module>
+        <module>wayang-eip-ftp</module>
+        <module>wayang-eip-soap</module>
+        <module>wayang-eip-social-media</module>
+        <module>wayang-eip-aws</module>
+        <module>wayang-eip-azure</module>
+        <module>wayang-eip-gcp</module>
+    </modules>
+</project>

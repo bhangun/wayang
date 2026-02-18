@@ -1,4 +1,4 @@
-package tech.kayys.wayang.integration.core.executor;
+package tech.kayys.wayang.eip.executor;
 
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;

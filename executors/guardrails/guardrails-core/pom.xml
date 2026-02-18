@@ -8,8 +8,8 @@
 
   <properties>
     <!-- Set Java version -->
-    <maven.compiler.source>21</maven.compiler.source>
-    <maven.compiler.target>21</maven.compiler.target>
+    <maven.compiler.source>25</maven.compiler.source>
+    <maven.compiler.target>25</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <cel-java.version>0.5.0</cel-java.version>
   </properties>
@@ -37,5 +37,6 @@
       <version>4.0.1</version>
       <scope>provided</scope>
     </dependency>
+    
   </dependencies>
 </project>

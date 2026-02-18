@@ -1,0 +1,34 @@
+name: Wayang Error Codes
+
+on:
+  pull_request:
+    paths:
+      - "wayang/scripts/generate-error-codes.sh"
+      - "wayang/docs/error-codes.md"
+      - "wayang/.github/workflows/error-codes.yml"
+      - "wayang/core/wayang-error-spi/src/main/java/**"
+  push:
+    paths:
+      - "wayang/scripts/generate-error-codes.sh"
+      - "wayang/docs/error-codes.md"
+      - "wayang/.github/workflows/error-codes.yml"
+      - "wayang/core/wayang-error-spi/src/main/java/**"
+
+jobs:
+  check-error-codes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Generate error codes doc
+        run: ./wayang/scripts/generate-error-codes.sh
+
+      - name: Check for updates
+        run: |
+          git diff --exit-code wayang/docs/error-codes.md

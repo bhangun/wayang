@@ -13,6 +13,7 @@
     <modules>
         <module>guardrails-runtime</module>
         <module>guardrails-core</module>
+        <module>guardrails-plugins</module>
     </modules>
 
     <dependencyManagement>

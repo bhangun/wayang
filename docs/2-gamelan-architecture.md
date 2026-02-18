@@ -12,8 +12,20 @@
 - ✔ Error handling
 - ✔ Callback / Eventing
 - ✔ Plugin-based extensibility
+- ✔ Service Discovery (optional)
+- ✔ DAG specialization (optional module)
 
 ---
+
+## Multi-Tenancy Activation
+
+Multi-tenancy is disabled by default and enabled per component via extensions.
+
+* Gamelan: `tenant-gamelan-ext`
+* Wayang: `tenant-wayang-ext`
+* Gollek: `tenant-gollek-ext`
+
+The extensions automatically set `wayang.multitenancy.enabled=true`. See `wayang-enterprise/modules/tenant/README.md` for details.
 
 ## 🎼 Gamelan Workflow Engine — Internal Modules (C4 Component)
 
@@ -47,6 +59,8 @@ Component(callbackMgr, "Callback Manager", "Event System", "Handles async callba
 
 Component(eventBus, "Internal Event Bus", "In-Memory / Kafka", "Publishes workflow lifecycle events")
 
+Component(serviceDiscovery, "Service Discovery (Optional)", "Consul / Static", "Discovers executor endpoints")
+
 Component(metricCollector, "Metrics & Tracing", "OpenTelemetry", "Collects observability data")
 
 Rel(orchestrator, defParser, "Loads")
@@ -64,6 +78,8 @@ Rel(orchestrator, errorHandler, "Delegates failures to")
 
 Rel(orchestrator, callbackMgr, "Registers callbacks")
 Rel(callbackMgr, eventBus, "Publishes events")
+
+Rel(orchestrator, serviceDiscovery, "Discovers executor endpoints")
 
 Rel(orchestrator, metricCollector, "Emits metrics")
 Rel(nodeExecutor, metricCollector, "Emits metrics")
@@ -334,6 +350,7 @@ Running → Suspended → Running
 * **Runtime API (REST/gRPC/Kafka)** → `workflow-gamelan/core/gamelan-runtime-core`, `workflow-gamelan/protocol/`
 * **SDK Client** → `workflow-gamelan/sdk/gamelan-sdk-client-*`
 * **Executor SDKs** → `workflow-gamelan/sdk/gamelan-sdk-executor-*`
+* **Service Discovery (optional)** → `workflow-gamelan/plugins/` (e.g., Consul plugin)
 
 ---
 
@@ -408,3 +425,143 @@ sequenceDiagram
         ORCH -->> RT: event(node.completed)
     end
 ```
+
+---
+
+## ✅ Workflow Mode (DAG | FLOW | STATE)
+
+By default, workflows run as **FLOW** (agentic loops allowed).  
+Use `mode: DAG` only when you want strict acyclic validation.
+
+```yaml
+id: example_workflow
+mode: FLOW  # FLOW | DAG | STATE
+```
+
+### DAG Example (Pipeline)
+
+```yaml
+id: nightly_pipeline
+mode: DAG
+nodes:
+  - id: extract
+    type: http
+  - id: transform
+    type: tool
+    dependsOn: [extract]
+  - id: load
+    type: storage
+    dependsOn: [transform]
+```
+
+Recommended runtime flags:
+* `gamelan.dag.plugin.enabled=true`
+* `gamelan.dag.scheduler.enabled=true` (topological ordering)
+
+---
+
+## 🔁 Executor Registration & Heartbeat — Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant EX as Executor Runtime
+    participant SDK as Executor SDK
+    participant API as Runtime API (REST/gRPC/Kafka)
+    participant REG as Executor Registry
+
+    EX ->> SDK: discover executors
+    SDK ->> API: register(executorInfo)
+    API ->> REG: registerExecutor()
+    REG -->> API: ok
+    API -->> SDK: registration ack
+
+    loop heartbeat interval
+        SDK ->> API: heartbeat(executorId)
+        API ->> REG: heartbeat(executorId)
+        REG -->> API: ok
+    end
+
+    alt heartbeat timeout
+        REG ->> REG: mark unhealthy + cleanup
+    end
+```
+
+---
+
+## 🔁 Async Callback / HITL — Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant ORCH as Orchestrator
+    participant EX as Executor
+    participant CB as Callback Service
+    participant API as Runtime API
+
+    ORCH ->> EX: dispatchTask(async)
+    ORCH ->> CB: registerCallback(token)
+    CB -->> ORCH: callback token
+    EX -->> API: callback(token, result)
+    API ->> CB: deliver callback
+    CB ->> ORCH: resume execution
+```
+
+---
+
+## ✅ Production-Ready Implementation Trail (Code Pointers)
+
+1. Runtime API executor endpoints: `workflow-gamelan/core/gamelan-runtime-core/src/main/java/tech/kayys/gamelan/runtime/resource/ExecutorRegistryResource.java`
+2. Executor registry core: `workflow-gamelan/core/gamelan-executor-registry/src/main/java/tech/kayys/gamelan/registry/ExecutorRegistry.java`
+3. gRPC executor registration/heartbeat: `workflow-gamelan/core/gamelan-engine/src/main/java/tech/kayys/gamelan/grpc/ExecutorServiceImpl.java`
+4. Executor SDK registration + heartbeat loop: `workflow-gamelan/core/gamelan-sdk-executor-core/src/main/java/tech/kayys/gamelan/sdk/executor/core/ExecutorRegistrationService.java`
+5. Dispatch transports: `workflow-gamelan/core/gamelan-engine/src/main/java/tech/kayys/gamelan/dispatcher/GrpcTaskDispatcher.java`
+6. Dispatch transports: `workflow-gamelan/core/gamelan-engine/src/main/java/tech/kayys/gamelan/dispatcher/KafkaTaskDispatcher.java`
+7. Dispatch transports: `workflow-gamelan/core/gamelan-engine/src/main/java/tech/kayys/gamelan/dispatcher/RestTaskDispatcher.java`
+8. Dispatch transports: `workflow-gamelan/core/gamelan-engine/src/main/java/tech/kayys/gamelan/dispatcher/LocalTaskDispatcher.java`
+9. Executor base contracts: `workflow-gamelan/core/gamelan-sdk-executor-core/src/main/java/tech/kayys/gamelan/sdk/executor/core/WorkflowExecutor.java`
+10. Executor base implementation: `workflow-gamelan/core/gamelan-sdk-executor-core/src/main/java/tech/kayys/gamelan/sdk/executor/core/AbstractWorkflowExecutor.java`
+11. Callback service contract: `workflow-gamelan/core/gamelan-engine/src/main/java/tech/kayys/gamelan/engine/CallbackService.java`
+12. Callback registration path: `workflow-gamelan/core/gamelan-engine/src/main/java/tech/kayys/gamelan/engine/impl/DefaultWorkflowRunManager.java`
+13. Executor adapters: `workflow-gamelan/core/gamelan-runtime-core/src/main/java/tech/kayys/gamelan/runtime/adapter/GrpcExecutorAdapter.java`
+14. Executor adapters: `workflow-gamelan/core/gamelan-runtime-core/src/main/java/tech/kayys/gamelan/runtime/adapter/HttpExecutorAdapter.java`
+15. Executor adapters: `workflow-gamelan/core/gamelan-runtime-core/src/main/java/tech/kayys/gamelan/runtime/adapter/LocalExecutorAdapter.java`
+
+---
+
+## ✅ Step-By-Step Build Order (Minimal → Production)
+
+1. **Boot the core engine**  
+   Focus: core orchestration loop and state transitions.  
+   Code: `workflow-gamelan/core/gamelan-engine`
+
+2. **Add the runtime API**  
+   Focus: external control plane entry points.  
+   Code: `workflow-gamelan/core/gamelan-runtime-core`
+
+3. **Introduce executor registration + heartbeat**  
+   Focus: discovery and liveness for distributed executors.  
+   Code: `workflow-gamelan/core/gamelan-executor-registry`, `workflow-gamelan/core/gamelan-sdk-executor-core`
+
+4. **Enable transports (local + remote)**  
+   Focus: dispatchers and adapters for real execution.  
+   Code: `workflow-gamelan/core/gamelan-engine/src/main/java/tech/kayys/gamelan/dispatcher/`, `workflow-gamelan/core/gamelan-runtime-core/src/main/java/tech/kayys/gamelan/runtime/adapter/`
+
+5. **Add callback + HITL support**  
+   Focus: async nodes, waiting states, external signals.  
+   Code: `workflow-gamelan/core/gamelan-engine/src/main/java/tech/kayys/gamelan/engine/CallbackService.java`, `workflow-gamelan/core/gamelan-engine/src/main/java/tech/kayys/gamelan/engine/impl/DefaultWorkflowRunManager.java`
+
+6. **Layer in SDKs**  
+   Focus: developer experience for client and executor runtimes.  
+   Code: `workflow-gamelan/sdk/`
+
+---
+
+## ✅ Production Readiness Checklist (Gamelan)
+
+* Executor registry health + heartbeat timeouts configured
+* Dispatch transports (REST/gRPC/Kafka) validated
+* Retry/compensation policies tested per node type
+* Callback/HITL tokens are signed and expiring
+* Idempotency enforced for task results
+* State store + history store durability verified
+* Dead-letter handling for failed tasks
+* Metrics + traces exported (OpenTelemetry)

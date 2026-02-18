@@ -5,19 +5,20 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>tech.kayys.wayang</groupId>
-        <artifactId>wayang-integration-parent</artifactId>
+        <artifactId>wayang-eip-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
-    <artifactId>wayang-integration-core</artifactId>
+    <artifactId>wayang-eip-core</artifactId>
 
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
     </properties>
 
     <dependencies>
+
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-arc</artifactId>
@@ -89,7 +90,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <release>21</release>
+                    <release>25</release>
                 </configuration>
             </plugin>
             <plugin>

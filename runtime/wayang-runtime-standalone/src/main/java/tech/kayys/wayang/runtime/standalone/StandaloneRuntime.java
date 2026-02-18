@@ -5,27 +5,25 @@ import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
-import tech.kayys.wayang.control.service.ProjectManager;
-import tech.kayys.wayang.control.service.WorkflowManager;
-import tech.kayys.wayang.engine.gamelan.GamelanService;
-import tech.kayys.wayang.plugin.ControlPlanePluginManager;
+import tech.kayys.wayang.control.service.*;
+import tech.kayys.wayang.schema.validator.SchemaValidationService;
+import tech.kayys.wayang.inference.gollek.GollekInferenceService;
+import tech.kayys.wayang.runtime.standalone.status.RuntimeStatusSnapshot;
+import tech.kayys.wayang.runtime.standalone.status.RuntimeStatusService;
 
 @QuarkusMain
 public class StandaloneRuntime implements QuarkusApplication {
 
     private static final Logger LOG = Logger.getLogger(StandaloneRuntime.class);
 
-    @Inject
-    GamelanService gamelanService;
-
-    @Inject
-    ControlPlanePluginManager pluginManager;
-
-    @Inject
-    ProjectManager projectManager;
-
-    @Inject
-    WorkflowManager workflowManager;
+    @Inject RuntimeStatusService runtimeStatusService;
+    @Inject ProjectManager projectManager;
+    @Inject WorkflowManager workflowManager;
+    @Inject AgentManager agentManager;
+    @Inject SchemaRegistryService schemaRegistryService;
+    @Inject PluginManagerService pluginManagerService;
+    @Inject SchemaValidationService schemaValidationService;
+    @Inject GollekInferenceService gollekInferenceService;
 
     @Override
     public int run(String... args) throws Exception {
@@ -33,29 +31,30 @@ public class StandaloneRuntime implements QuarkusApplication {
         System.out.println("      WAYANG STANDALONE RUNTIME STARTING         ");
         System.out.println("=================================================");
 
-        // 1. Initialize Plugins
-        LOG.info("Initializing Plugin Manager...");
-        int plugins = pluginManager.getRegisteredPlugins().size();
-        LOG.infof("Plugin Manager initialized. Loaded %d plugins.", plugins);
-
-        // 2. Test Orchestration Connection
-        LOG.info("Verifying Gamelan Orchestration Engine...");
-        gamelanService.testConnection();
-
-        // 3. Verify Control Plane Services
-        LOG.info("Verifying Control Plane Services...");
-        if (projectManager != null && workflowManager != null) {
-            LOG.info("Control Plane Services (ProjectManager, WorkflowManager) are active.");
+        RuntimeStatusSnapshot snapshot = runtimeStatusService.collectStatus().await().indefinitely();
+        if (snapshot.ready()) {
+            LOG.infof("Wayang standalone is ready. Components=%s", snapshot.components());
         } else {
-            LOG.error("Control Plane Services failed to inject.");
+            LOG.warnf("Wayang standalone started with degraded components=%s", snapshot.components());
         }
 
-        // 4. Start Quarkus and wait
+        // 7. Start Quarkus and wait
         System.out.println("=================================================");
         System.out.println("      WAYANG STANDALONE RUNTIME READY            ");
         System.out.println("=================================================");
-        
+
         Quarkus.waitForExit();
         return 0;
+    }
+
+    @SuppressWarnings("unused")
+    private boolean verifySystemReadiness() {
+        return projectManager != null
+                && workflowManager != null
+                && agentManager != null
+                && schemaValidationService != null
+                && schemaRegistryService != null
+                && pluginManagerService != null
+                && gollekInferenceService != null;
     }
 }

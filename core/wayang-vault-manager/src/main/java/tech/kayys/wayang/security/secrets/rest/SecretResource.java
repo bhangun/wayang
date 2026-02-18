@@ -6,6 +6,8 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
+import tech.kayys.wayang.error.ErrorCode;
+import tech.kayys.wayang.error.WayangException;
 import tech.kayys.wayang.security.secrets.core.DefaultSecretManager;
 import tech.kayys.wayang.security.secrets.core.SecretManager;
 import tech.kayys.wayang.security.secrets.dto.*;
@@ -312,15 +314,40 @@ record ErrorResponse(
         String message,
         String code) {
     static ErrorResponse from(Throwable th) {
+        if (th instanceof WayangException we) {
+            ErrorCode errorCode = we.getErrorCode();
+            return new ErrorResponse(
+                    we.getClass().getSimpleName(),
+                    we.getMessage(),
+                    errorCode.getCode());
+        }
         if (th instanceof SecretException se) {
+            ErrorCode errorCode = mapSecretErrorCode(se.getErrorCode());
             return new ErrorResponse(
                     "SecretException",
                     se.getMessage(),
-                    se.getErrorCode().name());
+                    errorCode.getCode());
         }
         return new ErrorResponse(
                 th.getClass().getSimpleName(),
                 th.getMessage(),
-                "UNKNOWN");
+                ErrorCode.INTERNAL_ERROR.getCode());
+    }
+
+    private static ErrorCode mapSecretErrorCode(SecretException.ErrorCode errorCode) {
+        return switch (errorCode) {
+            case SECRET_NOT_FOUND -> ErrorCode.SECURITY_SECRET_NOT_FOUND;
+            case PERMISSION_DENIED -> ErrorCode.SECURITY_FORBIDDEN;
+            case BACKEND_UNAVAILABLE -> ErrorCode.SECURITY_SECRET_BACKEND_UNAVAILABLE;
+            case ENCRYPTION_FAILED -> ErrorCode.SECURITY_SECRET_ENCRYPTION_FAILED;
+            case DECRYPTION_FAILED -> ErrorCode.SECURITY_SECRET_DECRYPTION_FAILED;
+            case INVALID_PATH -> ErrorCode.SECURITY_SECRET_INVALID_PATH;
+            case QUOTA_EXCEEDED -> ErrorCode.SECURITY_SECRET_QUOTA_EXCEEDED;
+            case VERSION_NOT_FOUND -> ErrorCode.SECURITY_SECRET_VERSION_NOT_FOUND;
+            case SECRET_EXPIRED -> ErrorCode.SECURITY_SECRET_EXPIRED;
+            case ROTATION_FAILED -> ErrorCode.SECURITY_SECRET_ROTATION_FAILED;
+            case INVALID_REQUEST -> ErrorCode.VALIDATION_FAILED;
+            case INTERNAL_ERROR -> ErrorCode.INTERNAL_ERROR;
+        };
     }
 }

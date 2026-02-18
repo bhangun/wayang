@@ -1,0 +1,591 @@
+// src/main/java/com/example/generator/plugin/PluginResource.java
+package com.example.generator.plugin;
+
+import io.quarkus.logging.Log;
+import io.smallrye.mutiny.Uni;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Path("/api/plugins")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+public class PluginResource {
+    
+    @Inject
+    PluginAwareGeneratorService pluginService;
+    
+    @Inject
+    PluginManager pluginManager;
+    
+    @GET
+    @Path("/")
+    public Response listPlugins() {
+        Log.info("Listing available plugins");
+        
+        try {
+            List<PluginAwareGeneratorService.PluginInfo> plugins = pluginService.getAvailablePlugins();
+            
+            return Response.ok(new PluginListResponse(
+                plugins.size(),
+                plugins
+            )).build();
+            
+        } catch (Exception e) {
+            Log.error("Failed to list plugins", e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ErrorResponse("Failed to list plugins: " + e.getMessage()))
+                .build();
+        }
+    }
+    
+    @GET
+    @Path("/{pluginId}")
+    public Response getPlugin(@PathParam("pluginId") String pluginId) {
+        Log.info("Getting plugin details: {}", pluginId);
+        
+        try {
+            var plugin = pluginManager.getPlugin(pluginId);
+            
+            if (plugin.isPresent()) {
+                GeneratorPlugin p = plugin.get();
+                return Response.ok(new PluginDetailsResponse(
+                    p.getId(),
+                    p.getName(),
+                    p.getVersion(),
+                    p.getDescription(),
+                    p.getConfiguration()
+                )).build();
+            } else {
+                return Response.status(Response.Status.NOT_FOUND)
+                    .entity(new ErrorResponse("Plugin not found: " + pluginId))
+                    .build();
+            }
+            
+        } catch (Exception e) {
+            Log.error("Failed to get plugin details", e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ErrorResponse("Failed to get plugin: " + e.getMessage()))
+                .build();
+        }
+    }
+    
+    @POST
+    @Path("/{pluginId}/configure")
+    public Response configurePlugin(@PathParam("pluginId") String pluginId, 
+                                  Map<String, Object> configuration) {
+        Log.info("Configuring plugin: {}", pluginId);
+        
+        try {
+            var plugin = pluginManager.getPlugin(pluginId);
+            
+            if (plugin.isPresent()) {
+                plugin.get().configure(configuration);
+                
+                return Response.ok(new SuccessResponse(
+                    "Plugin configured successfully",
+                    Map.of("pluginId", pluginId, "configuration", configuration)
+                )).build();
+            } else {
+                return Response.status(Response.Status.NOT_FOUND)
+                    .entity(new ErrorResponse("Plugin not found: " + pluginId))
+                    .build();
+            }
+            
+        } catch (Exception e) {
+            Log.error("Failed to configure plugin", e);
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ErrorResponse("Failed to configure plugin: " + e.getMessage()))
+                .build();
+        }
+    }
+    
+    @GET
+    @Path("/template-processors")
+    public Response getTemplateProcessors() {
+        Log.info("Listing template processors");
+        
+        try {
+            // Get all template processors
+            List<TemplateProcessor> processors = pluginManager.getTemplateProcessors("*");
+            
+            List<TemplateProcessorInfo> processorInfos = processors.stream()
+                .map(processor -> new TemplateProcessorInfo(
+                    processor.getTemplateType(),
+                    processor.getClass().getSimpleName()
+                ))
+                .toList();
+            
+            return Response.ok(new TemplateProcessorListResponse(
+                processorInfos.size(),
+                processorInfos
+            )).build();
+            
+        } catch (Exception e) {
+            Log.error("Failed to list template processors", e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ErrorResponse("Failed to list template processors: " + e.getMessage()))
+                .build();
+        }
+    }
+    
+    @GET
+    @Path("/validators")
+    public Response getValidators() {
+        Log.info("Listing validators");
+        
+        try {
+            List<ValidationPlugin> validators = pluginManager.getValidators("*");
+            
+            List<ValidatorInfo> validatorInfos = validators.stream()
+                .map(validator -> new ValidatorInfo(
+                    validator.getValidationType(),
+                    validator.getClass().getSimpleName(),
+                    validator.getValidationRules().size()
+                ))
+                .toList();
+            
+            return Response.ok(new ValidatorListResponse(
+                validatorInfos.size(),
+                validatorInfos
+            )).build();
+            
+        } catch (Exception e) {
+            Log.error("Failed to list validators", e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ErrorResponse("Failed to list validators: " + e.getMessage()))
+                .build();
+        }
+    }
+    
+    @POST
+    @Path("/execute/{pluginId}")
+    public Uni<Response> executePlugin(@PathParam("pluginId") String pluginId,
+                                     PluginExecutionRequest request) {
+        Log.info("Executing plugin: {}", pluginId);
+        
+        return Uni.createFrom().item(() -> {
+            try {
+                var plugin = pluginManager.getPlugin(pluginId);
+                
+                if (plugin.isEmpty()) {
+                    return Response.status(Response.Status.NOT_FOUND)
+                        .entity(new ErrorResponse("Plugin not found: " + pluginId))
+                        .build();
+                }
+                
+                PluginExecutionContext context = pluginManager.createExecutionContext();
+                context.setConfiguration(request.configuration != null ? request.configuration : new HashMap<>());
+                
+                // Set request data as context attributes
+                if (request.data != null) {
+                    request.data.forEach(context::setAttribute);
+                }
+                
+                PluginResult result = plugin.get().execute(context);
+                
+                return Response.ok(new PluginExecutionResponse(
+                    result.isSuccess(),
+                    result.getMessage(),
+                    result.getData(),
+                    context.getExecutionTime()
+                )).build();
+                
+            } catch (Exception e) {
+                Log.error("Failed to execute plugin", e);
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorResponse("Plugin execution failed: " + e.getMessage()))
+                    .build();
+            }
+        });
+    }
+    
+    // Response DTOs
+    public static class PluginListResponse {
+        public final int count;
+        public final List<PluginAwareGeneratorService.PluginInfo> plugins;
+        
+        public PluginListResponse(int count, List<PluginAwareGeneratorService.PluginInfo> plugins) {
+            this.count = count;
+            this.plugins = plugins;
+        }
+    }
+    
+    public static class PluginDetailsResponse {
+        public final String id;
+        public final String name;
+        public final String version;
+        public final String description;
+        public final Map<String, Object> configuration;
+        
+        public PluginDetailsResponse(String id, String name, String version, String description, 
+                                   Map<String, Object> configuration) {
+            this.id = id;
+            this.name = name;
+            this.version = version;
+            this.description = description;
+            this.configuration = configuration;
+        }
+    }
+    
+    public static class TemplateProcessorListResponse {
+        public final int count;
+        public final List<TemplateProcessorInfo> processors;
+        
+        public TemplateProcessorListResponse(int count, List<TemplateProcessorInfo> processors) {
+            this.count = count;
+            this.processors = processors;
+        }
+    }
+    
+    public static class TemplateProcessorInfo {
+        public final String templateType;
+        public final String className;
+        
+        public TemplateProcessorInfo(String templateType, String className) {
+            this.templateType = templateType;
+            this.className = className;
+        }
+    }
+    
+    public static class ValidatorListResponse {
+        public final int count;
+        public final List<ValidatorInfo> validators;
+        
+        public ValidatorListResponse(int count, List<ValidatorInfo> validators) {
+            this.count = count;
+            this.validators = validators;
+        }
+    }
+    
+    public static class ValidatorInfo {
+        public final String validationType;
+        public final String className;
+        public final int rulesCount;
+        
+        public ValidatorInfo(String validationType, String className, int rulesCount) {
+            this.validationType = validationType;
+            this.className = className;
+            this.rulesCount = rulesCount;
+        }
+    }
+    
+    public static class PluginExecutionRequest {
+        public Map<String, Object> configuration;
+        public Map<String, Object> data;
+        public String operation;
+    }
+    
+    public static class PluginExecutionResponse {
+        public final boolean success;
+        public final String message;
+        public final Map<String, Object> data;
+        public final long executionTime;
+        
+        public PluginExecutionResponse(boolean success, String message, Map<String, Object> data, 
+                                     long executionTime) {
+            this.success = success;
+            this.message = message;
+            this.data = data;
+            this.executionTime = executionTime;
+        }
+    }
+    
+    public static class ErrorResponse {
+        public final String error;
+        public final long timestamp;
+        
+        public ErrorResponse(String error) {
+            this.error = error;
+            this.timestamp = System.currentTimeMillis();
+        }
+    }
+    
+    public static class SuccessResponse {
+        public final String message;
+        public final Map<String, Object> data;
+        public final long timestamp;
+        
+        public SuccessResponse(String message, Map<String, Object> data) {
+            this.message = message;
+            this.data = data;
+            this.timestamp = System.currentTimeMillis();
+        }
+    }
+}
+
+// Update the main generator resource to use plugin-aware service
+// src/main/java/com/example/generator/McpGeneratorResourceEnhanced.java
+package com.example.generator;
+
+import com.example.generator.plugin.PluginAwareGeneratorService;
+import io.quarkus.logging.Log;
+import io.smallrye.mutiny.Uni;
+import jakarta.inject.Inject;
+import jakarta.validation.constraints.NotNull;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import org.jboss.resteasy.reactive.MultipartForm;
+import org.jboss.resteasy.reactive.PartType;
+import org.jboss.resteasy.reactive.RestForm;
+
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+
+@Path("/api/mcp-generator-v2")
+@Produces(MediaType.APPLICATION_JSON)
+public class McpGeneratorResourceEnhanced {
+
+    @Inject
+    PluginAwareGeneratorService pluginService;
+
+    @Inject
+    McpServerConfig config;
+
+    public static class EnhancedFileUpload {
+        @RestForm("file")
+        @PartType(MediaType.APPLICATION_OCTET_STREAM)
+        @NotNull
+        public InputStream file;
+
+        @RestForm("filename")
+        @PartType(MediaType.TEXT_PLAIN)
+        public String filename;
+
+        @RestForm("packageName")
+        @PartType(MediaType.TEXT_PLAIN)
+        public String packageName;
+
+        @RestForm("serverName")
+        @PartType(MediaType.TEXT_PLAIN)
+        public String serverName;
+
+        @RestForm("baseUrl")
+        @PartType(MediaType.TEXT_PLAIN)
+        public String baseUrl;
+
+        @RestForm("includeAuth")
+        @PartType(MediaType.TEXT_PLAIN)
+        public String includeAuth = "false";
+
+        @RestForm("specType")
+        @PartType(MediaType.TEXT_PLAIN)
+        public String specType = "auto";
+
+        @RestForm("collectionName")
+        @PartType(MediaType.TEXT_PLAIN)
+        public String collectionName;
+
+        @RestForm("enablePlugins")
+        @PartType(MediaType.TEXT_PLAIN)
+        public String enablePlugins = "true";
+
+        @RestForm("pluginOptions")
+        @PartType(MediaType.TEXT_PLAIN)
+        public String pluginOptionsJson;
+
+        public String getPackageNameOrDefault(String defaultValue) {
+            return packageName != null && !packageName.trim().isEmpty() ? packageName : defaultValue;
+        }
+        
+        public String getServerNameOrDefault(String defaultValue) {
+            return serverName != null && !serverName.trim().isEmpty() ? serverName : defaultValue;
+        }
+
+        public String getBaseUrlOrDefault(String defaultValue) {
+            return baseUrl != null && !baseUrl.trim().isEmpty() ? baseUrl : defaultValue;
+        }
+
+        public boolean isIncludeAuth() {
+            return "true".equalsIgnoreCase(includeAuth);
+        }
+
+        public boolean isEnablePlugins() {
+            return "true".equalsIgnoreCase(enablePlugins);
+        }
+
+        public McpGeneratorResource.SpecificationType getSpecType() {
+            if (specType == null) return McpGeneratorResource.SpecificationType.AUTO;
+            return switch (specType.toLowerCase()) {
+                case "openapi" -> McpGeneratorResource.SpecificationType.OPENAPI;
+                case "postman" -> McpGeneratorResource.SpecificationType.POSTMAN;
+                case "insomnia" -> McpGeneratorResource.SpecificationType.OPENAPI; // Will be detected by plugin
+                default -> McpGeneratorResource.SpecificationType.AUTO;
+            };
+        }
+
+        public String getCollectionNameOrDefault(String defaultValue) {
+            return collectionName != null && !collectionName.trim().isEmpty() ? collectionName : defaultValue;
+        }
+
+        public Map<String, Object> getPluginOptions() {
+            if (pluginOptionsJson == null || pluginOptionsJson.trim().isEmpty()) {
+                return new HashMap<>();
+            }
+            
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                return mapper.readValue(pluginOptionsJson, Map.class);
+            } catch (Exception e) {
+                Log.warn("Failed to parse plugin options JSON: {}", e.getMessage());
+                return new HashMap<>();
+            }
+        }
+    }
+
+    @POST
+    @Path("/generate")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    public Uni<Response> generateMcpServerWithPlugins(@MultipartForm EnhancedFileUpload upload) {
+        Log.info("Starting enhanced MCP server generation with plugins for file: {}", upload.filename);
+        
+        if (upload.isEnablePlugins()) {
+            return pluginService.generateMcpServerWithPlugins(
+                upload.file, 
+                upload.filename, 
+                upload.getPackageNameOrDefault(config.defaultPackage()), 
+                upload.getServerNameOrDefault(config.defaultServerName()),
+                upload.getBaseUrlOrDefault(config.defaultBaseUrl()),
+                upload.isIncludeAuth(),
+                upload.getSpecType(),
+                upload.getCollectionNameOrDefault("Generated Collection"),
+                upload.getPluginOptions()
+            ).map(zipBytes -> {
+                String filename = upload.getServerNameOrDefault(config.defaultServerName()).toLowerCase() + "-mcp-server-v2.zip";
+                Log.info("Successfully generated enhanced MCP server ZIP: {} ({} bytes)", filename, zipBytes.length);
+                
+                return Response.ok(zipBytes)
+                    .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+                    .header("Content-Type", "application/zip")
+                    .header("Content-Length", String.valueOf(zipBytes.length))
+                    .header("X-Generator-Version", "2.0-plugin-enabled")
+                    .build();
+            })
+            .onFailure().recoverWithItem(throwable -> {
+                Log.error("Enhanced generation failed", throwable);
+                
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Enhanced generation failed: " + throwable.getMessage()))
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+            });
+        } else {
+            Log.info("Plugins disabled, falling back to standard generation");
+            // Fallback to standard generation (would need to inject the original service)
+            return Uni.createFrom().item(
+                Response.status(Response.Status.NOT_IMPLEMENTED)
+                    .entity(new ErrorResponse("Standard generation fallback not implemented in this example"))
+                    .type(MediaType.APPLICATION_JSON)
+                    .build()
+            );
+        }
+    }
+
+    @GET
+    @Path("/capabilities")
+    public Response getCapabilities() {
+        return Response.ok(new CapabilitiesResponse(
+            pluginService.getAvailablePlugins(),
+            config.supportedVersions(),
+            config.supportedSpecTypes(),
+            config.maxFileSize()
+        )).build();
+    }
+
+    @POST
+    @Path("/validate-with-plugins")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<Response> validateWithPlugins(@MultipartForm EnhancedFileUpload upload) {
+        Log.info("Validating specification with plugins: {}", upload.filename);
+        
+        return Uni.createFrom().item(() -> {
+            try {
+                // This would use plugin-aware validation
+                // Simplified for this example
+                return Response.ok(new ValidationResponse(
+                    true,
+                    "Plugin-aware validation completed",
+                    java.util.List.of(),
+                    java.util.List.of("Using enhanced plugin validation")
+                )).build();
+                
+            } catch (Exception e) {
+                Log.error("Plugin validation failed", e);
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("Validation failed: " + e.getMessage()))
+                    .build();
+            }
+        });
+    }
+
+    // Response DTOs
+    public static class ErrorResponse {
+        public final String error;
+        public final long timestamp;
+        public final String version = "2.0-plugin-enabled";
+
+        public ErrorResponse(String error) {
+            this.error = error;
+            this.timestamp = System.currentTimeMillis();
+        }
+    }
+
+    public static class CapabilitiesResponse {
+        public final java.util.List<PluginAwareGeneratorService.PluginInfo> availablePlugins;
+        public final String[] supportedOpenApiVersions;
+        public final String[] supportedSpecTypes;
+        public final long maxFileSize;
+        public final String version = "2.0-plugin-enabled";
+
+        public CapabilitiesResponse(java.util.List<PluginAwareGeneratorService.PluginInfo> availablePlugins,
+                                  String[] supportedOpenApiVersions, String[] supportedSpecTypes, 
+                                  long maxFileSize) {
+            this.availablePlugins = availablePlugins;
+            this.supportedOpenApiVersions = supportedOpenApiVersions;
+            this.supportedSpecTypes = supportedSpecTypes;
+            this.maxFileSize = maxFileSize;
+        }
+    }
+
+    public static class ValidationResponse {
+        public final boolean valid;
+        public final String message;
+        public final java.util.List<String> errors;
+        public final java.util.List<String> warnings;
+        public final String version = "2.0-plugin-enabled";
+
+        public ValidationResponse(boolean valid, String message, java.util.List<String> errors, 
+                                java.util.List<String> warnings) {
+            this.valid = valid;
+            this.message = message;
+            this.errors = errors;
+            this.warnings = warnings;
+        }
+    }
+}
+
+// src/main/resources/application.properties (additions)
+# Plugin System Configuration
+mcp.generator.plugins.enabled=true
+mcp.generator.plugins.enabled-plugins=builtin,insomnia,validation
+mcp.generator.plugins.execution-timeout-seconds=30
+mcp.generator.plugins.allow-custom-plugins=true
+
+# Plugin-specific configurations
+mcp.generator.plugins.plugin-configs.insomnia.auto-detect-base-url=true
+mcp.generator.plugins.plugin-configs.validation.strict-mode=false
+mcp.generator.plugins.plugin-configs.template.enable-custom-functions=true
+
+# Enhanced generator features
+mcp.generator.enhanced.enable-plugin-discovery=true
+mcp.generator.enhanced.cache-plugin-results=true
+mcp.generator.enhanced.parallel-processing=false

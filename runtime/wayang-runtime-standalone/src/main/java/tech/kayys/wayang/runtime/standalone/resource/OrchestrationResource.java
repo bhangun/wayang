@@ -6,8 +6,9 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
-import tech.kayys.wayang.engine.gamelan.GamelanWorkflowEngine;
+import tech.kayys.gamelan.engine.tenant.TenantId;
 import tech.kayys.gamelan.engine.workflow.WorkflowDefinition;
+import tech.kayys.gamelan.engine.workflow.WorkflowDefinitionService;
 
 import java.util.List;
 
@@ -18,12 +19,14 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 public class OrchestrationResource {
 
+    private static final TenantId DEFAULT_TENANT = TenantId.of("default-tenant");
+
     @Inject
-    GamelanWorkflowEngine engine;
+    WorkflowDefinitionService workflowDefinitionService;
 
     @GET
     @Path("/workflows")
     public Uni<List<WorkflowDefinition>> listWorkflows() {
-        return engine.listWorkflows();
+        return workflowDefinitionService.list(DEFAULT_TENANT, true);
     }
 }

@@ -1,6 +1,6 @@
 # Wayang Standalone Runtime
 
-The Wayang Standalone Runtime is a self-contained, embeddable runtime that combines all core components of the Wayang platform into a single executable JAR. This runtime is ideal for development, testing, edge computing, and desktop applications.
+The Wayang Standalone Runtime is a self-contained, embeddable runtime that combines all core components of the Wayang platform into a portable executable distribution. It can be packaged as a single executable JAR or as a native binary.
 
 ## Architecture Overview
 
@@ -43,9 +43,22 @@ The standalone runtime includes:
 
 ### Running the Standalone Runtime
 
-#### From Prebuilt JAR
+#### From Prebuilt Portable JAR
 ```bash
-java -jar wayang-runtime-standalone-{version}.jar
+java -jar wayang-runtime-standalone-{version}-runner.jar
+```
+
+#### Mode Selection
+Community mode is default (`quarkus.profile=community`) and uses embedded H2 in PostgreSQL compatibility mode.
+
+Enterprise mode uses external PostgreSQL:
+```bash
+java -Dquarkus.profile=enterprise \
+  -DWAYANG_DB_JDBC_URL=jdbc:postgresql://localhost:5432/wayang \
+  -DWAYANG_DB_USERNAME=wayang \
+  -DWAYANG_DB_PASSWORD=wayang \
+  -DWAYANG_DB_REACTIVE_URL=postgresql://localhost:5432/wayang \
+  -jar wayang-runtime-standalone-{version}-runner.jar
 ```
 
 #### From Source
@@ -53,6 +66,29 @@ java -jar wayang-runtime-standalone-{version}.jar
 cd wayang/runtime/wayang-runtime-standalone
 ./mvnw clean package quarkus:dev
 ```
+
+### Build Artifacts
+
+#### Portable JAR (single file)
+```bash
+mvn -f wayang/pom.xml -pl runtime/wayang-runtime-standalone -am clean package -DskipTests
+```
+
+
+
+Artifact:
+- `target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner.jar`
+
+#### Native Binary
+```bash
+mvn -f wayang/pom.xml -pl runtime/wayang-runtime-standalone -am clean package -Dnative -DskipTests
+```
+
+Artifact:
+- `target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner`
+
+Note:
+- Native profile excludes `gollek-sdk-java-local` and `hypersistence-utils-hibernate-63` to keep native-image compilation stable.
 
 ### Configuration
 
@@ -173,6 +209,10 @@ mvn clean package
 ```bash
 cd wayang/runtime/wayang-runtime-standalone
 ./mvnw quarkus:dev
+```
+
+```bash
+java -Dgamelan.tenant.default-id=community -Dgamelan.tenant.allow-default=true -jar /Users/bhangun/Workspace/workkayys/Products/Wayang/wayang-platform/wayang/runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner.jar
 ```
 
 ### Adding New Components

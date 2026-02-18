@@ -7,7 +7,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import tech.kayys.wayang.control.service.ProjectManager;
-import tech.kayys.wayang.project.domain.WayangProject;
+import tech.kayys.wayang.control.domain.WayangProject;
 import tech.kayys.wayang.control.dto.CreateProjectRequest;
 import tech.kayys.wayang.control.dto.ProjectType;
 

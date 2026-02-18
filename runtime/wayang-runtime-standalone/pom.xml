@@ -20,6 +20,7 @@
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus.platform.version>3.31.2</quarkus.platform.version>
+        <quarkus.package.main-class>tech.kayys.wayang.runtime.standalone.StandaloneLauncher</quarkus.package.main-class>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.4</surefire-plugin.version>
         <gamelan.version>${project.version}</gamelan.version>
@@ -43,6 +44,12 @@
             <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-control-core</artifactId>
             <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>tech.kayys.gollek</groupId>
+                    <artifactId>gollek-sdk-java-local</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
@@ -60,6 +67,11 @@
             <version>${gamelan.version}</version>
         </dependency>
         <dependency>
+            <groupId>tech.kayys.gamelan</groupId>
+            <artifactId>gamelan-runtime-core</artifactId>
+            <version>${gamelan.version}</version>
+        </dependency>
+        <dependency>
             <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-vault-manager</artifactId>
             <version>${project.version}</version>
@@ -73,6 +85,16 @@
             <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-schema-api</artifactId>
             <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-resteasy</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-resteasy-jackson</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
@@ -83,6 +105,16 @@
             <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-control-api</artifactId>
             <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-resteasy</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-resteasy-jackson</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>tech.kayys.gollek</groupId>
@@ -92,6 +124,17 @@
         <dependency>
             <groupId>tech.kayys.gollek</groupId>
             <artifactId>gollek-engine</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.hypersistence</groupId>
+                    <artifactId>hypersistence-utils-hibernate-63</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.gollek</groupId>
+            <artifactId>gollek-api-rest</artifactId>
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
 
@@ -109,14 +152,26 @@
             <artifactId>quarkus-rest-jackson</artifactId>
         </dependency>
 
-        <!-- Database & Persistence (Standalone = H2 + Hibernate Reactive) -->
+        <!-- Database & Persistence -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-hibernate-reactive-panache</artifactId>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-orm-panache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
             <artifactId>quarkus-reactive-pg-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-h2</artifactId>
         </dependency>
 
         <!-- Testing -->
@@ -165,6 +220,7 @@
                     <systemPropertyVariables>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
+                        <quarkus.langchain4j.ai.gemini.api-key>test-key</quarkus.langchain4j.ai.gemini.api-key>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
@@ -194,6 +250,23 @@
 
     <profiles>
         <profile>
+            <id>portable-jar</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <quarkus.package.jar.enabled>true</quarkus.package.jar.enabled>
+                <quarkus.package.jar.type>uber-jar</quarkus.package.jar.type>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>tech.kayys.gollek</groupId>
+                    <artifactId>gollek-sdk-java-local</artifactId>
+                    <version>1.0.0-SNAPSHOT</version>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
             <id>native</id>
             <activation>
                 <property>
@@ -204,6 +277,7 @@
                 <quarkus.package.jar.enabled>false</quarkus.package.jar.enabled>
                 <skipITs>false</skipITs>
                 <quarkus.native.enabled>true</quarkus.native.enabled>
+                <quarkus.native.additional-build-args>--initialize-at-run-time=org.apache.commons.logging.impl.Log4JLogger</quarkus.native.additional-build-args>
             </properties>
         </profile>
     </profiles>

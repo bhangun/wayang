@@ -3,7 +3,7 @@ package tech.kayys.wayang.project.service;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import tech.kayys.wayang.project.dto.LLMConfig;
+import tech.kayys.wayang.control.dto.LLMConfig;
 
 /**
  * LLM Provider Factory

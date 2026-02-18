@@ -188,7 +188,7 @@ public class TemplateCatalogService {
                 "llmProvider", "openai",
                 "model", "gpt-4",
                 "systemPrompt", "You are a helpful customer support agent.");
-        startNode.position = new Position();
+        startNode.position = new Position(0, 0);
         startNode.position.x = 100;
         startNode.position.y = 100;
 

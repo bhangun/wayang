@@ -4,10 +4,11 @@ import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.gamelan.core.engine.NodeExecutionResult;
-import tech.kayys.gamelan.core.engine.NodeExecutionTask;
-import tech.kayys.gamelan.core.engine.error.ErrorInfo;
-import tech.kayys.gamelan.sdk.executor.core.AbstractWorkflowExecutor;
+import tech.kayys.gamelan.engine.node.NodeExecutionResult;
+import tech.kayys.gamelan.engine.node.NodeExecutionTask;
+import tech.kayys.gamelan.engine.node.NodeExecutionStatus;
+import tech.kayys.gamelan.sdk.executor.core.WorkflowExecutor;
+import tech.kayys.gamelan.sdk.executor.core.SimpleNodeExecutionResult;
 import tech.kayys.wayang.memory.spi.AgentMemory;
 import tech.kayys.wayang.memory.spi.MemoryEntry;
 
@@ -19,7 +20,7 @@ import java.util.*;
  * Abstract base class for all memory executors.
  * Provides common functionality for memory operations including store, retrieve, search, update, and delete.
  */
-public abstract class AbstractMemoryExecutor extends AbstractWorkflowExecutor {
+public abstract class AbstractMemoryExecutor implements WorkflowExecutor {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -425,9 +426,9 @@ public abstract class AbstractMemoryExecutor extends AbstractWorkflowExecutor {
             return true; // No filters, pass all
         }
 
-        for (Map.Entry<String, Object> filter : filterMap.entrySet()) {
-            String key = filter.getKey();
-            Object expectedValue = filter.getValue();
+        for (Object keyObj : filterMap.keySet()) {
+            String key = (String) keyObj;
+            Object expectedValue = filterMap.get(key);
             
             // Check in metadata
             if (entry.containsKey("metadata") && entry.get("metadata") instanceof Map metadata) {
@@ -496,7 +497,6 @@ public abstract class AbstractMemoryExecutor extends AbstractWorkflowExecutor {
     /**
      * Get executor type (memory type + "-memory-executor")
      */
-    @Override
     public String getExecutorType() {
         return getMemoryType() + "-memory-executor";
     }
@@ -504,44 +504,11 @@ public abstract class AbstractMemoryExecutor extends AbstractWorkflowExecutor {
     /**
      * Get supported node types
      */
-    @Override
     public String[] getSupportedNodeTypes() {
         return new String[] { 
             getMemoryType() + "-memory", 
             getMemoryType() + "-memory-task",
             "memory-operation"
         };
-    }
-
-    /**
-     * Check if this executor can handle the task
-     */
-    @Override
-    public boolean canHandle(NodeExecutionTask task) {
-        Map<String, Object> context = task.context() == null ? Map.of() : task.context();
-        
-        // Check if task specifies memory type
-        String memoryType = (String) context.get("memoryType");
-        if (memoryType != null && memoryType.equalsIgnoreCase(getMemoryType())) {
-            return true;
-        }
-
-        // Check if task specifies executor type
-        String executorType = (String) context.get("executorType");
-        if (executorType != null && executorType.equals(getExecutorType())) {
-            return true;
-        }
-
-        // Check node type
-        String nodeType = (String) context.get("nodeType");
-        if (nodeType != null) {
-            for (String supportedType : getSupportedNodeTypes()) {
-                if (nodeType.equalsIgnoreCase(supportedType)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 }

@@ -1,6 +1,7 @@
 package tech.kayys.wayang.runtime.standalone.resource;
 
 import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -22,11 +23,14 @@ public class OrchestrationResource {
     private static final TenantId DEFAULT_TENANT = TenantId.of("default-tenant");
 
     @Inject
-    WorkflowDefinitionService workflowDefinitionService;
+    Instance<WorkflowDefinitionService> workflowDefinitionService;
 
     @GET
     @Path("/workflows")
     public Uni<List<WorkflowDefinition>> listWorkflows() {
-        return workflowDefinitionService.list(DEFAULT_TENANT, true);
+        if (workflowDefinitionService == null || !workflowDefinitionService.isResolvable()) {
+            return Uni.createFrom().item(List.of());
+        }
+        return workflowDefinitionService.get().list(DEFAULT_TENANT, true);
     }
 }

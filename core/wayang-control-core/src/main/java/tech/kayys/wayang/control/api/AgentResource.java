@@ -23,9 +23,8 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import tech.kayys.wayang.agent.AgentTask;
 import tech.kayys.wayang.control.service.AgentManager;
-import tech.kayys.wayang.control.dto.AgentExecutionResult;
-import tech.kayys.wayang.control.dto.AgentTask;
 import tech.kayys.wayang.control.dto.CreateAgentRequest;
 
 import java.util.UUID;
@@ -52,9 +51,15 @@ public class AgentResource {
     @POST
     @Path("/{agentId}/execute")
     public Uni<Response> executeTask(@PathParam("agentId") UUID agentId,
-            @Valid AgentTask taskRequest,
+            @Valid tech.kayys.wayang.control.dto.AgentTask taskRequest,
             @HeaderParam("X-Tenant-Id") @DefaultValue("default") String tenantId) {
-        return agentManager.executeTask(agentId, taskRequest)
+        AgentTask agentTask = new AgentTask(
+                taskRequest.taskId(),
+                taskRequest.instruction(),
+                taskRequest.context(),
+                java.util.Collections.emptyList());
+
+        return agentManager.executeTask(agentId, agentTask)
                 .map(result -> Response.ok(result).build());
     }
 }

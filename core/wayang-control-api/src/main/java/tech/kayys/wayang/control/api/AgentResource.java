@@ -6,8 +6,8 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import tech.kayys.wayang.agent.AgentTask;
 import tech.kayys.wayang.control.service.AgentManager;
-import tech.kayys.wayang.control.dto.AgentTask;
 import tech.kayys.wayang.control.dto.CreateAgentRequest;
 
 import java.util.Collections;
@@ -39,14 +39,15 @@ public class AgentResource {
         @POST
         @Path("/{agentId}/execute")
         public Uni<Response> executeTask(@PathParam("agentId") UUID agentId,
-                        @Valid AgentTask taskRequest,
+                        @Valid tech.kayys.wayang.control.dto.AgentTask taskRequest,
                         @HeaderParam("X-Tenant-Id") @DefaultValue("default") String tenantId) {
+                AgentTask agentTask = new AgentTask(
+                                taskRequest.taskId(),
+                                taskRequest.instruction(),
+                                taskRequest.context(),
+                                Collections.emptyList());
 
-                // AgentTask DTO usually has instruction/context.
-                // We reuse AgentTask directly if it matches the JSON structure or create it.
-                // Assuming the body maps to AgentTask.
-
-                return agentManager.executeTask(agentId, taskRequest)
+                return agentManager.executeTask(agentId, agentTask)
                                 .map(result -> Response.ok(result).build());
         }
 }

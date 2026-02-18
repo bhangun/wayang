@@ -4,12 +4,12 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import tech.kayys.wayang.agent.AgentTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.kayys.wayang.agent.AgentExecutionResult;
 import tech.kayys.wayang.control.service.AgentManager;
 import tech.kayys.wayang.control.dto.CreateAgentRequest;
-import tech.kayys.wayang.control.dto.AgentTask;
 import tech.kayys.wayang.control.domain.AIAgent;
 
 import java.util.UUID;
@@ -89,10 +89,16 @@ public class AgentApi {
 
     @POST
     @Path("/{agentId}/execute")
-    public Response executeTask(@PathParam("agentId") UUID agentId, AgentTask task) {
+    public Response executeTask(@PathParam("agentId") UUID agentId, tech.kayys.wayang.control.dto.AgentTask task) {
         LOG.info("Executing task with agent: {}", agentId);
-        
-        return agentManager.executeTask(agentId, task)
+
+        AgentTask agentTask = new AgentTask(
+                task.taskId(),
+                task.instruction(),
+                task.context(),
+                java.util.Collections.emptyList());
+
+        return agentManager.executeTask(agentId, agentTask)
                 .onItem().transform(result -> Response.ok(result).build())
                 .onFailure().recoverWithItem(throwable -> {
                     LOG.error("Error executing task with agent: " + agentId, throwable);

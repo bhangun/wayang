@@ -32,10 +32,10 @@ public class CanvasAutoLayoutService {
     public Uni<CanvasData> autoLayout(CanvasData canvas, LayoutAlgorithm algorithm) {
         return Uni.createFrom().item(() -> {
             switch (algorithm) {
-                case HIERARCHICAL -> applyHierarchicalLayout(canvas);
+                case DAGRE -> applyHierarchicalLayout(canvas);
                 case FORCE_DIRECTED -> applyForceDirectedLayout(canvas);
                 case GRID -> applyGridLayout(canvas);
-                case SWIMLANE -> applySwimlaneLayout(canvas);
+                case CIRCULAR -> applySwimlaneLayout(canvas);
                 default -> LOG.warn("Unknown layout algorithm: {}", algorithm);
             }
             return canvas;
@@ -65,7 +65,7 @@ public class CanvasAutoLayoutService {
 
             for (int i = 0; i < nodesInRank.size(); i++) {
                 CanvasNode node = nodesInRank.get(i);
-                node.position = new Position();
+                node.position = new Position(0, 0);
                 node.position.x = xOffset + i * (200 + nodeSpacing);
                 node.position.y = yOffset + rank * rankSpacing;
             }
@@ -124,7 +124,7 @@ public class CanvasAutoLayoutService {
         Map<String, Velocity> velocities = new HashMap<>();
         canvas.nodes.forEach(node -> {
             if (node.position == null) {
-                node.position = new Position();
+                node.position = new Position(0, 0);
                 node.position.x = Math.random() * 1000;
                 node.position.y = Math.random() * 1000;
             }
@@ -196,7 +196,7 @@ public class CanvasAutoLayoutService {
 
         for (int i = 0; i < canvas.nodes.size(); i++) {
             CanvasNode node = canvas.nodes.get(i);
-            node.position = new Position();
+            node.position = new Position(0, 0);
             node.position.x = (i % cols) * spacing;
             node.position.y = (i / cols) * spacing;
         }
@@ -209,7 +209,7 @@ public class CanvasAutoLayoutService {
 
         for (int i = 0; i < canvas.nodes.size(); i++) {
             CanvasNode node = canvas.nodes.get(i);
-            node.position = new Position();
+            node.position = new Position(0, 0);
             node.position.x = 100;
             node.position.y = yOffset + i * spacing;
         }

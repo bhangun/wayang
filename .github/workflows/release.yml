@@ -5,22 +5,154 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run (no publish)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+  issues: write
+
+env:
+  MAVEN_OPTS: "-Xmx4g -XX:MaxMetaspaceSize=1g"
 
 jobs:
-  build:
-    name: Build native image on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            artifact_name: wayang-standalone-linux-x86_64
-          - os: macos-latest
-            artifact_name: wayang-standalone-osx-aarch_64
-          - os: windows-latest
-            artifact_name: wayang-standalone-windows-x86_64
+  # Build JAR (portable)
+  build-jar:
+    name: Build JAR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Build JAR
+        run: |
+          mvn clean package -DskipTests -pl runtime/wayang-runtime-standalone -am
+
+      - name: Rename JAR
+        run: |
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          VERSION="${VERSION#v}"  # Remove 'v' prefix
+          cp "runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner.jar" \
+             "artifacts/wayang-runtime-standalone-${VERSION}.jar"
+        shell: bash
+
+      - name: Upload JAR Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wayang-jar
+          path: artifacts/wayang-runtime-standalone-*.jar
+          retention-days: 7
+
+  # Build native images for all platforms
+  build-native-linux-x86:
+    name: Build Native Linux x86_64
+    runs-on: ubuntu-latest
+    needs: []
+    container:
+      image: ghcr.io/graalvm/native-image-community:25
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: /root/.m2
+          key: linux-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: linux-m2
+
+      - name: Build Native Image
+        run: |
+          mvn clean package -Pnative -DskipTests -pl runtime/wayang-runtime-standalone -am
+
+      - name: Prepare Artifact
+        run: |
+          mkdir -p artifacts
+          mv "runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner" \
+             "artifacts/wayang-standalone-linux-x86_64"
+          chmod +x artifacts/wayang-standalone-linux-x86_64
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wayang-standalone-linux-x86_64
+          path: artifacts/wayang-standalone-linux-x86_64
+          retention-days: 7
+
+  build-native-linux-arm:
+    name: Build Native Linux ARM64
+    runs-on: ubuntu-latest
+    needs: []
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: linux-arm-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: linux-arm-m2
+
+      - name: Build Native Image (cross-compile)
+        run: |
+          mvn clean package -Pnative -DskipTests -pl runtime/wayang-runtime-standalone -am \
+            -Dquarkus.native.container-build=true \
+            -Dquarkus.native.container-runtime=docker \
+            -Dquarkus.native.native-image-xbuild-image-args=--platform=linux/arm64
+
+      - name: Prepare Artifact
+        run: |
+          mkdir -p artifacts
+          mv "runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner" \
+             "artifacts/wayang-standalone-linux-aarch_64"
+          chmod +x artifacts/wayang-standalone-linux-aarch_64
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wayang-standalone-linux-aarch_64
+          path: artifacts/wayang-standalone-linux-aarch_64
+          retention-days: 7
+
+  build-native-macos-x86:
+    name: Build Native macOS x86_64
+    runs-on: macos-13
+    needs: []
     steps:
       - uses: actions/checkout@v4
 
@@ -36,35 +168,112 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
+          key: macos-x86-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: macos-x86-m2
 
-      - name: Build with Maven
+      - name: Build Native Image
         run: |
           mvn clean package -Pnative -DskipTests -pl runtime/wayang-runtime-standalone -am
 
-      - name: Rename and Upload Artifact
-        shell: bash
+      - name: Prepare Artifact
         run: |
-          BIN_NAME="wayang-runtime-standalone-1.0.0-SNAPSHOT-runner"
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            mv "runtime/wayang-runtime-standalone/target/${BIN_NAME}.exe" "${{ matrix.artifact_name }}.exe"
-            echo "ARTIFACT_PATH=${{ matrix.artifact_name }}.exe" >> $GITHUB_ENV
-          else
-            mv "runtime/wayang-runtime-standalone/target/${BIN_NAME}" "${{ matrix.artifact_name }}"
-            chmod +x "${{ matrix.artifact_name }}"
-            echo "ARTIFACT_PATH=${{ matrix.artifact_name }}" >> $GITHUB_ENV
-          fi
+          mkdir -p artifacts
+          mv "runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner" \
+             "artifacts/wayang-standalone-osx-x86_64"
+          chmod +x artifacts/wayang-standalone-osx-x86_64
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ env.ARTIFACT_PATH }}
+          name: wayang-standalone-osx-x86_64
+          path: artifacts/wayang-standalone-osx-x86_64
+          retention-days: 7
 
+  build-native-macos-arm:
+    name: Build Native macOS ARM64
+    runs-on: macos-latest
+    needs: []
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: macos-arm-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: macos-arm-m2
+
+      - name: Build Native Image
+        run: |
+          mvn clean package -Pnative -DskipTests -pl runtime/wayang-runtime-standalone -am
+
+      - name: Prepare Artifact
+        run: |
+          mkdir -p artifacts
+          mv "runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner" \
+             "artifacts/wayang-standalone-osx-aarch_64"
+          chmod +x artifacts/wayang-standalone-osx-aarch_64
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wayang-standalone-osx-aarch_64
+          path: artifacts/wayang-standalone-osx-aarch_64
+          retention-days: 7
+
+  build-native-windows:
+    name: Build Native Windows x86_64
+    runs-on: windows-latest
+    needs: []
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\npm-cache
+          key: windows-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: windows-m2
+
+      - name: Build Native Image
+        run: |
+          mvn clean package -Pnative -DskipTests -pl runtime/wayang-runtime-standalone -am
+        shell: bash
+
+      - name: Prepare Artifact
+        run: |
+          mkdir -p artifacts
+          mv "runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner.exe" \
+             "artifacts/wayang-standalone-windows-x86_64.exe"
+        shell: bash
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wayang-standalone-windows-x86_64
+          path: artifacts/wayang-standalone-windows-x86_64.exe
+          retention-days: 7
+
+  # Release and publish
   release:
     name: Release with JReleaser
-    needs: build
+    needs: [build-jar, build-native-linux-x86, build-native-linux-arm, build-native-macos-x86, build-native-macos-arm, build-native-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -83,13 +292,42 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: Run JReleaser
+      - name: List artifacts
+        run: ls -la artifacts/
+        shell: bash
+
+      - name: Run JReleaser (Dry Run)
+        if: ${{ github.event.inputs.dry_run == 'true' }}
         shell: bash
         run: |
-          # JReleaser expects artifacts in specific paths or we point to them
-          # In jreleaser.yml we pointed to artifacts/
-          mvn jreleaser:full-release
+          mvn jreleaser:dry-run -Djreleaser.git.root.search=true
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # JRELEASER_DOCKER_DOCKER_IO_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          # JRELEASER_CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+          JRELEASER_DOCKER_DOCKER_IO_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          JRELEASER_DOCKER_DOCKER_IO_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          JRELEASER_CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+          JRELEASER_SDKMAN_CONSUMER_KEY: ${{ secrets.SDKMAN_CONSUMER_KEY }}
+          JRELEASER_SDKMAN_CONSUMER_TOKEN: ${{ secrets.SDKMAN_CONSUMER_TOKEN }}
+
+      - name: Run JReleaser (Full Release)
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        shell: bash
+        run: |
+          mvn jreleaser:full-release -Djreleaser.git.root.search=true
+        env:
+          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JRELEASER_DOCKER_DOCKER_IO_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          JRELEASER_DOCKER_DOCKER_IO_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          JRELEASER_CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+          JRELEASER_SDKMAN_CONSUMER_KEY: ${{ secrets.SDKMAN_CONSUMER_KEY }}
+          JRELEASER_SDKMAN_CONSUMER_TOKEN: ${{ secrets.SDKMAN_CONSUMER_TOKEN }}
+
+      - name: Upload JReleaser output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jreleaser-output
+          path: |
+            target/jreleaser/
+            target/jreleaser/logs/
+          retention-days: 7

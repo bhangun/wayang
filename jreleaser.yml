@@ -4,13 +4,17 @@
 project:
   name: wayang
   version: 1.0.0-SNAPSHOT
-  description: Wayang Standalone Server
-  longDescription: Wayang is a platform for building and running AI-powered applications.
+  description: Wayang - AI Agent Workflow Platform
+  longDescription: |
+    Wayang is a comprehensive, production-ready AI agent workflow platform built on Quarkus 3.x.
+    It provides a low-code solution for building, orchestrating, and managing AI agent workflows
+    with support for RAG, guardrails, tools, memory, and multi-agent coordination.
   authors:
     - bhangun
   license: Apache-2.0
   links:
     homepage: https://github.com/bhangun/wayang
+    documentation: https://github.com/bhangun/wayang/tree/main/docs
   java:
     groupId: tech.kayys.wayang
     version: 25
@@ -20,49 +24,135 @@ release:
     owner: bhangun
     overwrite: true
     sign: true
+    changelog:
+      formatted: ALWAYS
+      preset: conventional-commits
+      contributors:
+        enabled: true
+    milestone:
+      name: '{{tagName}}'
+    issues:
+      enabled: true
+    releaseName: '{{tagName}}'
+    draft: false
+    skipRelease: false
+    prerelease:
+      enabled: false
+      pattern: '.*-rc\.\d+$'
 
 distributions:
+  # Native binary distribution
   wayang-standalone:
     type: NATIVE_IMAGE
-    executable: wayang-standalone
-    artifacts:
-      - path: artifacts/wayang-standalone-linux-x86_64
-        platform: linux-x86_64
-      - path: artifacts/wayang-standalone-linux-aarch_64
-        platform: linux-aarch_64
-      - path: artifacts/wayang-standalone-osx-x86_64
-        platform: osx-x86_64
-      - path: artifacts/wayang-standalone-osx-aarch_64
-        platform: osx-aarch_64
-      - path: artifacts/wayang-standalone-windows-x86_64
-        platform: windows-x86_64
+    executable: wayang
+    artifactOverrides:
+      - platform: linux-x86_64
+        artifactPath: artifacts/wayang-standalone-linux-x86_64
+      - platform: linux-aarch_64
+        artifactPath: artifacts/wayang-standalone-linux-aarch_64
+      - platform: osx-x86_64
+        artifactPath: artifacts/wayang-standalone-osx-x86_64
+      - platform: osx-aarch_64
+        artifactPath: artifacts/wayang-standalone-osx-aarch_64
+      - platform: windows-x86_64
+        artifactPath: artifacts/wayang-standalone-windows-x86_64.exe
 
     brew:
       active: ALWAYS
       formulaName: wayang
-      multiFormula: false
+      multiFormula: true
       tap:
         owner: bhangun
         name: homebrew-tap
+        branch: main
+      commitAuthor:
+        name: bhangun
+        email: bhangun@users.noreply.github.com
+      templateDirectory: scripts/templates/brew
+      extraProperties:
+        skipPgp: 'true'
 
     chocolatey:
       active: ALWAYS
       packageName: wayang
+      title: Wayang
       remoteBuild: true
-      bucket:
-        owner: bhangun
-        name: chocolatey-bucket
+      skipPublishing: false
+      apiKey: '{{CHOCOLATEY_API_KEY}}'
+      owners: bhangun
+      authors: bhangun
+      commitAuthor:
+        name: bhangun
+        email: bhangun@users.noreply.github.com
+      templateDirectory: scripts/templates/chocolatey
+      extraProperties:
+        skipPgp: 'true'
 
     docker:
       active: ALWAYS
       repository: wayang
+      imageNames:
+        - wayang
+        - bhangun/wayang
       labels:
         org.opencontainers.image.title: "Wayang Standalone"
+        org.opencontainers.image.description: "AI Agent Workflow Platform"
+        org.opencontainers.image.source: "https://github.com/bhangun/wayang"
+        org.opencontainers.image.licenses: "Apache-2.0"
       registries:
         - server: docker.io
-          username: ${{ env.DOCKER_USERNAME }}
+          username: '{{DOCKER_USERNAME}}'
+          password: '{{DOCKER_PASSWORD}}'
       specs:
         - platform: linux/amd64
-          dockerfile: runtime/wayang-runtime-standalone/src/main/docker/Dockerfile.native-micro
+          dockerfile: runtime/wayang-runtime-standalone/src/main/docker/Dockerfile.native
         - platform: linux/arm64
-          dockerfile: runtime/wayang-runtime-standalone/src/main/docker/Dockerfile.native-micro
+          dockerfile: runtime/wayang-runtime-standalone/src/main/docker/Dockerfile.native
+
+  # JAR distribution
+  wayang-jar:
+    type: JAVA_BINARY
+    executable: wayang
+    mainClass: tech.kayys.wayang.runtime.standalone.StandaloneLauncher
+    jarPath: artifacts/wayang-runtime-standalone-{{projectVersion}}.jar
+    artifacts:
+      - path: artifacts/wayang-runtime-standalone-{{projectVersion}}.jar
+
+    sdkman:
+      active: RELEASE
+      candidate: wayang
+      consumerKey: '{{SDKMAN_CONSUMER_KEY}}'
+      consumerToken: '{{SDKMAN_CONSUMER_TOKEN}}'
+      command:
+        enabled: true
+
+packagers:
+  docker:
+    active: ALWAYS
+    continueOnError: true
+    imageNames:
+      - wayang
+      - bhangun/wayang
+    buildArgs:
+      - --platform=linux/amd64,linux/arm64
+    specs:
+      native:
+        active: ALWAYS
+        dockerfile: runtime/wayang-runtime-standalone/src/main/docker/Dockerfile.native
+        imageNames:
+          - wayang:{{projectVersion}}
+          - wayang:latest
+          - bhangun/wayang:{{projectVersion}}
+          - bhangun/wayang:latest
+      jar:
+        active: ALWAYS
+        dockerfile: runtime/wayang-runtime-standalone/src/main/docker/Dockerfile.jvm
+        imageNames:
+          - wayang:{{projectVersion}}-jvm
+          - wayang:jvm
+          - bhangun/wayang:{{projectVersion}}-jvm
+          - bhangun/wayang:jvm
+
+signing:
+  active: ALWAYS
+  armored: true

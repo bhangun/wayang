@@ -41,6 +41,9 @@ public class StandaloneRuntime implements QuarkusApplication {
             if (System.getProperty("gamelan.tenant.allow-default") == null) {
                 System.setProperty("gamelan.tenant.allow-default", COMMUNITY_ALLOW_DEFAULT);
             }
+            if (System.getProperty("mp.jwt.verify.publickey.location") == null) {
+                System.setProperty("mp.jwt.verify.publickey.location", "classpath:jwt/public-key.pem");
+            }
             // Force standalone community defaults to win over transitive module properties.
             if (System.getProperty("quarkus.datasource.db-kind") == null) {
                 System.setProperty("quarkus.datasource.db-kind", "h2");

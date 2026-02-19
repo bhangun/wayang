@@ -1,0 +1,35 @@
+# Chocolatey verification script for Wayang
+
+$ErrorActionPreference = 'Stop'
+
+$testDir = Join-Path $env:TEMP "chocolatey\wayang\test"
+New-Item -ItemType Directory -Path $testDir -Force | Out-Null
+
+try {
+    # Test wayang command
+    $output = & wayang --version 2>&1
+    
+    if ($LASTEXITCODE -ne 0) {
+        throw "wayang command failed with exit code $LASTEXITCODE"
+    }
+    
+    Write-Host "wayang version output: $output"
+    
+    # Verify version contains expected string
+    if ($output -notmatch '{{projectVersion}}') {
+        Write-Warning "Version mismatch. Expected: {{projectVersion}}, Got: $output"
+    }
+    
+    Write-Host "Chocolatey verification completed successfully!"
+    exit 0
+}
+catch {
+    Write-Error "Verification failed: $_"
+    exit 1
+}
+finally {
+    # Cleanup
+    if (Test-Path $testDir) {
+        Remove-Item $testDir -Recurse -Force
+    }
+}

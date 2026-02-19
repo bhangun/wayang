@@ -37,6 +37,8 @@ public final class StandaloneLauncher {
                     System.getProperty("gamelan.tenant.default-id", "community"));
             System.setProperty("gamelan.tenant.allow-default",
                     System.getProperty("gamelan.tenant.allow-default", "true"));
+            System.setProperty("mp.jwt.verify.publickey.location",
+                    System.getProperty("mp.jwt.verify.publickey.location", "classpath:jwt/public-key.pem"));
             System.setProperty("quarkus.langchain4j.ai.gemini.api-key",
                     System.getProperty("quarkus.langchain4j.ai.gemini.api-key", "community-default-key"));
         }

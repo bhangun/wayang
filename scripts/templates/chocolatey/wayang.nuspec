@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Chocolatey package for Wayang -->
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>wayang</id>
+    <version>{{projectVersion}}</version>
+    <title>Wayang</title>
+    <authors>bhangun</authors>
+    <owners>bhangun</owners>
+    <projectUrl>https://github.com/bhangun/wayang</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/bhangun/wayang/main/docs/logo.png</iconUrl>
+    <copyright>Apache-2.0</copyright>
+    <licenseUrl>https://github.com/bhangun/wayang/blob/main/LICENSE.md</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/bhangun/wayang</projectSourceUrl>
+    <docsUrl>https://github.com/bhangun/wayang/blob/main/docs/README.md</docsUrl>
+    <bugTrackerUrl>https://github.com/bhangun/wayang/issues</bugTrackerUrl>
+    <packageSourceUrl>https://github.com/bhangun/wayang/tree/main/scripts/templates/chocolatey</packageSourceUrl>
+    <tags>wayang ai agent workflow rag llm</tags>
+    <summary>Wayang - AI Agent Workflow Platform</summary>
+    <description>Wayang is a comprehensive, production-ready AI agent workflow platform built on Quarkus 3.x. It provides a low-code solution for building, orchestrating, and managing AI agent workflows with support for RAG, guardrails, tools, memory, and multi-agent coordination.</description>
+    <releaseNotes>https://github.com/bhangun/wayang/releases/tag/v{{projectVersion}}</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+    <file src="legal\**" target="legal" />
+  </files>
+</package>

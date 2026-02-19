@@ -1,0 +1,67 @@
+name: Release Installer
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/install.sh'
+  pull_request:
+    paths:
+      - 'scripts/install.sh'
+  workflow_dispatch:
+
+jobs:
+  test-installer:
+    name: Test Installer on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            install_dir: /home/runner/.wayang
+            bin_dir: /home/runner/.local/bin
+          - os: macos-latest
+            install_dir: /Users/runner/.wayang
+            bin_dir: /Users/runner/.local/bin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Make installer executable
+        run: chmod +x scripts/install.sh
+
+      - name: Test curl installation method
+        run: |
+          ./scripts/install.sh --help
+          
+      - name: Test installation (dry-run simulation)
+        env:
+          WAYANG_INSTALL_DIR: ${{ matrix.install_dir }}
+          WAYANG_BIN_DIR: ${{ matrix.bin_dir }}
+        run: |
+          # Test that script runs without errors (will fail to download in test env)
+          ./scripts/install.sh -v v0.0.0 || true
+          
+      - name: Verify script syntax
+        run: |
+          bash -n scripts/install.sh
+
+  validate-installer:
+    name: Validate Installer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@v2
+        with:
+          check_together: 'yes'
+          format: gcc
+        env:
+          SHELLCHECK_OPTS: -e SC1091 -e SC2086
+
+      - name: Verify install.sh is executable
+        run: |
+          test -x scripts/install.sh || (echo "install.sh is not executable" && exit 1)

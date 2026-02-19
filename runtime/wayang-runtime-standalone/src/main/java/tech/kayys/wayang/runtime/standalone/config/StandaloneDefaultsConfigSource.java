@@ -43,6 +43,7 @@ public class StandaloneDefaultsConfigSource implements ConfigSource {
         PROPERTIES.put("wayang.multitenancy.enabled", "true");
         PROPERTIES.put("gamelan.tenant.default-id", "community");
         PROPERTIES.put("gamelan.tenant.allow-default", "true");
+        PROPERTIES.put("mp.jwt.verify.publickey.location", "classpath:jwt/public-key.pem");
     }
 
     @Override

@@ -6,7 +6,7 @@ import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.wayang.eip.config.AggregatorConfig;
+import tech.kayys.wayang.eip.dto.AggregatorDto;
 import tech.kayys.wayang.eip.model.Aggregation;
 
 import java.time.Instant;
@@ -32,7 +32,7 @@ public class AggregatorStore {
         cleanupScheduler.scheduleAtFixedRate(this::cleanup, 1, 1, TimeUnit.MINUTES);
     }
 
-    public Uni<Aggregation> add(String correlationId, Object message, AggregatorConfig config) {
+    public Uni<Aggregation> add(String correlationId, Object message, AggregatorDto config) {
         return Uni.createFrom().item(() -> {
             Aggregation updated = aggregations.compute(correlationId, (key, existing) -> {
                 if (existing == null) {
@@ -42,7 +42,7 @@ public class AggregatorStore {
                             correlationId,
                             messages,
                             Instant.now(),
-                            Instant.now().plus(config.timeout()),
+                            Instant.now().plusMillis(config.timeoutMs()),
                             config.expectedCount());
                 } else {
                     existing.messages().add(message);

@@ -1,13 +1,12 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.gamelan.executor.rag.domain.RagResponse;
-import tech.kayys.gamelan.executor.rag.domain.RagWorkflowInput;
-import tech.kayys.gamelan.executor.rag.examples.RagQueryService;
+import tech.kayys.wayang.rag.domain.RagResponse;
+import tech.kayys.wayang.rag.domain.RagWorkflowInput;
 
 @ApplicationScoped
 public class RagExecutionService {

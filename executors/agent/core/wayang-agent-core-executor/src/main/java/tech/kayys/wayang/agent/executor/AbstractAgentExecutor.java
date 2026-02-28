@@ -12,6 +12,7 @@ import tech.kayys.wayang.error.WayangException;
 
 import java.time.Instant;
 import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Abstract base class for all agent executors
@@ -89,6 +90,9 @@ public abstract class AbstractAgentExecutor implements WorkflowExecutor {
 
     @jakarta.inject.Inject
     protected tech.kayys.wayang.tool.spi.ToolExecutor toolExecutor;
+
+    @jakarta.inject.Inject
+    protected ObjectMapper objectMapper;
 
     /**
      * Called before execution starts

@@ -8,14 +8,15 @@ import org.slf4j.LoggerFactory;
 import tech.kayys.gamelan.engine.node.NodeExecutionResult;
 import tech.kayys.gamelan.engine.node.NodeExecutionTask;
 import tech.kayys.gamelan.engine.protocol.CommunicationType;
-import tech.kayys.gamelan.executor.rag.domain.GenerationConfig;
-import tech.kayys.gamelan.executor.rag.domain.RagResponse;
-import tech.kayys.gamelan.executor.rag.domain.RagWorkflowInput;
-import tech.kayys.gamelan.executor.rag.domain.RetrievalConfig;
-import tech.kayys.gamelan.executor.rag.examples.RagQueryService;
+
 import tech.kayys.gamelan.sdk.executor.core.AbstractWorkflowExecutor;
 import tech.kayys.gamelan.sdk.executor.core.Executor;
 import tech.kayys.gamelan.sdk.executor.core.SimpleNodeExecutionResult;
+import tech.kayys.wayang.rag.RagQueryService;
+import tech.kayys.wayang.rag.domain.GenerationConfig;
+import tech.kayys.wayang.rag.domain.RagResponse;
+import tech.kayys.wayang.rag.domain.RagWorkflowInput;
+import tech.kayys.wayang.rag.domain.RetrievalConfig;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -26,7 +27,7 @@ import java.util.Map;
 import java.util.Set;
 
 @ApplicationScoped
-@Executor(executorType = "rag-executor", communicationType = CommunicationType.GRPC, maxConcurrentTasks = 20, supportedNodeTypes = {
+@Executor(executorType = "rag-executor", description = "Retrieval-Augmented Generation executor: retrieves relevant documents from a vector store and uses an LLM to generate a grounded answer.", communicationType = CommunicationType.GRPC, maxConcurrentTasks = 20, supportedNodeTypes = {
         "rag", "RAG", "rag-query", "rag.answer" }, version = "1.0.0")
 public class RagExecutor extends AbstractWorkflowExecutor {
 

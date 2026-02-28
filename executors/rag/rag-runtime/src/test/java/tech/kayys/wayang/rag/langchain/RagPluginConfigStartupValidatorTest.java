@@ -2,6 +2,10 @@ package tech.kayys.gamelan.executor.rag.langchain;
 
 import org.junit.jupiter.api.Test;
 
+import tech.kayys.wayang.rag.RagPluginTenantStrategyResolver;
+import tech.kayys.wayang.rag.RagRuntimeConfig;
+import tech.kayys.wayang.rag.config.RagPluginConfigStartupValidator;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

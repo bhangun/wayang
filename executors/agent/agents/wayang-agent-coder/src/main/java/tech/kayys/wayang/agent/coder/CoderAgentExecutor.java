@@ -15,6 +15,7 @@ import tech.kayys.wayang.agent.coder.prompts.CodePrompts;
 import tech.kayys.wayang.agent.executor.AbstractAgentExecutor;
 import tech.kayys.wayang.error.ErrorCode;
 import tech.kayys.wayang.error.WayangException;
+import tech.kayys.wayang.agent.schema.CoderAgentConfig;
 
 import java.util.Map;
 
@@ -25,8 +26,13 @@ import java.util.Map;
  */
 @Slf4j
 @ApplicationScoped
-@Executor(type = "agent-coder", version = "1.0.0")
+@Executor(executorType = "agent-coder", version = "1.0.0")
 public class CoderAgentExecutor extends AbstractAgentExecutor {
+
+    @Override
+    public String getExecutorType() {
+        return "agent-coder";
+    }
 
     @Inject
     GollekInferenceService inferenceService;
@@ -45,6 +51,7 @@ public class CoderAgentExecutor extends AbstractAgentExecutor {
 
         return Uni.createFrom().item(() -> {
             try {
+                CoderAgentConfig config = objectMapper.convertValue(task.context(), CoderAgentConfig.class);
                 Map<String, Object> context = task.context();
                 String taskType = (String) context.getOrDefault("taskType", "GENERATE");
                 String instruction = (String) context.get("instruction");

@@ -7,9 +7,15 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import tech.kayys.gamelan.core.engine.NodeExecutionResult;
-import tech.kayys.gamelan.core.engine.NodeExecutionTask;
-import tech.kayys.gamelan.core.domain.*;
+import tech.kayys.gamelan.engine.node.NodeExecutionResult;
+import tech.kayys.gamelan.engine.node.NodeExecutionTask;
+import tech.kayys.gamelan.engine.node.NodeExecutionStatus;
+import tech.kayys.gamelan.engine.execution.ExecutionToken;
+import tech.kayys.gamelan.engine.workflow.WorkflowRunId;
+import tech.kayys.gamelan.engine.node.NodeId;
+import tech.kayys.gamelan.engine.run.RetryPolicy;
+import java.time.Duration;
+import tech.kayys.wayang.memory.ShortTermMemoryExecutor;
 import tech.kayys.wayang.memory.spi.AgentMemory;
 import tech.kayys.wayang.memory.spi.MemoryEntry;
 
@@ -40,9 +46,9 @@ class ShortTermMemoryExecutorTest {
 
     @BeforeEach
     void setUp() {
-        runId = WorkflowRunId.from("test-run-" + UUID.randomUUID());
-        nodeId = NodeId.from("test-node");
-        token = ExecutionToken.from("test-token");
+        runId = WorkflowRunId.of("test-run-" + UUID.randomUUID());
+        nodeId = NodeId.of("test-node");
+        token = ExecutionToken.create(runId, nodeId, 0, Duration.ofHours(1));
     }
 
     @Test
@@ -55,7 +61,7 @@ class ShortTermMemoryExecutorTest {
                 "content", "Test memory content",
                 "memoryType", "short"
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // When
         Uni<NodeExecutionResult> resultUni = executor.execute(task);
@@ -84,7 +90,7 @@ class ShortTermMemoryExecutorTest {
                 "content", "Test context content",
                 "memoryType", "short"
         );
-        NodeExecutionTask storeTask = new NodeExecutionTask(runId, nodeId, 0, token, storeContext);
+        NodeExecutionTask storeTask = new NodeExecutionTask(runId, nodeId, 0, token, storeContext, RetryPolicy.DEFAULT);
         executor.execute(storeTask).await().indefinitely();
 
         // Then retrieve
@@ -93,7 +99,7 @@ class ShortTermMemoryExecutorTest {
                 "operation", "context",
                 "memoryType", "short"
         );
-        NodeExecutionTask retrieveTask = new NodeExecutionTask(runId, nodeId, 0, token, retrieveContext);
+        NodeExecutionTask retrieveTask = new NodeExecutionTask(runId, nodeId, 0, token, retrieveContext, RetryPolicy.DEFAULT);
 
         // When
         Uni<NodeExecutionResult> resultUni = executor.execute(retrieveTask);
@@ -106,7 +112,7 @@ class ShortTermMemoryExecutorTest {
                     Map<String, Object> output = result.output();
                     assertThat(output.get("success")).isEqualTo(true);
                     assertThat(output.get("operation")).isEqualTo("context");
-                    assertThat(output.get("count")).isGreaterThanOrEqualTo(1);
+                    assertThat((Integer) output.get("count")).isGreaterThanOrEqualTo(1);
                 }))
                 .assertCompleted();
     }
@@ -122,14 +128,14 @@ class ShortTermMemoryExecutorTest {
                 "content", "To be cleared",
                 "memoryType", "short"
         );
-        executor.execute(new NodeExecutionTask(runId, nodeId, 0, token, storeContext)).await().indefinitely();
+        executor.execute(new NodeExecutionTask(runId, nodeId, 0, token, storeContext, RetryPolicy.DEFAULT)).await().indefinitely();
 
         Map<String, Object> clearContext = Map.of(
                 "agentId", agentId,
                 "operation", "clear",
                 "memoryType", "short"
         );
-        NodeExecutionTask clearTask = new NodeExecutionTask(runId, nodeId, 0, token, clearContext);
+        NodeExecutionTask clearTask = new NodeExecutionTask(runId, nodeId, 0, token, clearContext, RetryPolicy.DEFAULT);
 
         // When
         Uni<NodeExecutionResult> resultUni = executor.execute(clearTask);
@@ -142,7 +148,7 @@ class ShortTermMemoryExecutorTest {
                     Map<String, Object> output = result.output();
                     assertThat(output.get("success")).isEqualTo(true);
                     assertThat(output.get("operation")).isEqualTo("clear");
-                    assertThat(output.get("clearedCount")).isGreaterThanOrEqualTo(1);
+                    assertThat((Integer) output.get("clearedCount")).isGreaterThanOrEqualTo(1);
                 }))
                 .assertCompleted();
     }
@@ -163,7 +169,7 @@ class ShortTermMemoryExecutorTest {
                     "memoryType", "short",
                     "limit", windowSize
             );
-            executor.execute(new NodeExecutionTask(runId, nodeId, 0, token, context)).await().indefinitely();
+            executor.execute(new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT)).await().indefinitely();
         }
 
         // When - retrieve context
@@ -173,14 +179,14 @@ class ShortTermMemoryExecutorTest {
                 "memoryType", "short",
                 "limit", windowSize
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // Then
         executor.execute(task).subscribe().withSubscriber(UniAssertSubscriber.create())
                 .awaitItem()
                 .assertItem(match(result -> {
                     Map<String, Object> output = result.output();
-                    assertThat(output.get("count")).isEqualTo(windowSize);
+                    assertThat((Integer) output.get("count")).isEqualTo(windowSize);
                 }))
                 .assertCompleted();
     }
@@ -195,14 +201,14 @@ class ShortTermMemoryExecutorTest {
                 "operation", "store",
                 "content", "Apple is a fruit",
                 "memoryType", "short"
-        ))).await().indefinitely();
+        ), RetryPolicy.DEFAULT)).await().indefinitely();
         
         executor.execute(new NodeExecutionTask(runId, nodeId, 0, token, Map.of(
                 "agentId", agentId,
                 "operation", "store",
                 "content", "Carrots are vegetables",
                 "memoryType", "short"
-        ))).await().indefinitely();
+        ), RetryPolicy.DEFAULT)).await().indefinitely();
 
         // When
         Map<String, Object> context = Map.of(
@@ -211,7 +217,7 @@ class ShortTermMemoryExecutorTest {
                 "query", "fruit",
                 "memoryType", "short"
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // Then
         executor.execute(task).subscribe().withSubscriber(UniAssertSubscriber.create())
@@ -219,7 +225,7 @@ class ShortTermMemoryExecutorTest {
                 .assertItem(match(result -> {
                     Map<String, Object> output = result.output();
                     assertThat(output.get("success")).isEqualTo(true);
-                    assertThat(output.get("count")).isEqualTo(1);
+                    assertThat((Integer) output.get("count")).isEqualTo(1);
                 }))
                 .assertCompleted();
     }
@@ -233,7 +239,7 @@ class ShortTermMemoryExecutorTest {
                 "operation", "store",
                 "memoryType", "short"
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // When
         Uni<NodeExecutionResult> resultUni = executor.execute(task);
@@ -244,7 +250,7 @@ class ShortTermMemoryExecutorTest {
                 .assertItem(match(result -> {
                     Map<String, Object> output = result.output();
                     assertThat(output.get("success")).isEqualTo(false);
-                    assertThat(output.get("error")).contains("content");
+                    assertThat((String) output.get("error")).contains("content");
                 }))
                 .assertCompleted();
     }
@@ -259,7 +265,7 @@ class ShortTermMemoryExecutorTest {
                 "operation", "store",
                 "content", "Stats test",
                 "memoryType", "short"
-        ))).await().indefinitely();
+        ), RetryPolicy.DEFAULT)).await().indefinitely();
 
         // When
         Map<String, Object> context = Map.of(
@@ -267,7 +273,7 @@ class ShortTermMemoryExecutorTest {
                 "operation", "stats",
                 "memoryType", "short"
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // Then
         executor.execute(task).subscribe().withSubscriber(UniAssertSubscriber.create())
@@ -278,7 +284,7 @@ class ShortTermMemoryExecutorTest {
                     assertThat(output.get("stats")).isNotNull();
                     Map<String, Object> stats = (Map<String, Object>) output.get("stats");
                     assertThat(stats.get("memoryType")).isEqualTo("short");
-                    assertThat(stats.get("currentSize")).isGreaterThan(0);
+                    assertThat((Integer) stats.get("currentSize")).isGreaterThan(0);
                 }))
                 .assertCompleted();
     }

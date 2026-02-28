@@ -2,6 +2,11 @@ package tech.kayys.gamelan.executor.rag.langchain;
 
 import org.junit.jupiter.api.Test;
 
+import tech.kayys.wayang.rag.RagPipelinePlugin;
+import tech.kayys.wayang.rag.RagPluginTenantStrategyResolution;
+import tech.kayys.wayang.rag.RagPluginTenantStrategyResolver;
+import tech.kayys.wayang.rag.RagRuntimeConfig;
+
 import java.util.List;
 import java.util.Map;
 

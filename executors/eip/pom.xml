@@ -16,9 +16,8 @@
     <name>Wayang :: EIP :: Parent</name>
 
     <modules>
-        <module>wayang-eip-runtime</module>
-        <module>executors</module>
         <module>eip-api</module>
+        <module>eip-spi</module>
     </modules>
 
     <properties>

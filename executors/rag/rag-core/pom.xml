@@ -35,6 +35,26 @@
             <version>2.18.2</version>
         </dependency>
         <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-schema-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-plugin-spi</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.victools</groupId>
+            <artifactId>jsonschema-generator</artifactId>
+            <version>4.38.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.victools</groupId>
+            <artifactId>jsonschema-module-jackson</artifactId>
+            <version>4.38.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
             <version>${junit.jupiter.version}</version>
@@ -61,10 +81,10 @@
                 <version>3.13.0</version>
                 <configuration>
                     <includes>
-                        <include>tech/kayys/wayang/rag/core/**/*.java</include>
+                        <include>tech/kayys/wayang/rag/**/*.java</include>
                     </includes>
                     <testIncludes>
-                        <testInclude>tech/kayys/wayang/rag/core/**/*.java</testInclude>
+                        <testInclude>tech/kayys/wayang/rag/**/*.java</testInclude>
                     </testIncludes>
                 </configuration>
             </plugin>

@@ -6,7 +6,8 @@ import tech.kayys.gamelan.engine.node.NodeExecutionTask;
 import tech.kayys.gamelan.sdk.executor.core.AbstractWorkflowExecutor;
 import tech.kayys.gamelan.sdk.executor.core.Executor;
 import tech.kayys.gamelan.sdk.executor.core.SimpleNodeExecutionResult;
-import tech.kayys.wayang.eip.config.RouterConfig;
+import tech.kayys.wayang.eip.dto.RouterDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import tech.kayys.wayang.eip.service.RouteEvaluator;
 
 import jakarta.inject.Inject;
@@ -28,10 +29,13 @@ public class RouterExecutor extends AbstractWorkflowExecutor {
         @Inject
         RouteEvaluator routeEvaluator;
 
+        @Inject
+        ObjectMapper objectMapper;
+
         @Override
         public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
                 Map<String, Object> context = task.context();
-                RouterConfig config = RouterConfig.fromContext(context);
+                RouterDto config = objectMapper.convertValue(context, RouterDto.class);
 
                 LOG.debug("Routing message with strategy: {}", config.strategy());
 

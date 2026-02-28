@@ -6,7 +6,9 @@ import tech.kayys.gamelan.engine.node.NodeExecutionTask;
 import tech.kayys.gamelan.sdk.executor.core.AbstractWorkflowExecutor;
 import tech.kayys.gamelan.sdk.executor.core.Executor;
 import tech.kayys.gamelan.sdk.executor.core.SimpleNodeExecutionResult;
-import tech.kayys.wayang.eip.config.ThrottlerConfig;
+import tech.kayys.wayang.eip.dto.ThrottlerDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.inject.Inject;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,10 +24,13 @@ public class ThrottlerExecutor extends AbstractWorkflowExecutor {
 
         private static final Logger LOG = LoggerFactory.getLogger(ThrottlerExecutor.class);
 
+        @Inject
+        ObjectMapper objectMapper;
+
         @Override
         public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
                 Map<String, Object> context = task.context();
-                ThrottlerConfig config = ThrottlerConfig.fromContext(context);
+                ThrottlerDto config = objectMapper.convertValue(context, ThrottlerDto.class);
 
                 LOG.debug("Throttling at {} rps", config.rate());
 

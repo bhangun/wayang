@@ -24,8 +24,8 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import tech.kayys.wayang.eip.config.EndpointConfig;
-import tech.kayys.wayang.eip.config.AuthConfig;
+import tech.kayys.wayang.eip.dto.EndpointDto;
+import tech.kayys.wayang.eip.dto.AuthDto;
 
 @ApplicationScoped
 public class HttpEndpointClient implements EndpointClient {
@@ -53,7 +53,7 @@ public class HttpEndpointClient implements EndpointClient {
     }
 
     @Override
-    public Uni<Object> send(EndpointConfig config, Object payload) {
+    public Uni<Object> send(EndpointDto config, Object payload) {
         try {
             URI uri = URI.create(config.uri());
             HttpMethod method = getMethod(config);
@@ -112,7 +112,7 @@ public class HttpEndpointClient implements EndpointClient {
         }
     }
 
-    private void addAuthentication(HttpRequest<Buffer> request, AuthConfig auth) {
+    private void addAuthentication(HttpRequest<Buffer> request, AuthDto auth) {
         if (auth == null || auth.type() == null)
             return;
 
@@ -131,7 +131,7 @@ public class HttpEndpointClient implements EndpointClient {
         }
     }
 
-    private HttpMethod getMethod(EndpointConfig config) {
+    private HttpMethod getMethod(EndpointDto config) {
         String method = (String) config.properties().getOrDefault("method", "POST");
         return switch (method.toUpperCase()) {
             case "GET" -> HttpMethod.GET;

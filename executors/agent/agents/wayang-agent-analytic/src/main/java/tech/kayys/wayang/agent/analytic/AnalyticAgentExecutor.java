@@ -15,6 +15,7 @@ import tech.kayys.wayang.agent.analytic.prompts.AnalyticsPrompts;
 import tech.kayys.wayang.agent.executor.AbstractAgentExecutor;
 import tech.kayys.wayang.error.ErrorCode;
 import tech.kayys.wayang.error.WayangException;
+import tech.kayys.wayang.agent.schema.AnalyticAgentConfig;
 
 import java.util.Map;
 
@@ -24,8 +25,13 @@ import java.util.Map;
  */
 @Slf4j
 @ApplicationScoped
-@Executor(type = "agent-analytic", version = "1.0.0")
+@Executor(executorType = "agent-analytic", version = "1.0.0")
 public class AnalyticAgentExecutor extends AbstractAgentExecutor {
+
+    @Override
+    public String getExecutorType() {
+        return "agent-analytic";
+    }
 
     @Inject
     GollekInferenceService inferenceService;
@@ -45,6 +51,7 @@ public class AnalyticAgentExecutor extends AbstractAgentExecutor {
         return Uni.createFrom().item(() -> {
             try {
                 // Extract task parameters
+                AnalyticAgentConfig config = objectMapper.convertValue(task.context(), AnalyticAgentConfig.class);
                 Map<String, Object> context = task.context();
                 String taskType = (String) context.getOrDefault("taskType", "DESCRIPTIVE");
                 String question = (String) context.get("question");

@@ -11,7 +11,8 @@ import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import tech.kayys.wayang.eip.config.MessageStoreConfig;
+import tech.kayys.wayang.eip.dto.MessageStoreDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import tech.kayys.wayang.eip.service.InMemoryMessageStore;
 
 import java.time.Duration;
@@ -30,15 +31,18 @@ public class MessageStoreExecutor extends AbstractWorkflowExecutor {
         @Inject
         InMemoryMessageStore messageStore; // Using concrete implementation for now, should use interface and factory
 
+        @Inject
+        ObjectMapper objectMapper;
+
         @Override
         public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
                 Map<String, Object> context = task.context();
-                MessageStoreConfig config = MessageStoreConfig.fromContext(context);
+                MessageStoreDto config = objectMapper.convertValue(context, MessageStoreDto.class);
                 Object message = context.get("message");
                 String operation = (String) context.getOrDefault("operation", "store");
 
                 if ("store".equals(operation)) {
-                        return messageStore.store(message, config.retention())
+                        return messageStore.store(message, Duration.ofDays(config.retentionDays()))
                                         .map(id -> {
                                                 LOG.info("Stored message with ID: {}", id);
                                                 return SimpleNodeExecutionResult.success(

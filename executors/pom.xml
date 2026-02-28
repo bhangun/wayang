@@ -6,6 +6,7 @@
         <groupId>tech.kayys.wayang</groupId>
         <artifactId>wayang</artifactId>
         <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>wayang-executor-parent</artifactId>
     <packaging>pom</packaging>
@@ -22,5 +23,8 @@
         <module>rag</module>
 
         <module>web-search</module>
+        <module>memory</module>
+        <module>tool</module>
+        <module>vector</module>
     </modules>
 </project>

@@ -11,7 +11,8 @@ import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import tech.kayys.wayang.eip.config.IdempotentReceiverConfig;
+import tech.kayys.wayang.eip.dto.IdempotentReceiverDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import tech.kayys.wayang.eip.service.IdempotencyStore;
 
 import java.time.Duration;
@@ -30,10 +31,13 @@ public class IdempotentReceiverExecutor extends AbstractWorkflowExecutor {
     @Inject
     IdempotencyStore idempotencyStore;
 
+    @Inject
+    ObjectMapper objectMapper;
+
     @Override
     public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
         Map<String, Object> context = task.context();
-        IdempotentReceiverConfig config = IdempotentReceiverConfig.fromContext(context);
+        IdempotentReceiverDto config = objectMapper.convertValue(context, IdempotentReceiverDto.class);
 
         // Extract key
         String key = extractKey(context, config.idempotencyKeyField());
@@ -42,7 +46,7 @@ public class IdempotentReceiverExecutor extends AbstractWorkflowExecutor {
                     new IllegalArgumentException("Missing idempotency key field: " + config.idempotencyKeyField()));
         }
 
-        return idempotencyStore.checkAndRecord(key, config.windowDuration())
+        return idempotencyStore.checkAndRecord(key, Duration.ofHours(config.windowHours()))
                 .flatMap(isDuplicate -> {
                     if (isDuplicate) {
                         LOG.info("Duplicate message detected: {}", key);

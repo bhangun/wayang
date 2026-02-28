@@ -1,13 +1,13 @@
-package tech.kayys.gamelan.executor.rag.examples;
+package tech.kayys.wayang.rag;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.gamelan.executor.rag.domain.*;
-import tech.kayys.gamelan.executor.rag.langchain.RagObservabilityMetrics;
-import tech.kayys.gamelan.executor.rag.langchain.NativeRagCoreService;
+import tech.kayys.wayang.rag.domain.*;
+import tech.kayys.wayang.rag.RagObservabilityMetrics;
+import tech.kayys.wayang.rag.NativeRagCoreService;
 import tech.kayys.wayang.rag.core.model.RagResult;
 import tech.kayys.wayang.rag.core.model.RagScoredChunk;
 

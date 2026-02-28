@@ -1,6 +1,9 @@
 package tech.kayys.gamelan.executor.rag.langchain;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import tech.kayys.wayang.rag.embedding.RagEmbeddingStoreFactory;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

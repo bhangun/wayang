@@ -11,8 +11,9 @@ import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import tech.kayys.wayang.eip.config.AggregatorConfig;
+import tech.kayys.wayang.eip.dto.AggregatorDto;
 import tech.kayys.wayang.eip.service.AggregatorStore;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.Map;
@@ -29,10 +30,13 @@ public class AggregatorExecutor extends AbstractWorkflowExecutor {
         @Inject
         AggregatorStore aggregatorStore;
 
+        @Inject
+        ObjectMapper objectMapper;
+
         @Override
         public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
                 Map<String, Object> context = task.context();
-                AggregatorConfig config = AggregatorConfig.fromContext(context);
+                AggregatorDto config = objectMapper.convertValue(context, AggregatorDto.class);
 
                 String correlationId = (String) context.get(config.correlationKey());
                 Object message = context.get("message");

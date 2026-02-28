@@ -2,8 +2,14 @@ package tech.kayys.gamelan.executor.rag.langchain;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+
+import tech.kayys.wayang.rag.RagEvalDataset;
+import tech.kayys.wayang.rag.RagEvalQueryCase;
 import tech.kayys.wayang.rag.core.model.RagChunk;
 import tech.kayys.wayang.rag.core.model.RagScoredChunk;
+import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalRequest;
+import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalResponse;
+import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalService;
 
 import java.time.Clock;
 import java.time.Instant;

@@ -9,7 +9,7 @@ import org.eclipse.microprofile.reactive.messaging.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import tech.kayys.wayang.eip.config.EndpointConfig;
+import tech.kayys.wayang.eip.dto.EndpointDto;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -31,7 +31,7 @@ class KafkaEndpointClient implements EndpointClient {
     ObjectMapper objectMapper;
 
     @Override
-    public Uni<Object> send(EndpointConfig config, Object payload) {
+    public Uni<Object> send(EndpointDto config, Object payload) {
         try {
             // Extract topic from URI (kafka://topic-name)
             String topic = config.uri().replace("kafka://", "");

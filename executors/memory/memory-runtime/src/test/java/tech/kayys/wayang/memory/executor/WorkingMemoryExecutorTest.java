@@ -7,9 +7,15 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import tech.kayys.gamelan.core.engine.NodeExecutionResult;
-import tech.kayys.gamelan.core.engine.NodeExecutionTask;
-import tech.kayys.gamelan.core.domain.*;
+import tech.kayys.gamelan.engine.node.NodeExecutionResult;
+import tech.kayys.gamelan.engine.node.NodeExecutionTask;
+import tech.kayys.gamelan.engine.node.NodeExecutionStatus;
+import tech.kayys.gamelan.engine.execution.ExecutionToken;
+import tech.kayys.gamelan.engine.workflow.WorkflowRunId;
+import tech.kayys.gamelan.engine.node.NodeId;
+import tech.kayys.gamelan.engine.run.RetryPolicy;
+import java.time.Duration;
+import tech.kayys.wayang.memory.WorkingMemoryExecutor;
 
 import java.util.Map;
 import java.util.UUID;
@@ -31,9 +37,9 @@ class WorkingMemoryExecutorTest {
 
     @BeforeEach
     void setUp() {
-        runId = WorkflowRunId.from("test-run-" + UUID.randomUUID());
-        nodeId = NodeId.from("test-node");
-        token = ExecutionToken.from("test-token");
+        runId = WorkflowRunId.of("test-run-" + UUID.randomUUID());
+        nodeId = NodeId.of("test-node");
+        token = ExecutionToken.create(runId, nodeId, 0, Duration.ofHours(1));
     }
 
     @Test
@@ -47,7 +53,7 @@ class WorkingMemoryExecutorTest {
                 "memoryType", "working",
                 "slot", "task-1"
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // When
         Uni<NodeExecutionResult> resultUni = executor.execute(task);
@@ -82,7 +88,7 @@ class WorkingMemoryExecutorTest {
                     "memoryType", "working",
                     "slot", "default",
                     "limit", capacity
-            ))).await().indefinitely();
+            ), RetryPolicy.DEFAULT)).await().indefinitely();
         }
 
         // When - retrieve context
@@ -92,14 +98,14 @@ class WorkingMemoryExecutorTest {
                 "memoryType", "working",
                 "slot", "default"
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // Then
         executor.execute(task).subscribe().withSubscriber(UniAssertSubscriber.create())
                 .awaitItem()
                 .assertItem(match(result -> {
                     Map<String, Object> output = result.output();
-                    assertThat(output.get("count")).isEqualTo(capacity);
+                    assertThat((Integer) output.get("count")).isEqualTo(capacity);
                 }))
                 .assertCompleted();
     }
@@ -115,14 +121,14 @@ class WorkingMemoryExecutorTest {
                 "operation", "store",
                 "content", "Current task: implement feature X",
                 "memoryType", "working"
-        ))).await().indefinitely();
+        ), RetryPolicy.DEFAULT)).await().indefinitely();
 
         executor.execute(new NodeExecutionTask(runId, nodeId, 0, token, Map.of(
                 "agentId", agentId,
                 "operation", "store",
                 "content", "Note: review code quality",
                 "memoryType", "working"
-        ))).await().indefinitely();
+        ), RetryPolicy.DEFAULT)).await().indefinitely();
 
         // When
         Map<String, Object> context = Map.of(
@@ -131,7 +137,7 @@ class WorkingMemoryExecutorTest {
                 "query", "task",
                 "memoryType", "working"
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // Then
         executor.execute(task).subscribe().withSubscriber(UniAssertSubscriber.create())
@@ -139,7 +145,7 @@ class WorkingMemoryExecutorTest {
                 .assertItem(match(result -> {
                     Map<String, Object> output = result.output();
                     assertThat(output.get("success")).isEqualTo(true);
-                    assertThat(output.get("count")).isGreaterThan(0);
+                    assertThat((Integer) output.get("count")).isGreaterThan(0);
                 }))
                 .assertCompleted();
     }
@@ -158,7 +164,7 @@ class WorkingMemoryExecutorTest {
                 "content", "Initial content",
                 "memoryType", "working",
                 "memoryId", memoryId
-        ))).await().indefinitely();
+        ), RetryPolicy.DEFAULT)).await().indefinitely();
 
         // When - update
         Map<String, Object> context = Map.of(
@@ -168,7 +174,7 @@ class WorkingMemoryExecutorTest {
                 "content", "Updated content",
                 "memoryType", "working"
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // Then
         executor.execute(task).subscribe().withSubscriber(UniAssertSubscriber.create())
@@ -194,7 +200,7 @@ class WorkingMemoryExecutorTest {
                 "content", "To be deleted",
                 "memoryType", "working",
                 "memoryId", memoryId
-        ))).await().indefinitely();
+        ), RetryPolicy.DEFAULT)).await().indefinitely();
 
         // When - delete
         Map<String, Object> context = Map.of(
@@ -203,7 +209,7 @@ class WorkingMemoryExecutorTest {
                 "memoryId", memoryId,
                 "memoryType", "working"
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // Then
         executor.execute(task).subscribe().withSubscriber(UniAssertSubscriber.create())
@@ -227,7 +233,7 @@ class WorkingMemoryExecutorTest {
                 "operation", "store",
                 "content", "Stats entry",
                 "memoryType", "working"
-        ))).await().indefinitely();
+        ), RetryPolicy.DEFAULT)).await().indefinitely();
 
         // When
         Map<String, Object> context = Map.of(
@@ -235,7 +241,7 @@ class WorkingMemoryExecutorTest {
                 "operation", "stats",
                 "memoryType", "working"
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // Then
         executor.execute(task).subscribe().withSubscriber(UniAssertSubscriber.create())
@@ -246,7 +252,7 @@ class WorkingMemoryExecutorTest {
                     assertThat(output.get("stats")).isNotNull();
                     Map<String, Object> stats = (Map<String, Object>) output.get("stats");
                     assertThat(stats.get("memoryType")).isEqualTo("working");
-                    assertThat(stats.get("totalEntries")).isGreaterThan(0);
+                    assertThat((Integer) stats.get("totalEntries")).isGreaterThan(0);
                 }))
                 .assertCompleted();
     }
@@ -263,7 +269,7 @@ class WorkingMemoryExecutorTest {
                 "content", "To be cleared",
                 "memoryType", "working",
                 "slot", "clear-test"
-        ))).await().indefinitely();
+        ), RetryPolicy.DEFAULT)).await().indefinitely();
 
         // When - clear
         Map<String, Object> context = Map.of(
@@ -272,7 +278,7 @@ class WorkingMemoryExecutorTest {
                 "memoryType", "working",
                 "slot", "clear-test"
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // Then
         executor.execute(task).subscribe().withSubscriber(UniAssertSubscriber.create())

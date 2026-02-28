@@ -11,7 +11,8 @@ import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import tech.kayys.wayang.eip.config.TransformerConfig;
+import tech.kayys.wayang.eip.dto.TransformerDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import tech.kayys.wayang.eip.service.TransformerRegistry;
 
 import java.time.Instant;
@@ -29,10 +30,13 @@ public class TransformerExecutor extends AbstractWorkflowExecutor {
         @Inject
         TransformerRegistry transformerRegistry;
 
+        @Inject
+        ObjectMapper objectMapper;
+
         @Override
         public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
                 Map<String, Object> context = task.context();
-                TransformerConfig config = TransformerConfig.fromContext(context);
+                TransformerDto config = objectMapper.convertValue(context, TransformerDto.class);
                 Object message = context.get("message");
 
                 LOG.debug("Transforming message with type: {}", config.transformType());

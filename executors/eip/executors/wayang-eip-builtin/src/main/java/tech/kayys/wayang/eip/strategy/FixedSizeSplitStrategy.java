@@ -1,7 +1,7 @@
 package tech.kayys.wayang.eip.strategy;
 
 import io.smallrye.mutiny.Uni;
-import tech.kayys.wayang.eip.config.SplitterConfig;
+import tech.kayys.wayang.eip.dto.SplitterDto;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,7 +9,7 @@ import java.util.List;
 public class FixedSizeSplitStrategy implements SplitStrategy {
 
     @Override
-    public Uni<List<Object>> split(Object message, SplitterConfig config) {
+    public Uni<List<Object>> split(Object message, SplitterDto config) {
         return Uni.createFrom().item(() -> {
             if (message instanceof List<?> list) {
                 List<Object> batches = new ArrayList<>();

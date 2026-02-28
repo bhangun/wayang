@@ -22,5 +22,15 @@
             <artifactId>wayang-memory-core</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-plugin-spi</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-schema-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

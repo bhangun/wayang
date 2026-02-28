@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import tech.kayys.wayang.rag.core.model.RagChunk;
 import tech.kayys.wayang.rag.core.store.InMemoryVectorStore;
 import tech.kayys.wayang.rag.core.store.VectorStore;
+import tech.kayys.wayang.rag.embedding.OwnedRagEmbeddingStoreAdapter;
 
 import java.util.Map;
 

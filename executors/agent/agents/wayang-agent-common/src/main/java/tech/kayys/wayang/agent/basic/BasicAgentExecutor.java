@@ -9,14 +9,20 @@ import tech.kayys.wayang.agent.AgentType;
 import tech.kayys.wayang.agent.executor.AbstractAgentExecutor;
 
 import java.util.Map;
+import tech.kayys.wayang.agent.schema.BasicAgentConfig;
 
 /**
  * Executor for Basic (Common) Agents.
  * Responsible for general purpose tasks.
  */
 @ApplicationScoped
-@Executor(type = "agent-common", version = "1.0.0")
+@Executor(executorType = "agent-basic", version = "1.0.0")
 public class BasicAgentExecutor extends AbstractAgentExecutor {
+
+    @Override
+    public String getExecutorType() {
+        return "agent-basic";
+    }
 
     @Override
     protected AgentType getAgentType() {
@@ -26,6 +32,8 @@ public class BasicAgentExecutor extends AbstractAgentExecutor {
     @Override
     protected Uni<NodeExecutionResult> doExecute(NodeExecutionTask task) {
         logger.info("Basic agent executing task: {}", task.nodeId());
+
+        BasicAgentConfig config = objectMapper.convertValue(task.context(), BasicAgentConfig.class);
 
         return Uni.createFrom().item(() -> {
             Map<String, Object> output = Map.of(

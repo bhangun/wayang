@@ -13,7 +13,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import io.smallrye.mutiny.Uni;
-import tech.kayys.wayang.eip.config.RouterConfig;
+import tech.kayys.wayang.eip.dto.RouterDto;
+import tech.kayys.wayang.eip.dto.RouteRuleDto;
 
 /**
  * Real CEL/JsonPath Route Evaluator
@@ -26,17 +27,17 @@ public class RouteEvaluator {
     @Inject
     ObjectMapper objectMapper;
 
-    public Uni<List<String>> evaluateRoutes(RouterConfig config, Map<String, Object> context) {
+    public Uni<List<String>> evaluateRoutes(RouterDto config, Map<String, Object> context) {
         return Uni.createFrom().item(() -> {
             List<String> results = new ArrayList<>();
             Object message = context.get("message");
 
             // Sort rules by priority (highest first)
-            List<tech.kayys.wayang.eip.config.RouteRule> sortedRules = new ArrayList<>(config.rules());
+            List<RouteRuleDto> sortedRules = new ArrayList<>(config.rules());
             sortedRules.sort(java.util.Comparator
-                    .comparingInt(tech.kayys.wayang.eip.config.RouteRule::priority).reversed());
+                    .comparingInt(RouteRuleDto::priority).reversed());
 
-            for (tech.kayys.wayang.eip.config.RouteRule rule : sortedRules) {
+            for (RouteRuleDto rule : sortedRules) {
                 if (matches(rule.condition(), message, context)) {
                     results.add(rule.targetNode());
                     if ("first".equalsIgnoreCase(config.strategy())) {

@@ -23,7 +23,7 @@ cat > pom.xml << 'EOF'
     <packaging>pom</packaging>
     
     <properties>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.release>25</maven.compiler.release>
         <quarkus.version>3.6.4</quarkus.version>
     </properties>
     

@@ -11,17 +11,19 @@ import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import tech.kayys.wayang.eip.config.FilterConfig;
 import tech.kayys.wayang.eip.service.FilterEvaluator;
 
 import java.time.Instant;
 import java.util.Map;
 
+import tech.kayys.wayang.eip.dto.FilterDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import tech.kayys.wayang.eip.service.RouteEvaluator; // Added based on new injection
+
 import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
-@Executor(executorType = "eip.filter", maxConcurrentTasks = 200, supportedNodeTypes = {
-                "filter", "validator" }, version = "1.0.0")
+@Executor(executorType = "eip.filter", maxConcurrentTasks = 100, supportedNodeTypes = { "filter" }, version = "1.0.0")
 public class FilterExecutor extends AbstractWorkflowExecutor {
 
         private static final Logger LOG = LoggerFactory.getLogger(FilterExecutor.class);
@@ -29,10 +31,16 @@ public class FilterExecutor extends AbstractWorkflowExecutor {
         @Inject
         FilterEvaluator filterEvaluator;
 
+        @Inject
+        RouteEvaluator routeEvaluator;
+
+        @Inject
+        ObjectMapper objectMapper;
+
         @Override
         public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
                 Map<String, Object> context = task.context();
-                FilterConfig config = FilterConfig.fromContext(context);
+                FilterDto config = objectMapper.convertValue(context, FilterDto.class);
 
                 return filterEvaluator.evaluate(config.expression(), context)
                                 .map(matches -> {

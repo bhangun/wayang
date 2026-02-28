@@ -12,7 +12,8 @@ import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import tech.kayys.wayang.eip.config.ChannelConfig;
+import tech.kayys.wayang.eip.dto.ChannelDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import tech.kayys.wayang.eip.service.ChannelRegistry;
 
 import java.time.Duration;
@@ -36,10 +37,13 @@ public class ChannelExecutor extends AbstractWorkflowExecutor {
         @Inject
         AuditService auditService;
 
+        @Inject
+        ObjectMapper objectMapper;
+
         @Override
         public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
                 Map<String, Object> context = task.context();
-                ChannelConfig config = ChannelConfig.fromContext(context);
+                ChannelDto config = objectMapper.convertValue(context, ChannelDto.class);
                 Object message = context.get("message");
                 String operation = (String) context.getOrDefault("operation", "send");
 
@@ -55,7 +59,7 @@ public class ChannelExecutor extends AbstractWorkflowExecutor {
                 };
         }
 
-        private Uni<NodeExecutionResult> sendToChannel(ChannelConfig config, Object message, NodeExecutionTask task) {
+        private Uni<NodeExecutionResult> sendToChannel(ChannelDto config, Object message, NodeExecutionTask task) {
                 return channelRegistry.getChannel(config.channelName())
                                 .send(message)
                                 .map(messageId -> {
@@ -76,7 +80,7 @@ public class ChannelExecutor extends AbstractWorkflowExecutor {
                                 });
         }
 
-        private Uni<NodeExecutionResult> receiveFromChannel(ChannelConfig config, NodeExecutionTask task) {
+        private Uni<NodeExecutionResult> receiveFromChannel(ChannelDto config, NodeExecutionTask task) {
                 return channelRegistry.getChannel(config.channelName())
                                 .receive()
                                 .map(message -> SimpleNodeExecutionResult.success(
@@ -91,7 +95,7 @@ public class ChannelExecutor extends AbstractWorkflowExecutor {
                                                 task.token(), Duration.ZERO));
         }
 
-        private Uni<NodeExecutionResult> peekChannel(ChannelConfig config, NodeExecutionTask task) {
+        private Uni<NodeExecutionResult> peekChannel(ChannelDto config, NodeExecutionTask task) {
                 return channelRegistry.getChannel(config.channelName())
                                 .peek()
                                 .map(message -> SimpleNodeExecutionResult.success(
@@ -105,7 +109,7 @@ public class ChannelExecutor extends AbstractWorkflowExecutor {
                                                 task.token(), Duration.ZERO));
         }
 
-        private Uni<NodeExecutionResult> getChannelSize(ChannelConfig config, NodeExecutionTask task) {
+        private Uni<NodeExecutionResult> getChannelSize(ChannelDto config, NodeExecutionTask task) {
                 return channelRegistry.getChannel(config.channelName())
                                 .size()
                                 .map(size -> SimpleNodeExecutionResult.success(

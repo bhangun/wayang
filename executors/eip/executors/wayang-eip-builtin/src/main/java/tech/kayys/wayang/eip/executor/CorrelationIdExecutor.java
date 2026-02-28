@@ -12,7 +12,8 @@ import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import tech.kayys.wayang.eip.config.CorrelationIdConfig;
+import tech.kayys.wayang.eip.dto.CorrelationIdDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import tech.kayys.wayang.eip.service.CorrelationService;
 
 import java.time.Duration;
@@ -36,10 +37,13 @@ public class CorrelationIdExecutor extends AbstractWorkflowExecutor {
     @Inject
     AuditService auditService;
 
+    @Inject
+    ObjectMapper objectMapper;
+
     @Override
     public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
         Map<String, Object> context = task.context();
-        CorrelationIdConfig config = CorrelationIdConfig.fromContext(context);
+        CorrelationIdDto config = objectMapper.convertValue(context, CorrelationIdDto.class);
         Object message = context.get("message");
 
         return generateOrExtractCorrelationId(config, message, context)
@@ -83,7 +87,7 @@ public class CorrelationIdExecutor extends AbstractWorkflowExecutor {
     }
 
     private Uni<String> generateOrExtractCorrelationId(
-            CorrelationIdConfig config, Object message, Map<String, Object> context) {
+            CorrelationIdDto config, Object message, Map<String, Object> context) {
 
         return switch (config.strategy()) {
             case "generate" -> generateNewId();
@@ -101,7 +105,7 @@ public class CorrelationIdExecutor extends AbstractWorkflowExecutor {
     }
 
     private Uni<String> extractCorrelationId(
-            CorrelationIdConfig config, Object message, Map<String, Object> context) {
+            CorrelationIdDto config, Object message, Map<String, Object> context) {
 
         return Uni.createFrom().item(() -> {
             if (config.extractFrom() != null) {
@@ -126,7 +130,7 @@ public class CorrelationIdExecutor extends AbstractWorkflowExecutor {
     }
 
     private Uni<String> propagateCorrelationId(
-            CorrelationIdConfig config, Map<String, Object> context) {
+            CorrelationIdDto config, Map<String, Object> context) {
 
         return Uni.createFrom().item(() -> {
             // Try to get from headers

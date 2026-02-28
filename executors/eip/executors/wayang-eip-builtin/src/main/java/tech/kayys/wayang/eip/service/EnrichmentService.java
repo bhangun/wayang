@@ -7,7 +7,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.wayang.eip.config.EnrichmentSource;
+import tech.kayys.wayang.eip.dto.EnrichmentSourceDto;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,7 +23,7 @@ public class EnrichmentService {
 
     private final Map<String, Object> cache = new ConcurrentHashMap<>();
 
-    public Uni<Map<String, Object>> enrich(EnrichmentSource source, Object message, Map<String, Object> context) {
+    public Uni<Map<String, Object>> enrich(EnrichmentSourceDto source, Object message, Map<String, Object> context) {
         LOG.debug("Enriching from source: {} ({})", source.type(), source.uri());
 
         return (Uni<Map<String, Object>>) (Uni<?>) switch (source.type()) {
@@ -34,7 +34,7 @@ public class EnrichmentService {
         };
     }
 
-    private Uni<Map<String, Object>> enrichFromCache(EnrichmentSource source, Object message) {
+    private Uni<Map<String, Object>> enrichFromCache(EnrichmentSourceDto source, Object message) {
         return Uni.createFrom().item(() -> {
             String key = extractKey(source, message);
             Object cached = cache.get(key);
@@ -46,7 +46,7 @@ public class EnrichmentService {
         });
     }
 
-    private Uni<Map<String, Object>> enrichFromStatic(EnrichmentSource source, Object message) {
+    private Uni<Map<String, Object>> enrichFromStatic(EnrichmentSourceDto source, Object message) {
         return Uni.createFrom().item(() -> {
             // Parse static data from URI
             try {
@@ -64,7 +64,7 @@ public class EnrichmentService {
         });
     }
 
-    private Uni<Map<String, Object>> enrichFromContext(EnrichmentSource source, Map<String, Object> context) {
+    private Uni<Map<String, Object>> enrichFromContext(EnrichmentSourceDto source, Map<String, Object> context) {
         return Uni.createFrom().item(() -> {
             Map<String, Object> enrichment = new HashMap<>();
             source.mapping().forEach((targetKey, sourceKey) -> {
@@ -77,7 +77,7 @@ public class EnrichmentService {
         });
     }
 
-    private String extractKey(EnrichmentSource source, Object message) {
+    private String extractKey(EnrichmentSourceDto source, Object message) {
         if (message instanceof Map) {
             Object keyField = ((Map<?, ?>) message).get(source.uri());
             return keyField != null ? keyField.toString() : "default";

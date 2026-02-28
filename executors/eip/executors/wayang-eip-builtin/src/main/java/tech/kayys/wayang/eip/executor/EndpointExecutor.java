@@ -10,7 +10,8 @@ import tech.kayys.wayang.eip.service.AuditService;
 import tech.kayys.wayang.eip.client.EndpointClientRegistry;
 
 import tech.kayys.wayang.eip.client.EndpointClient;
-import tech.kayys.wayang.eip.config.EndpointConfig;
+import tech.kayys.wayang.eip.dto.EndpointDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.inject.Inject;
 
@@ -45,10 +46,13 @@ public class EndpointExecutor extends AbstractWorkflowExecutor {
         @Inject
         AuditService auditService;
 
+        @Inject
+        ObjectMapper objectMapper;
+
         @Override
         public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
                 Map<String, Object> context = task.context();
-                EndpointConfig config = EndpointConfig.fromContext(context);
+                EndpointDto config = objectMapper.convertValue(context, EndpointDto.class);
                 Object payload = context.get("payload");
 
                 LOG.info("Sending to endpoint: {}, protocol: {}", config.uri(), config.protocol());
@@ -83,7 +87,7 @@ public class EndpointExecutor extends AbstractWorkflowExecutor {
                                 });
         }
 
-        private Uni<Object> sendToEndpoint(EndpointConfig config, Object payload, NodeExecutionTask task) {
+        private Uni<Object> sendToEndpoint(EndpointDto config, Object payload, NodeExecutionTask task) {
                 EndpointClient client = clientRegistry.getClient(config.protocol());
                 return client.send(config, payload)
                                 .ifNoItem().after(Duration.ofMillis(config.timeoutMs()))

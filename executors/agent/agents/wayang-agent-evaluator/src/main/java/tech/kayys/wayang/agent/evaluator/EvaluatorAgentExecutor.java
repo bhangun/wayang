@@ -9,14 +9,20 @@ import tech.kayys.wayang.agent.AgentType;
 import tech.kayys.wayang.agent.executor.AbstractAgentExecutor;
 
 import java.util.Map;
+import tech.kayys.wayang.agent.schema.EvaluatorAgentConfig;
 
 /**
  * Executor for Evaluator Agents.
  * Responsible for evaluating outputs and providing feedback.
  */
 @ApplicationScoped
-@Executor(type = "agent-evaluator", version = "1.0.0")
+@Executor(executorType = "agent-evaluator", version = "1.0.0")
 public class EvaluatorAgentExecutor extends AbstractAgentExecutor {
+
+    @Override
+    public String getExecutorType() {
+        return "agent-evaluator";
+    }
 
     @Override
     protected AgentType getAgentType() {
@@ -26,6 +32,8 @@ public class EvaluatorAgentExecutor extends AbstractAgentExecutor {
     @Override
     protected Uni<NodeExecutionResult> doExecute(NodeExecutionTask task) {
         logger.info("Evaluator agent executing task: {}", task.nodeId());
+
+        EvaluatorAgentConfig config = objectMapper.convertValue(task.context(), EvaluatorAgentConfig.class);
 
         return Uni.createFrom().item(() -> {
             Map<String, Object> output = Map.of(

@@ -23,6 +23,22 @@
             <artifactId>wayang-vector-core</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>tech.kayys.gamelan</groupId>
+            <artifactId>gamelan-engine-core</artifactId>
+            <version>1.0.0-SNAPSHOT</version> <!-- Adjust if a property is used -->
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-schema-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-plugin-spi</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Quarkus dependencies -->
         <dependency>

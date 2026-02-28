@@ -11,7 +11,8 @@ import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import tech.kayys.wayang.eip.config.RetryConfig;
+import tech.kayys.wayang.eip.dto.RetryDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import tech.kayys.wayang.eip.service.RetryService;
 
 import java.time.Instant;
@@ -29,10 +30,13 @@ public class RetryExecutor extends AbstractWorkflowExecutor {
         @Inject
         RetryService retryService;
 
+        @Inject
+        ObjectMapper objectMapper;
+
         @Override
         public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
                 Map<String, Object> context = task.context();
-                RetryConfig config = RetryConfig.fromContext(context);
+                RetryDto config = objectMapper.convertValue(context, RetryDto.class);
 
                 // In a real scenario, this executor might wrap another action or be part of a
                 // larger flow control

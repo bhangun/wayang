@@ -1,4 +1,4 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag;
 
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;

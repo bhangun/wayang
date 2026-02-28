@@ -9,14 +9,20 @@ import tech.kayys.wayang.agent.AgentType;
 import tech.kayys.wayang.agent.executor.AbstractAgentExecutor;
 
 import java.util.Map;
+import tech.kayys.wayang.agent.schema.PlannerAgentConfig;
 
 /**
  * Executor for Planner Agents.
  * Responsible for breaking down goals into tasks.
  */
 @ApplicationScoped
-@Executor(type = "agent-planner", version = "1.0.0")
+@Executor(executorType = "agent-planner", version = "1.0.0")
 public class PlannerAgentExecutor extends AbstractAgentExecutor {
+
+    @Override
+    public String getExecutorType() {
+        return "agent-planner";
+    }
 
     @Override
     protected AgentType getAgentType() {
@@ -26,6 +32,8 @@ public class PlannerAgentExecutor extends AbstractAgentExecutor {
     @Override
     protected Uni<NodeExecutionResult> doExecute(NodeExecutionTask task) {
         logger.info("Planner agent executing task: {}", task.nodeId());
+
+        PlannerAgentConfig config = objectMapper.convertValue(task.context(), PlannerAgentConfig.class);
 
         return Uni.createFrom().item(() -> {
             Map<String, Object> output = Map.of(

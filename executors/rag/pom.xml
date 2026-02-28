@@ -7,6 +7,7 @@
         <groupId>tech.kayys.wayang</groupId>
         <artifactId>wayang</artifactId>
         <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
     <artifactId>wayang-rag-parent</artifactId>
     <packaging>pom</packaging>
@@ -23,6 +24,10 @@
         <module>rag-runtime</module>
         <module>rag-core</module>
         <module>rag-executor</module>
+        <module>wayang-rag-retrieval</module>
+        <module>wayang-rag-config</module>
+        <module>wayang-rag-embedding</module>
+        <module>wayang-rag-slo</module>
     </modules>
 
     <dependencyManagement>

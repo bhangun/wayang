@@ -7,9 +7,15 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import tech.kayys.gamelan.core.engine.NodeExecutionResult;
-import tech.kayys.gamelan.core.engine.NodeExecutionTask;
-import tech.kayys.gamelan.core.domain.*;
+import tech.kayys.gamelan.engine.node.NodeExecutionResult;
+import tech.kayys.gamelan.engine.node.NodeExecutionTask;
+import tech.kayys.gamelan.engine.node.NodeExecutionStatus;
+import tech.kayys.gamelan.engine.execution.ExecutionToken;
+import tech.kayys.gamelan.engine.workflow.WorkflowRunId;
+import tech.kayys.gamelan.engine.node.NodeId;
+import tech.kayys.gamelan.engine.run.RetryPolicy;
+import java.time.Duration;
+import tech.kayys.wayang.memory.LongTermMemoryExecutor;
 
 import java.util.Map;
 import java.util.UUID;
@@ -31,9 +37,9 @@ class LongTermMemoryExecutorTest {
 
     @BeforeEach
     void setUp() {
-        runId = WorkflowRunId.from("test-run-" + UUID.randomUUID());
-        nodeId = NodeId.from("test-node");
-        token = ExecutionToken.from("test-token");
+        runId = WorkflowRunId.of("test-run-" + UUID.randomUUID());
+        nodeId = NodeId.of("test-node");
+        token = ExecutionToken.create(runId, nodeId, 0, Duration.ofHours(1));
     }
 
     @Test
@@ -47,7 +53,7 @@ class LongTermMemoryExecutorTest {
                 "memoryType", "longterm",
                 "importance", 0.8
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // When
         Uni<NodeExecutionResult> resultUni = executor.execute(task);
@@ -78,14 +84,14 @@ class LongTermMemoryExecutorTest {
                 "operation", "store",
                 "content", "Java is a programming language",
                 "memoryType", "longterm"
-        ))).await().indefinitely();
+        ), RetryPolicy.DEFAULT)).await().indefinitely();
 
         executor.execute(new NodeExecutionTask(runId, nodeId, 0, token, Map.of(
                 "agentId", agentId,
                 "operation", "store",
                 "content", "Python is used for data science",
                 "memoryType", "longterm"
-        ))).await().indefinitely();
+        ), RetryPolicy.DEFAULT)).await().indefinitely();
 
         // When - search
         Map<String, Object> context = Map.of(
@@ -95,7 +101,7 @@ class LongTermMemoryExecutorTest {
                 "memoryType", "longterm",
                 "limit", 5
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // Then
         executor.execute(task).subscribe().withSubscriber(UniAssertSubscriber.create())
@@ -121,7 +127,7 @@ class LongTermMemoryExecutorTest {
                 "operation", "store",
                 "content", "To be cleared",
                 "memoryType", "longterm"
-        ))).await().indefinitely();
+        ), RetryPolicy.DEFAULT)).await().indefinitely();
 
         // When - clear
         Map<String, Object> context = Map.of(
@@ -129,7 +135,7 @@ class LongTermMemoryExecutorTest {
                 "operation", "clear",
                 "memoryType", "longterm"
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // Then
         executor.execute(task).subscribe().withSubscriber(UniAssertSubscriber.create())
@@ -153,7 +159,7 @@ class LongTermMemoryExecutorTest {
                 "operation", "store",
                 "content", "Stats test entry",
                 "memoryType", "longterm"
-        ))).await().indefinitely();
+        ), RetryPolicy.DEFAULT)).await().indefinitely();
 
         // When
         Map<String, Object> context = Map.of(
@@ -161,7 +167,7 @@ class LongTermMemoryExecutorTest {
                 "operation", "stats",
                 "memoryType", "longterm"
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // Then
         executor.execute(task).subscribe().withSubscriber(UniAssertSubscriber.create())
@@ -185,7 +191,7 @@ class LongTermMemoryExecutorTest {
                 "operation", "search",
                 "memoryType", "longterm"
         );
-        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context);
+        NodeExecutionTask task = new NodeExecutionTask(runId, nodeId, 0, token, context, RetryPolicy.DEFAULT);
 
         // When
         Uni<NodeExecutionResult> resultUni = executor.execute(task);
@@ -196,7 +202,7 @@ class LongTermMemoryExecutorTest {
                 .assertItem(match(result -> {
                     Map<String, Object> output = result.output();
                     assertThat(output.get("success")).isEqualTo(false);
-                    assertThat(output.get("error")).contains("query");
+                    assertThat((String) output.get("error")).contains("query");
                 }))
                 .assertCompleted();
     }

@@ -1,9 +1,13 @@
-package tech.kayys.gamelan.executor.rag.examples;
+package tech.kayys.wayang.rag;
 
-import tech.kayys.gamelan.executor.rag.domain.*;
 
 import java.util.List;
 import java.util.Map;
+
+import tech.kayys.wayang.rag.domain.GenerationConfig;
+import tech.kayys.wayang.rag.domain.RagMode;
+import tech.kayys.wayang.rag.domain.RetrievalConfig;
+import tech.kayys.wayang.rag.domain.SearchStrategy;
 
 record RagQueryRequest(
         String tenantId,

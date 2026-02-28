@@ -11,7 +11,8 @@ import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import tech.kayys.wayang.eip.config.SplitterConfig;
+import tech.kayys.wayang.eip.dto.SplitterDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import tech.kayys.wayang.eip.strategy.SplitStrategyFactory;
 
 import java.time.Instant;
@@ -29,10 +30,13 @@ public class SplitterExecutor extends AbstractWorkflowExecutor {
         @Inject
         SplitStrategyFactory strategyFactory;
 
+        @Inject
+        ObjectMapper objectMapper;
+
         @Override
         public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
                 Map<String, Object> context = task.context();
-                SplitterConfig config = SplitterConfig.fromContext(context);
+                SplitterDto config = objectMapper.convertValue(context, SplitterDto.class);
                 Object message = context.get("message");
 
                 return strategyFactory.getStrategy(config.strategy())

@@ -47,6 +47,18 @@
             <artifactId>gamelan-sdk-executor</artifactId>
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
+        <!-- hitl-core for HumanTaskExecutor -->
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>hitl-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Schema DTO for HumanTaskConfig -->
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-schema-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!--  <dependency>
             <groupId>tech.kayys.gamelan</groupId>
             <artifactId>gamelan-grpc</artifactId>

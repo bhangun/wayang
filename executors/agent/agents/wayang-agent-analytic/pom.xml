@@ -13,6 +13,7 @@
     <properties>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
+        <gamelan.version>1.0.0-SNAPSHOT</gamelan.version>
     </properties>
 
     <dependencies>
@@ -29,7 +30,7 @@
         <dependency>
             <groupId>tech.kayys.gamelan.sdk</groupId>
             <artifactId>gamelan-sdk-executor-core</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <version>${gamelan.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

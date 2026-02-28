@@ -1,8 +1,8 @@
 package tech.kayys.wayang.eip.client;
 
 import io.smallrye.mutiny.Uni;
-import tech.kayys.wayang.eip.config.EndpointConfig;
+import tech.kayys.wayang.eip.dto.EndpointDto;
 
 public interface EndpointClient {
-    Uni<Object> send(EndpointConfig config, Object payload);
+    Uni<Object> send(EndpointDto config, Object payload);
 }

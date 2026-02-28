@@ -1,6 +1,8 @@
 package tech.kayys.gamelan.executor.rag.langchain;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import tech.kayys.wayang.rag.RagObservabilityMetrics;
+
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

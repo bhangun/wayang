@@ -1,7 +1,7 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import tech.kayys.gamelan.executor.rag.domain.GenerationConfig;
+import tech.kayys.wayang.rag.domain.GenerationConfig;
 import tech.kayys.wayang.rag.core.model.RagQuery;
 import tech.kayys.wayang.rag.core.model.RagScoredChunk;
 

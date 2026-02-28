@@ -9,6 +9,8 @@ import tech.kayys.gamelan.executor.rag.domain.RetrievalConfig;
 import tech.kayys.wayang.rag.core.model.RagChunk;
 import tech.kayys.wayang.rag.core.store.InMemoryVectorStore;
 import tech.kayys.wayang.rag.core.store.VectorStore;
+import tech.kayys.wayang.rag.embedding.RagEmbeddingStore;
+import tech.kayys.wayang.rag.embedding.RagEmbeddingStoreFactory;
 
 import java.util.Map;
 

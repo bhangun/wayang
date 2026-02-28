@@ -12,10 +12,12 @@ import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import tech.kayys.wayang.eip.config.DeadLetterChannelConfig;
+import tech.kayys.wayang.eip.dto.DeadLetterChannelDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import tech.kayys.wayang.eip.model.DeadLetterMessage;
 import tech.kayys.wayang.eip.service.DeadLetterStore;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -38,10 +40,13 @@ public class DeadLetterChannelExecutor extends AbstractWorkflowExecutor {
     @Inject
     AuditService auditService;
 
+    @Inject
+    ObjectMapper objectMapper;
+
     @Override
     public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
         Map<String, Object> context = task.context();
-        DeadLetterChannelConfig config = DeadLetterChannelConfig.fromContext(context);
+        DeadLetterChannelDto config = objectMapper.convertValue(context, DeadLetterChannelDto.class);
         Object failedMessage = context.get("message");
         Object error = context.get("error");
 
@@ -54,7 +59,7 @@ public class DeadLetterChannelExecutor extends AbstractWorkflowExecutor {
                 task.runId().value(),
                 task.nodeId().value(),
                 Instant.now(),
-                Instant.now().plus(config.retention()),
+                Instant.now().plus(Duration.ofDays(config.retentionDays())),
                 extractErrorDetails(error));
 
         return deadLetterStore.store(config.channelName(), dlm)
@@ -111,7 +116,7 @@ public class DeadLetterChannelExecutor extends AbstractWorkflowExecutor {
         return sb.toString();
     }
 
-    private void notifyAdmin(DeadLetterMessage dlm, DeadLetterChannelConfig config) {
+    private void notifyAdmin(DeadLetterMessage dlm, DeadLetterChannelDto config) {
         // In production, send email/slack/pagerduty notification
         LOG.warn("ADMIN NOTIFICATION: Dead letter message {} in channel {}",
                 dlm.id(), config.channelName());

@@ -11,8 +11,9 @@ import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import tech.kayys.wayang.eip.config.EnricherConfig;
-import tech.kayys.wayang.eip.config.EnrichmentSource;
+import tech.kayys.wayang.eip.dto.EnricherDto;
+import tech.kayys.wayang.eip.dto.EnrichmentSourceDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import tech.kayys.wayang.eip.service.EnrichmentService;
 
 import java.time.Duration;
@@ -32,17 +33,20 @@ public class EnricherExecutor extends AbstractWorkflowExecutor {
     @Inject
     EnrichmentService enrichmentService;
 
+    @Inject
+    ObjectMapper objectMapper;
+
     @Override
     public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
         Map<String, Object> context = task.context();
-        EnricherConfig config = EnricherConfig.fromContext(context);
+        EnricherDto config = objectMapper.convertValue(context, EnricherDto.class);
         Object message = context.get("message");
 
         // Start with empty enrichment map
         Uni<Map<String, Object>> enrichmentUni = Uni.createFrom().item(new HashMap<>());
 
         // Chain enrichments from all sources
-        for (EnrichmentSource source : config.sources()) {
+        for (EnrichmentSourceDto source : config.sources()) {
             enrichmentUni = enrichmentUni
                     .flatMap(currentEnrichment -> enrichmentService.enrich(source, message, context)
                             .map(newEnrichment -> {

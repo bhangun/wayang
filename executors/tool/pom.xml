@@ -23,6 +23,7 @@
         <module>golek-tool-sandbox</module>
         <module>golek-tool-rest</module>
         <module>gollek-plugin-tool-execution</module>
+        <module>wayang-tool-runtime</module>
     </modules>
 
     <properties>

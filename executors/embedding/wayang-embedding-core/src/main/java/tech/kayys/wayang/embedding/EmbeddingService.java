@@ -1,8 +1,11 @@
 package tech.kayys.wayang.embedding;
 
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -16,6 +19,8 @@ import java.util.OptionalInt;
 
 @ApplicationScoped
 public class EmbeddingService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(EmbeddingService.class);
 
     private final EmbeddingProviderRegistry registry;
     private final EmbeddingConfigRuntime runtimeConfig;
@@ -41,35 +46,40 @@ public class EmbeddingService {
         this.vectorCache = new EmbeddingVectorCache(this.config.getCacheMaxEntries());
     }
 
-    public EmbeddingResponse embed(EmbeddingRequest request) {
+    public Uni<EmbeddingResponse> embed(EmbeddingRequest request) {
         return embedForTenant(null, request);
     }
 
-    public EmbeddingResponse embedForTenant(String tenantId, EmbeddingRequest request) {
-        EmbeddingModuleConfig activeConfig = activeConfig();
-        String modelName = resolveModel(tenantId, request);
-        String providerName = resolveProviderName(tenantId, request);
-        boolean normalize = request.normalize() == null ? activeConfig.isNormalize() : request.normalize();
-        EmbeddingProvider provider = resolveProvider(providerName, modelName);
+    public Uni<EmbeddingResponse> embedForTenant(String tenantId, EmbeddingRequest request) {
+        return Uni.createFrom().deferred(() -> {
+            EmbeddingModuleConfig activeConfig = activeConfig();
+            String modelName = resolveModel(tenantId, request);
+            String providerName = resolveProviderName(tenantId, request);
+            boolean normalize = request.normalize() == null ? activeConfig.isNormalize() : request.normalize();
 
-        if (!provider.supports(modelName)) {
-            throw new EmbeddingException(
-                    "Provider '" + provider.name() + "' does not support model '" + modelName + "'");
-        }
+            EmbeddingProvider provider = resolveProvider(providerName, modelName);
+            if (!provider.supports(modelName)) {
+                return Uni.createFrom().failure(new EmbeddingException(
+                        "Provider '" + provider.name() + "' does not support model '" + modelName + "'"));
+            }
 
-        List<float[]> vectors = embedWithCacheAndDedup(
-                tenantId,
-                request.inputs(),
-                provider,
-                modelName,
-                normalize,
-                activeConfig);
-        int dimension = vectors.isEmpty() ? 0 : vectors.get(0).length;
-        return new EmbeddingResponse(vectors, dimension, provider.name(), modelName, activeConfig.getEmbeddingVersion());
+            return embedWithCacheAndDedup(
+                    tenantId,
+                    request.inputs(),
+                    provider,
+                    modelName,
+                    normalize,
+                    activeConfig)
+                    .map(vectors -> {
+                        int dimension = vectors.isEmpty() ? 0 : vectors.get(0).length;
+                        return new EmbeddingResponse(vectors, dimension, provider.name(), modelName,
+                                activeConfig.getEmbeddingVersion());
+                    });
+        });
     }
 
-    public float[] embedOne(String input) {
-        return embed(EmbeddingRequest.single(input)).first();
+    public Uni<float[]> embedOne(String input) {
+        return embed(EmbeddingRequest.single(input)).map(EmbeddingResponse::first);
     }
 
     public void reloadConfiguration() {
@@ -79,7 +89,7 @@ public class EmbeddingService {
         }
     }
 
-    private List<float[]> embedWithCacheAndDedup(
+    private Uni<List<float[]>> embedWithCacheAndDedup(
             String tenantId,
             List<String> inputs,
             EmbeddingProvider provider,
@@ -103,30 +113,40 @@ public class EmbeddingService {
             missingByKey.computeIfAbsent(key, ignored -> new ArrayList<>()).add(i);
         }
 
-        if (!missingByKey.isEmpty()) {
-            List<String> missingInputs = missingByKey.values().stream()
-                    .map(indexes -> inputs.get(indexes.get(0)))
-                    .toList();
-            List<float[]> generated = provider.embedAll(missingInputs, modelName);
-            validateDimensions(modelName, generated);
-            if (normalize) {
-                generated = generated.stream().map(EmbeddingService::l2Normalize).toList();
-            }
-
-            int generatedIndex = 0;
-            for (Map.Entry<String, List<Integer>> entry : missingByKey.entrySet()) {
-                float[] vector = generated.get(generatedIndex++);
-                if (cacheEnabled) {
-                    vectorCache.put(entry.getKey(), copyVector(vector));
-                }
-                for (Integer outputIndex : entry.getValue()) {
-                    resolved.put(outputIndex, copyVector(vector));
-                }
-            }
+        if (missingByKey.isEmpty()) {
+            return Uni.createFrom().item(assembleResults(inputs.size(), resolved));
         }
 
-        List<float[]> ordered = new ArrayList<>(inputs.size());
-        for (int i = 0; i < inputs.size(); i++) {
+        List<String> missingInputs = missingByKey.values().stream()
+                .map(indexes -> inputs.get(indexes.get(0)))
+                .toList();
+
+        // Assuming provider.embedAll is blocking, wrapping in Uni for now.
+        // If provider can be reactive, even better.
+        return Uni.createFrom().item(() -> provider.embedAll(missingInputs, modelName))
+                .map(generated -> {
+                    validateDimensions(modelName, generated);
+                    if (normalize) {
+                        generated = generated.stream().map(EmbeddingService::l2Normalize).toList();
+                    }
+
+                    int generatedIndex = 0;
+                    for (Map.Entry<String, List<Integer>> entry : missingByKey.entrySet()) {
+                        float[] vector = generated.get(generatedIndex++);
+                        if (cacheEnabled) {
+                            vectorCache.put(entry.getKey(), copyVector(vector));
+                        }
+                        for (Integer outputIndex : entry.getValue()) {
+                            resolved.put(outputIndex, copyVector(vector));
+                        }
+                    }
+                    return assembleResults(inputs.size(), resolved);
+                });
+    }
+
+    private List<float[]> assembleResults(int size, Map<Integer, float[]> resolved) {
+        List<float[]> ordered = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
             float[] vector = resolved.get(i);
             if (vector == null) {
                 throw new EmbeddingException("Failed to resolve embedding at index " + i);

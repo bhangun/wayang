@@ -132,6 +132,7 @@ public class EmbeddingBatchPipeline implements AutoCloseable {
                     request.provider(),
                     request.normalize());
 
+            // Blocking call for the worker thread
             EmbeddingResponse response = retry(tenantId, slice);
             if (provider == null) {
                 provider = response.provider();
@@ -140,7 +141,8 @@ public class EmbeddingBatchPipeline implements AutoCloseable {
                 dimension = response.dimension();
             } else if (response.dimension() != dimension) {
                 throw new EmbeddingException(
-                        "Batch embedding dimension mismatch: expected " + dimension + " but got " + response.dimension());
+                        "Batch embedding dimension mismatch: expected " + dimension + " but got "
+                                + response.dimension());
             }
             vectors.addAll(response.embeddings());
         }
@@ -155,7 +157,7 @@ public class EmbeddingBatchPipeline implements AutoCloseable {
         RuntimeException last = null;
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
             try {
-                return embeddingService.embedForTenant(tenantId, request);
+                return embeddingService.embedForTenant(tenantId, request).await().indefinitely();
             } catch (RuntimeException ex) {
                 last = ex;
                 if (attempt == maxRetries) {

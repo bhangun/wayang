@@ -26,7 +26,7 @@ class EmbeddingServiceTest {
         config.setNormalize(true);
 
         EmbeddingService service = new EmbeddingService(registry, config);
-        EmbeddingResponse response = service.embed(EmbeddingRequest.single("what is wayang"));
+        EmbeddingResponse response = service.embed(EmbeddingRequest.single("what is wayang")).await().indefinitely();
 
         assertEquals("hash", response.provider());
         assertEquals("hash-384", response.model());
@@ -50,7 +50,7 @@ class EmbeddingServiceTest {
         EmbeddingService service = new EmbeddingService(registry, new EmbeddingModuleConfig());
 
         EmbeddingRequest req = new EmbeddingRequest(List.of("hello"), "hash-1536", "hash", false);
-        EmbeddingResponse response = service.embed(req);
+        EmbeddingResponse response = service.embed(req).await().indefinitely();
 
         assertEquals(1536, response.first().length);
     }
@@ -66,8 +66,11 @@ class EmbeddingServiceTest {
         config.setDefaultModel("hash-384");
 
         EmbeddingService service = new EmbeddingService(registry, config);
-        EmbeddingResponse tfidf = service.embed(new EmbeddingRequest(List.of("risk scoring"), "tfidf-256", null, false));
-        EmbeddingResponse chargram = service.embed(new EmbeddingRequest(List.of("risk scoring"), "chargram-256", null, false));
+        EmbeddingResponse tfidf = service.embed(new EmbeddingRequest(List.of("risk scoring"), "tfidf-256", null, false))
+                .await().indefinitely();
+        EmbeddingResponse chargram = service
+                .embed(new EmbeddingRequest(List.of("risk scoring"), "chargram-256", null, false)).await()
+                .indefinitely();
 
         assertEquals("tfidf", tfidf.provider());
         assertEquals(256, tfidf.dimension());
@@ -89,7 +92,7 @@ class EmbeddingServiceTest {
         EmbeddingService service = new EmbeddingService(registry, config);
         EmbeddingResponse response = service.embedForTenant(
                 "tenant-risk",
-                new EmbeddingRequest(List.of("risk score card declined"), null, null, false));
+                new EmbeddingRequest(List.of("risk score card declined"), null, null, false)).await().indefinitely();
 
         assertEquals("tfidf", response.provider());
         assertEquals("tfidf-512", response.model());
@@ -123,7 +126,7 @@ class EmbeddingServiceTest {
 
         assertThrows(
                 EmbeddingException.class,
-                () -> service.embed(EmbeddingRequest.single("dimension mismatch")));
+                () -> service.embed(EmbeddingRequest.single("dimension mismatch")).await().indefinitely());
     }
 
     @Test
@@ -138,8 +141,8 @@ class EmbeddingServiceTest {
 
         EmbeddingService service = new EmbeddingService(registry, config);
         EmbeddingRequest request = new EmbeddingRequest(List.of("alpha", "beta", "alpha"), null, null, false);
-        EmbeddingResponse first = service.embedForTenant("tenant-a", request);
-        EmbeddingResponse second = service.embedForTenant("tenant-a", request);
+        EmbeddingResponse first = service.embedForTenant("tenant-a", request).await().indefinitely();
+        EmbeddingResponse second = service.embedForTenant("tenant-a", request).await().indefinitely();
 
         assertEquals(3, first.dimension());
         assertEquals(1, countingProvider.calls.get());
@@ -149,12 +152,13 @@ class EmbeddingServiceTest {
 
     @Test
     void shouldUseVersionFromConfig() {
-        EmbeddingProviderRegistry registry = new EmbeddingProviderRegistry(List.of(new DeterministicHashEmbeddingProvider()));
+        EmbeddingProviderRegistry registry = new EmbeddingProviderRegistry(
+                List.of(new DeterministicHashEmbeddingProvider()));
         EmbeddingModuleConfig config = new EmbeddingModuleConfig();
         config.setEmbeddingVersion("v7");
         EmbeddingService service = new EmbeddingService(registry, config);
 
-        EmbeddingResponse response = service.embed(EmbeddingRequest.single("hello"));
+        EmbeddingResponse response = service.embed(EmbeddingRequest.single("hello")).await().indefinitely();
 
         assertEquals("v7", response.version());
     }

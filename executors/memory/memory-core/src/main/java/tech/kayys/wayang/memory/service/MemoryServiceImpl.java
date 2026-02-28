@@ -29,6 +29,9 @@ public class MemoryServiceImpl implements MemoryService {
     
     @Inject
     MemoryEventPublisher eventPublisher;
+
+    @Inject
+    tech.kayys.wayang.embedding.EmbeddingService embeddingService;
     
     @ConfigProperty(name = "memory.cache.ttl", defaultValue = "PT1H")
     Duration cacheTTL;
@@ -131,15 +134,25 @@ public class MemoryServiceImpl implements MemoryService {
     public Uni<List<ConversationMemory>> findSimilarMemories(String sessionId, String query, int limit) {
         LOG.info("Finding similar memories for session: {}, query: {}", sessionId, query);
         
-        // Simplified search for now as generateEmbedding requires more infrastructure
-        return ConversationMemoryEntity.<ConversationMemoryEntity>find("sessionId = ?1", sessionId)
-            .list()
-            .onItem().transform(entities -> 
-                entities.stream()
-                    .map(entity -> convertToConversationMemory(entity, 0.8))
-                    .limit(limit)
-                    .collect(Collectors.toList())
-            );
+        return embeddingService.embedOne(query)
+            .onItem().transformToUni(queryVector -> {
+                // This would normally call a vector store, but for now we'll simulate it
+                // by fetching all memories for the session and calculating similarity.
+                // In a real scenario, tech.kayys.wayang.memory.service.VectorMemoryStore would be used.
+                return ConversationMemoryEntity.<ConversationMemoryEntity>find("sessionId = ?1", sessionId)
+                    .list()
+                    .onItem().transform(entities -> 
+                        entities.stream()
+                            .map(entity -> {
+                                double similarity = calculateCosineSimilarity(queryVector, entity.getEmbedding());
+                                return convertToConversationMemory(entity, similarity);
+                            })
+                            .filter(m -> m.getRelevanceScore() >= similarityThreshold)
+                            .sorted(Comparator.comparing(ConversationMemory::getRelevanceScore).reversed())
+                            .limit(limit)
+                            .collect(Collectors.toList())
+                    );
+            });
     }
 
     // Private helper methods
@@ -215,18 +228,36 @@ public class MemoryServiceImpl implements MemoryService {
     }
 
     private Uni<ConversationMemory> createConversationMemory(AgentResponse result) {
-        // Simplified without embedding for now
-        return Uni.createFrom().item(
-            new ConversationMemory(
-                result.getId(),
-                "assistant",
-                result.getContent(),
-                result.getMetadata(),
-                new ArrayList<>(),
-                result.getTimestamp(),
-                null
-            )
-        );
+        return embeddingService.embedOne(result.getContent())
+            .map(vector -> {
+                List<Float> embeddingList = new ArrayList<>(vector.length);
+                for (float v : vector) {
+                    embeddingList.add(v);
+                }
+                
+                return new ConversationMemory(
+                    result.getId(),
+                    "assistant",
+                    result.getContent(),
+                    result.getMetadata(),
+                    embeddingList,
+                    result.getTimestamp(),
+                    1.0
+                );
+            });
+    }
+
+    private double calculateCosineSimilarity(float[] vectorA, List<Float> vectorB) {
+        if (vectorB == null || vectorA.length != vectorB.size()) return 0.0;
+        double dotProduct = 0.0;
+        double normA = 0.0;
+        double normB = 0.0;
+        for (int i = 0; i < vectorA.length; i++) {
+            dotProduct += vectorA[i] * vectorB.get(i);
+            normA += Math.pow(vectorA[i], 2);
+            normB += Math.pow(vectorB.get(i), 2);
+        }
+        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
     private Uni<Void> addMemoryToSession(String sessionId, ConversationMemory memory) {

@@ -19,6 +19,11 @@
     <dependencies>
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-embedding-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-vector-core</artifactId>
             <version>${project.version}</version>
         </dependency>

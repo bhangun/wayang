@@ -5,11 +5,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.wayang.rag.domain.*;
-import tech.kayys.wayang.rag.RagObservabilityMetrics;
-import tech.kayys.wayang.rag.NativeRagCoreService;
-import tech.kayys.wayang.rag.core.model.RagResult;
-import tech.kayys.wayang.rag.core.model.RagScoredChunk;
+import tech.kayys.wayang.rag.RagResult;
+import tech.kayys.wayang.rag.RagScoredChunk;
 
 import java.time.Instant;
 import java.util.*;

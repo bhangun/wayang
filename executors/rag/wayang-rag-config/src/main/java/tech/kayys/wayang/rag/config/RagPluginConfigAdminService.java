@@ -4,6 +4,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
+import tech.kayys.wayang.rag.RagPluginTenantStrategyResolver;
+import tech.kayys.wayang.rag.RagRuntimeConfig;
 
 import java.time.Instant;
 
@@ -95,7 +97,8 @@ public class RagPluginConfigAdminService {
                 mp,
                 "rag.runtime.rag.plugins.selection-strategy",
                 config.getRagPluginSelectionStrategy()));
-        config.setRagPluginEnabledIds(readString(mp, "rag.runtime.rag.plugins.enabled", config.getRagPluginEnabledIds()));
+        config.setRagPluginEnabledIds(
+                readString(mp, "rag.runtime.rag.plugins.enabled", config.getRagPluginEnabledIds()));
         config.setRagPluginOrder(readString(mp, "rag.runtime.rag.plugins.order", config.getRagPluginOrder()));
         config.setRagPluginTenantEnabledOverrides(readString(
                 mp,

@@ -1,13 +1,15 @@
-package tech.kayys.gamelan.executor.rag.examples;
+package tech.kayys.wayang.rag;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.kayys.gamelan.executor.rag.domain.ChunkingConfig;
-import tech.kayys.gamelan.executor.rag.langchain.NativeRagCoreService;
-import tech.kayys.wayang.rag.core.model.RagChunk;
+import tech.kayys.wayang.rag.ChunkingConfig;
+import tech.kayys.wayang.rag.RagMetrics;
+import tech.kayys.wayang.rag.NativeRagCoreService;
+import tech.kayys.wayang.rag.RagChunk;
+import tech.kayys.wayang.rag.RagDocument;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -36,7 +38,8 @@ class DocumentIngestionServiceTest {
 
     @Test
     void testIngestTextDocuments_Success() {
-        when(nativeRagCoreService.ingestText(anyString(), anyString(), anyString(), anyMap(), any(ChunkingConfig.class)))
+        when(nativeRagCoreService.ingestText(anyString(), anyString(), anyString(), anyMap(),
+                any(ChunkingConfig.class)))
                 .thenReturn(List.of(RagChunk.of("doc-1", 0, "chunk", Map.of())));
 
         IngestResult result = ingestionService
@@ -50,7 +53,8 @@ class DocumentIngestionServiceTest {
 
     @Test
     void testBatchIngest_Success() {
-        when(nativeRagCoreService.ingestText(anyString(), anyString(), anyString(), anyMap(), any(ChunkingConfig.class)))
+        when(nativeRagCoreService.ingestText(anyString(), anyString(), anyString(), anyMap(),
+                any(ChunkingConfig.class)))
                 .thenReturn(List.of(RagChunk.of("doc-1", 0, "chunk", Map.of())));
 
         IngestResult result = ingestionService.batchIngest(

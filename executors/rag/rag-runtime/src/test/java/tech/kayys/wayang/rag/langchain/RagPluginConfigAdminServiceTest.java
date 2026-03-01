@@ -1,4 +1,4 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag.langchain;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -111,19 +111,20 @@ class RagPluginConfigAdminServiceTest {
         service.config = config;
         service.strategyResolver = new RagPluginTenantStrategyResolver(config);
 
-        RagPluginConfigValidationException ex = assertThrows(RagPluginConfigValidationException.class, () -> service.update(new RagPluginConfigUpdate(
-                null,
-                "normalize-query",
-                "normalize-query",
-                "tenant-a=normalize-query",
-                "tenant-a",
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null)));
+        RagPluginConfigValidationException ex = assertThrows(RagPluginConfigValidationException.class,
+                () -> service.update(new RagPluginConfigUpdate(
+                        null,
+                        "normalize-query",
+                        "normalize-query",
+                        "tenant-a=normalize-query",
+                        "tenant-a",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null)));
 
         assertEquals("invalid_entry", ex.getCode());
         assertEquals("tenantOrderOverrides", ex.getField());
@@ -172,19 +173,20 @@ class RagPluginConfigAdminServiceTest {
         service.config = config;
         service.strategyResolver = new RagPluginTenantStrategyResolver(config);
 
-        RagPluginConfigValidationException ex = assertThrows(RagPluginConfigValidationException.class, () -> service.update(new RagPluginConfigUpdate(
-                "unknown-strategy",
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null)));
+        RagPluginConfigValidationException ex = assertThrows(RagPluginConfigValidationException.class,
+                () -> service.update(new RagPluginConfigUpdate(
+                        "unknown-strategy",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null)));
 
         assertEquals("unknown_strategy_id", ex.getCode());
         assertEquals("selectionStrategy", ex.getField());

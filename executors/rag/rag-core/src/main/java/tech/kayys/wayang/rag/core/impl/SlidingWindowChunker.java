@@ -1,7 +1,7 @@
 package tech.kayys.wayang.rag.core.impl;
 
-import tech.kayys.wayang.rag.core.model.RagChunk;
-import tech.kayys.wayang.rag.core.model.RagDocument;
+import tech.kayys.wayang.rag.RagChunk;
+import tech.kayys.wayang.rag.RagDocument;
 import tech.kayys.wayang.rag.core.spi.Chunker;
 import tech.kayys.wayang.rag.core.spi.ChunkingOptions;
 

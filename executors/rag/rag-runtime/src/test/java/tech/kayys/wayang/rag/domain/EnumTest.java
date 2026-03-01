@@ -1,7 +1,4 @@
-package tech.kayys.gamelan.executor.rag.domain;
-
-import org.junit.jupiter.api.Test;
-import tech.kayys.gamelan.executor.rag.examples.SourceType;
+package tech.kayys.wayang.rag;
 
 import static org.junit.jupiter.api.Assertions.*;
 

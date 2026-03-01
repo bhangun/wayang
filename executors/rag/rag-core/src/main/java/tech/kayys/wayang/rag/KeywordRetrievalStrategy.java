@@ -1,3 +1,20 @@
+package tech.kayys.wayang.rag;
+
+import dev.langchain4j.data.embedding.Embedding;
+import dev.langchain4j.data.segment.TextSegment;
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.store.embedding.EmbeddingMatch;
+import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
+import dev.langchain4j.store.embedding.EmbeddingStore;
+import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tech.kayys.wayang.rag.model.RetrievalConfig;
+import tech.kayys.wayang.rag.model.RetrievalStrategy;
+import tech.kayys.wayang.rag.model.ScoredDocument;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * KEYWORD RETRIEVAL STRATEGY - FULL BM25 IMPLEMENTATION

@@ -1,4 +1,4 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag;
 
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerResponseContext;

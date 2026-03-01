@@ -5,8 +5,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.wayang.rag.domain.RagResponse;
-import tech.kayys.wayang.rag.domain.RagWorkflowInput;
+import tech.kayys.wayang.rag.RagResponse;
+import tech.kayys.wayang.rag.RagWorkflowInput;
 
 @ApplicationScoped
 public class RagExecutionService {

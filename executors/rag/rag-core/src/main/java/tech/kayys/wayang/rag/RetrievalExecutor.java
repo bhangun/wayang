@@ -1,4 +1,6 @@
 
+package tech.kayys.wayang.rag;
+
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -23,8 +25,6 @@ import tech.kayys.gamelan.core.engine.NodeExecutionResult;
 import tech.kayys.gamelan.core.engine.NodeExecutionTask;
 import tech.kayys.gamelan.executor.Executor;
 import tech.kayys.gamelan.executor.AbstractWorkflowExecutor;
-import tech.kayys.gamelan.executor.rag.infrastructure.EmbeddingStoreRegistry;
-import tech.kayys.gamelan.executor.rag.embedding.EmbeddingModelFactory;
 import tech.kayys.wayang.error.ErrorCode;
 
 import java.time.Duration;

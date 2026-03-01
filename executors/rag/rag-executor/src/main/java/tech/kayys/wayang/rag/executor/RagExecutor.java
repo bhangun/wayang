@@ -13,10 +13,10 @@ import tech.kayys.gamelan.sdk.executor.core.AbstractWorkflowExecutor;
 import tech.kayys.gamelan.sdk.executor.core.Executor;
 import tech.kayys.gamelan.sdk.executor.core.SimpleNodeExecutionResult;
 import tech.kayys.wayang.rag.RagQueryService;
-import tech.kayys.wayang.rag.domain.GenerationConfig;
-import tech.kayys.wayang.rag.domain.RagResponse;
-import tech.kayys.wayang.rag.domain.RagWorkflowInput;
-import tech.kayys.wayang.rag.domain.RetrievalConfig;
+import tech.kayys.wayang.rag.GenerationConfig;
+import tech.kayys.wayang.rag.RagResponse;
+import tech.kayys.wayang.rag.RagWorkflowInput;
+import tech.kayys.wayang.rag.RetrievalConfig;
 
 import java.time.Duration;
 import java.time.Instant;

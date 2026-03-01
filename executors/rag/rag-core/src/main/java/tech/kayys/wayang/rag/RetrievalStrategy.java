@@ -1,4 +1,8 @@
-package main.java.tech.kayys.wayang.rag;
+package tech.kayys.wayang.rag;
+
+import dev.langchain4j.data.segment.TextSegment;
+import dev.langchain4j.store.embedding.EmbeddingStore;
+import java.util.List;
 
 public interface RetrievalStrategy {
     List<ScoredDocument> retrieve(

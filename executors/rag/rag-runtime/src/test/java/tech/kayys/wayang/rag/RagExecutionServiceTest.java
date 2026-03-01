@@ -1,4 +1,4 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag;
 
 import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
@@ -6,11 +6,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.kayys.gamelan.executor.rag.domain.GenerationConfig;
-import tech.kayys.gamelan.executor.rag.domain.RagResponse;
-import tech.kayys.gamelan.executor.rag.domain.RagWorkflowInput;
-import tech.kayys.gamelan.executor.rag.domain.RetrievalConfig;
-import tech.kayys.gamelan.executor.rag.examples.RagQueryService;
+import tech.kayys.wayang.rag.GenerationConfig;
+import tech.kayys.wayang.rag.RagResponse;
+import tech.kayys.wayang.rag.RagWorkflowInput;
+import tech.kayys.wayang.rag.RetrievalConfig;
+import tech.kayys.wayang.rag.RagQueryService;
 
 import java.time.Instant;
 import java.util.List;
@@ -39,7 +39,8 @@ class RagExecutionServiceTest {
     void testExecuteRagWorkflow_Success() {
         when(ragQueryService.query(anyString(), anyString(), anyString()))
                 .thenReturn(Uni.createFrom().item(new RagResponse(
-                        "q", "a", List.of(), List.of(), null, null, Instant.now(), Map.of(), List.of(), Optional.empty())));
+                        "q", "a", List.of(), List.of(), null, null, Instant.now(), Map.of(), List.of(),
+                        Optional.empty())));
 
         RagResponse response = ragExecutionService.executeRagWorkflow(
                 new RagWorkflowInput("tenant", "q", RetrievalConfig.defaults(), GenerationConfig.defaults()))

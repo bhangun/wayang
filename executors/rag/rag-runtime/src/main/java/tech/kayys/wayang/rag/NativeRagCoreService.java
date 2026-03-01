@@ -4,21 +4,19 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import tech.kayys.wayang.embedding.EmbeddingService;
+import tech.kayys.wayang.rag.RagChunk;
+import tech.kayys.wayang.rag.RagQuery;
+import tech.kayys.wayang.rag.RagResult;
+import tech.kayys.wayang.rag.RagScoredChunk;
+import tech.kayys.wayang.rag.RetrievalConfig;
+import tech.kayys.wayang.rag.GenerationConfig;
+import tech.kayys.wayang.rag.RagPluginExecutionContext;
 import tech.kayys.wayang.rag.core.impl.RagIndexer;
 import tech.kayys.wayang.rag.core.impl.RagPipeline;
 import tech.kayys.wayang.rag.core.impl.SimpleTextDocumentParser;
 import tech.kayys.wayang.rag.core.impl.SlidingWindowChunker;
 import tech.kayys.wayang.rag.core.impl.TopKReranker;
 import tech.kayys.wayang.rag.core.impl.VectorRetriever;
-import tech.kayys.wayang.rag.core.model.RagChunk;
-import tech.kayys.wayang.rag.core.model.RagQuery;
-import tech.kayys.wayang.rag.core.model.RagResult;
-import tech.kayys.wayang.rag.core.model.RagScoredChunk;
-import tech.kayys.wayang.rag.core.spi.ChunkingOptions;
-import tech.kayys.wayang.rag.domain.ChunkingConfig;
-import tech.kayys.wayang.rag.domain.GenerationConfig;
-import tech.kayys.wayang.rag.domain.RetrievalConfig;
-
 import java.util.List;
 import java.util.Map;
 
@@ -80,7 +78,7 @@ public class NativeRagCoreService {
                 if (pluginManager == null) {
                         return result;
                 }
-                java.util.List<tech.kayys.wayang.rag.core.model.RagScoredChunk> transformedChunks = pluginManager
+                java.util.List<RagScoredChunk> transformedChunks = pluginManager
                                 .applyAfterRetrieve(
                                                 pluginContext,
                                                 result.chunks());

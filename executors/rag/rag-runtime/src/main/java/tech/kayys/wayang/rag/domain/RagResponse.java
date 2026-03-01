@@ -1,4 +1,4 @@
-package tech.kayys.gamelan.executor.rag.domain;
+package tech.kayys.wayang.rag.domain;
 
 import java.time.Instant;
 import java.util.List;

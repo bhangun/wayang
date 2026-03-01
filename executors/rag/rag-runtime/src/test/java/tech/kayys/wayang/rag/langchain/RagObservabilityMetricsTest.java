@@ -1,4 +1,4 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag.langchain;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import tech.kayys.wayang.rag.RagObservabilityMetrics;

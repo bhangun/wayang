@@ -1,16 +1,17 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.kayys.gamelan.executor.rag.domain.RetrievalConfig;
+import tech.kayys.wayang.rag.domain.RetrievalConfig;
 import tech.kayys.wayang.rag.core.model.RagChunk;
 import tech.kayys.wayang.rag.core.store.InMemoryVectorStore;
 import tech.kayys.wayang.rag.core.store.VectorStore;
 import tech.kayys.wayang.rag.embedding.RagEmbeddingStore;
 import tech.kayys.wayang.rag.embedding.RagEmbeddingStoreFactory;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaContract;
 
 import java.util.Map;
 

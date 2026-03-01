@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
+import tech.kayys.wayang.rag.RagRuntimeConfig;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -41,7 +42,8 @@ public class RagSloAlertService {
                 config,
                 sloService,
                 Clock.systemUTC(),
-                objectMapperInstance != null && objectMapperInstance.isResolvable() ? objectMapperInstance.get() : null);
+                objectMapperInstance != null && objectMapperInstance.isResolvable() ? objectMapperInstance.get()
+                        : null);
     }
 
     RagSloAlertService(RagRuntimeConfig config, RagSloAdminService sloService, Clock clock) {
@@ -208,12 +210,14 @@ public class RagSloAlertService {
         return breach.metric() != null && breach.metric().startsWith("eval_guardrail_");
     }
 
-    private boolean isSuppressedBySnooze(SnoozeMarker snooze, List<RagSloBreach> activeBreaches, String fullFingerprint) {
+    private boolean isSuppressedBySnooze(SnoozeMarker snooze, List<RagSloBreach> activeBreaches,
+            String fullFingerprint) {
         if (!snooze.active()) {
             return false;
         }
         if (SCOPE_GUARDRAIL.equals(snooze.scope())) {
-            List<RagSloBreach> guardrail = activeBreaches.stream().filter(RagSloAlertService::isGuardrailBreach).toList();
+            List<RagSloBreach> guardrail = activeBreaches.stream().filter(RagSloAlertService::isGuardrailBreach)
+                    .toList();
             List<RagSloBreach> nonGuardrail = activeBreaches.stream().filter(b -> !isGuardrailBreach(b)).toList();
             if (!nonGuardrail.isEmpty() || guardrail.isEmpty()) {
                 return false;

@@ -4,9 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
-import tech.kayys.gamelan.executor.rag.domain.RetrievalConfig;
-import tech.kayys.wayang.rag.core.model.RagScoredChunk;
-
+import tech.kayys.wayang.rag.RetrievalConfig;
+import tech.kayys.wayang.rag.RagQuery;
+import tech.kayys.wayang.rag.RagResult;
+import tech.kayys.wayang.rag.RagScoredChunk;
+import tech.kayys.wayang.rag.RagEvalDataset;
+import tech.kayys.wayang.rag.RagEvalQueryCase;
+import tech.kayys.wayang.rag.NativeRagCoreService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -68,7 +72,8 @@ public class RagRetrievalEvalService {
         }
 
         int topK = resolveTopK(request == null ? null : request.topK(), dataset.topK());
-        double minSimilarity = resolveMinSimilarity(request == null ? null : request.minSimilarity(), dataset.minSimilarity());
+        double minSimilarity = resolveMinSimilarity(request == null ? null : request.minSimilarity(),
+                dataset.minSimilarity());
         String matchField = normalizeMatchField(firstNonBlank(
                 request == null ? null : request.matchField(),
                 dataset.matchField(),
@@ -79,8 +84,10 @@ public class RagRetrievalEvalService {
             throw new BadRequestException("dataset.queries must not be empty");
         }
 
-        Map<String, Object> requestFilters = request == null || request.filters() == null ? Map.of() : Map.copyOf(request.filters());
-        Map<String, Object> datasetFilters = dataset.defaultFilters() == null ? Map.of() : Map.copyOf(dataset.defaultFilters());
+        Map<String, Object> requestFilters = request == null || request.filters() == null ? Map.of()
+                : Map.copyOf(request.filters());
+        Map<String, Object> datasetFilters = dataset.defaultFilters() == null ? Map.of()
+                : Map.copyOf(dataset.defaultFilters());
 
         RetrievalConfig retrievalConfig = withThresholds(RetrievalConfig.defaults(), topK, (float) minSimilarity);
 
@@ -290,7 +297,8 @@ public class RagRetrievalEvalService {
     }
 
     private static int resolveTopK(Integer requestTopK, Integer datasetTopK) {
-        int value = requestTopK != null ? requestTopK : (datasetTopK != null ? datasetTopK : RetrievalConfig.defaults().topK());
+        int value = requestTopK != null ? requestTopK
+                : (datasetTopK != null ? datasetTopK : RetrievalConfig.defaults().topK());
         return Math.max(1, value);
     }
 

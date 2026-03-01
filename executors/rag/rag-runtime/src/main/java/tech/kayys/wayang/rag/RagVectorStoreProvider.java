@@ -1,10 +1,10 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
-import tech.kayys.wayang.rag.core.model.RagChunk;
+import tech.kayys.wayang.rag.RagChunk;
 import tech.kayys.wayang.rag.core.store.JsonPayloadCodec;
 import tech.kayys.wayang.rag.core.store.VectorStore;
 import tech.kayys.wayang.rag.core.store.VectorStoreFactory;

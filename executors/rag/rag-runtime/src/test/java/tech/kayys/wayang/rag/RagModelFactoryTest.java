@@ -1,4 +1,4 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -6,6 +6,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.kayys.wayang.embedding.EmbeddingService;
+import tech.kayys.wayang.rag.GenerationConfig;
+import tech.kayys.wayang.rag.RetrievalConfig;
 import tech.kayys.wayang.rag.embedding.RagEmbeddingModel;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;

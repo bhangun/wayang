@@ -11,10 +11,10 @@ public class QueryRewritePlugin implements RagPipelinePlugin {
     @Inject
     RagPluginTuningConfig tuningConfig;
 
-    QueryRewritePlugin() {
+    public QueryRewritePlugin() {
     }
 
-    QueryRewritePlugin(RagPluginTuningConfig tuningConfig) {
+    public QueryRewritePlugin(RagPluginTuningConfig tuningConfig) {
         this.tuningConfig = tuningConfig;
     }
 

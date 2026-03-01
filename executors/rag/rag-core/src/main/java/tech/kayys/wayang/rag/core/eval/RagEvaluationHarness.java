@@ -1,7 +1,7 @@
 package tech.kayys.wayang.rag.core.eval;
 
-import tech.kayys.wayang.rag.core.model.RagQuery;
-import tech.kayys.wayang.rag.core.model.RagScoredChunk;
+import tech.kayys.wayang.rag.RagQuery;
+import tech.kayys.wayang.rag.RagScoredChunk;
 import tech.kayys.wayang.rag.core.spi.Retriever;
 
 import java.util.ArrayList;
@@ -29,7 +29,8 @@ public class RagEvaluationHarness {
 
         for (RagEvalCase evalCase : evalCases) {
             long started = System.nanoTime();
-            List<RagScoredChunk> results = retriever.retrieve(new RagQuery(evalCase.query(), topK, 0.0, java.util.Map.of()));
+            List<RagScoredChunk> results = retriever
+                    .retrieve(new RagQuery(evalCase.query(), topK, 0.0, java.util.Map.of()));
             long elapsedMs = Math.max(0L, (System.nanoTime() - started) / 1_000_000L);
             latenciesMs.add(elapsedMs);
 

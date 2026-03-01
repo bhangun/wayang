@@ -1,4 +1,4 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag.langchain;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import tech.kayys.wayang.rag.RagObservabilityMetrics;
@@ -12,6 +12,8 @@ import tech.kayys.wayang.rag.slo.RagSloBreach;
 import tech.kayys.wayang.rag.slo.RagSloSnapshot;
 import tech.kayys.wayang.rag.slo.RagSloStatus;
 import tech.kayys.wayang.rag.slo.RagSloThresholds;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaHistoryCompactorJob;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaHistoryCompactorStatus;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -183,7 +185,8 @@ class RagSloAlertServiceTest {
         config.setSloAlertCooldownMs(0L);
         config.setSloAlertMinSeverity("warning");
 
-        RagSloAlertService service = new RagSloAlertService(config, createBreachingSloService(config), new MutableClock(Instant.parse("2026-01-01T00:00:00Z")));
+        RagSloAlertService service = new RagSloAlertService(config, createBreachingSloService(config),
+                new MutableClock(Instant.parse("2026-01-01T00:00:00Z")));
         service.snooze(new RagSloAlertSnoozeRequest(60000L, "all"));
         RagSloAlertSnoozeStatus cleared = service.clearSnooze();
         assertFalse(cleared.active());
@@ -222,7 +225,8 @@ class RagSloAlertServiceTest {
     private static RagSloStatus statusWithBreaches(List<RagSloBreach> breaches) {
         return new RagSloStatus(
                 breaches.isEmpty(),
-                new RagSloThresholds(0, 0, 0, 0, 0, 0, 0, 0, 1, 2, java.util.Map.of(), java.util.Map.of(), true, "warning", 1000),
+                new RagSloThresholds(0, 0, 0, 0, 0, 0, 0, 0, 1, 2, java.util.Map.of(), java.util.Map.of(), true,
+                        "warning", 1000),
                 new RagSloSnapshot(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
                 breaches,
                 Instant.parse("2026-01-01T00:00:00Z"));

@@ -7,8 +7,11 @@ import org.slf4j.LoggerFactory;
 
 import tech.kayys.wayang.rag.RagPipelinePlugin;
 import tech.kayys.wayang.rag.RagPluginExecutionContext;
-import tech.kayys.wayang.rag.core.model.RagResult;
-import tech.kayys.wayang.rag.core.model.RagScoredChunk;
+import tech.kayys.wayang.rag.GenerationConfig;
+import tech.kayys.wayang.rag.RagResponse;
+import tech.kayys.wayang.rag.RetrievalConfig;
+import tech.kayys.wayang.rag.RagResult;
+import tech.kayys.wayang.rag.RagScoredChunk;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +45,8 @@ public class RagPluginManager {
                 RagPluginExecutionContext updated = plugin.beforeQuery(current);
                 current = updated == null ? current : updated;
             } catch (RuntimeException ex) {
-                LOG.warn("RAG plugin {} failed in beforeQuery hook. Continuing without plugin mutation.", plugin.id(), ex);
+                LOG.warn("RAG plugin {} failed in beforeQuery hook. Continuing without plugin mutation.", plugin.id(),
+                        ex);
             }
         }
         return current;
@@ -97,7 +101,8 @@ public class RagPluginManager {
                 .map(plugin -> RagPluginCatalog.normalizeId(plugin.id()))
                 .collect(Collectors.toUnmodifiableSet());
         RagPluginTenantStrategyResolution strategy = resolveTenantStrategy(tenantId);
-        java.util.Set<String> enabled = RagPluginTenantStrategyResolver.parseEnabledPluginIds(strategy.effectiveEnabledIds());
+        java.util.Set<String> enabled = RagPluginTenantStrategyResolver
+                .parseEnabledPluginIds(strategy.effectiveEnabledIds());
         boolean allEnabled = enabled.isEmpty() || enabled.contains("*");
 
         List<PluginInspection> inspections = new ArrayList<>(discovered.size());

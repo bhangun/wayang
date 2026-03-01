@@ -1,4 +1,4 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag.langchain;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

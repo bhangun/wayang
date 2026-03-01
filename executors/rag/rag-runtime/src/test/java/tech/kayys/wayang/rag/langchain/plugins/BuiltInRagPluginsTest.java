@@ -1,10 +1,10 @@
-package tech.kayys.gamelan.executor.rag.langchain.plugins;
+package tech.kayys.wayang.rag.langchain.plugins;
 
 import org.junit.jupiter.api.Test;
-import tech.kayys.gamelan.executor.rag.domain.GenerationConfig;
-import tech.kayys.gamelan.executor.rag.langchain.RagPluginExecutionContext;
-import tech.kayys.gamelan.executor.rag.langchain.RagRuntimePluginTuningConfig;
-import tech.kayys.gamelan.executor.rag.langchain.RagRuntimeConfig;
+import tech.kayys.wayang.rag.domain.GenerationConfig;
+import tech.kayys.wayang.rag.RagPluginExecutionContext;
+import tech.kayys.wayang.rag.RagRuntimePluginTuningConfig;
+import tech.kayys.wayang.rag.RagRuntimeConfig;
 import tech.kayys.wayang.rag.LexicalRerankPlugin;
 import tech.kayys.wayang.rag.QueryRewritePlugin;
 import tech.kayys.wayang.rag.SafetyFilterPlugin;

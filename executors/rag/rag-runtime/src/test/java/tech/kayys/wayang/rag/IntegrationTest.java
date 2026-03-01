@@ -1,17 +1,22 @@
-package tech.kayys.gamelan.executor.rag.examples;
+package tech.kayys.wayang.rag;
 
 import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.kayys.gamelan.executor.rag.domain.*;
-import tech.kayys.gamelan.executor.rag.langchain.NativeRagCoreService;
-import tech.kayys.wayang.rag.core.model.RagChunk;
-import tech.kayys.wayang.rag.core.model.RagQuery;
-import tech.kayys.wayang.rag.core.model.RagResult;
-import tech.kayys.wayang.rag.core.model.RagScoredChunk;
-
+import tech.kayys.wayang.rag.ChunkingConfig;
+import tech.kayys.wayang.rag.GenerationConfig;
+import tech.kayys.wayang.rag.RagMode;
+import tech.kayys.wayang.rag.RagResponse;
+import tech.kayys.wayang.rag.RetrievalConfig;
+import tech.kayys.wayang.rag.SearchStrategy;
+import tech.kayys.wayang.rag.NativeRagCoreService;
+import tech.kayys.wayang.rag.RagChunk;
+import tech.kayys.wayang.rag.RagQuery;
+import tech.kayys.wayang.rag.RagResult;
+import tech.kayys.wayang.rag.RagScoredChunk;
+import tech.kayys.wayang.rag.RagDocument;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -43,12 +48,16 @@ class IntegrationTest {
                 ingestionService.nativeRagCoreService = nativeRagCoreService;
                 queryService.nativeRagCoreService = nativeRagCoreService;
 
-                when(nativeRagCoreService.ingestText(anyString(), anyString(), anyString(), anyMap(), any(ChunkingConfig.class)))
+                when(nativeRagCoreService.ingestText(anyString(), anyString(), anyString(), anyMap(),
+                                any(ChunkingConfig.class)))
                                 .thenReturn(List.of(RagChunk.of("doc", 0, "chunk", Map.of("source", "s"))));
-                when(nativeRagCoreService.query(anyString(), anyString(), any(RetrievalConfig.class), any(GenerationConfig.class), anyMap()))
+                when(nativeRagCoreService.query(anyString(), anyString(), any(RetrievalConfig.class),
+                                any(GenerationConfig.class), anyMap()))
                                 .thenReturn(new RagResult(
                                                 RagQuery.of("q"),
-                                                List.of(new RagScoredChunk(RagChunk.of("doc", 0, "chunk", Map.of("source", "s")), 0.9)),
+                                                List.of(new RagScoredChunk(
+                                                                RagChunk.of("doc", 0, "chunk", Map.of("source", "s")),
+                                                                0.9)),
                                                 "answer",
                                                 Map.of()));
 

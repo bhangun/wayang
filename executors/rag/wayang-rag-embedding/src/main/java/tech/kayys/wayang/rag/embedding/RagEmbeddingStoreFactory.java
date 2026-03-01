@@ -4,7 +4,12 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.gamelan.executor.rag.domain.RetrievalConfig;
+
+import tech.kayys.wayang.rag.RagChunk;
+import tech.kayys.wayang.rag.RagVectorStoreProvider;
+import tech.kayys.wayang.rag.RetrievalConfig;
+import tech.kayys.wayang.rag.langchain.RagObservabilityMetrics;
+import tech.kayys.wayang.rag.langchain.RagRuntimeConfig;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

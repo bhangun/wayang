@@ -1,7 +1,7 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag.langchain;
 
 import org.junit.jupiter.api.Test;
-import tech.kayys.gamelan.executor.rag.domain.GenerationConfig;
+import tech.kayys.wayang.rag.domain.GenerationConfig;
 import tech.kayys.wayang.rag.RagPipelinePlugin;
 import tech.kayys.wayang.rag.RagPluginExecutionContext;
 import tech.kayys.wayang.rag.RagPluginManager;
@@ -9,8 +9,8 @@ import tech.kayys.wayang.rag.RagPluginTenantStrategyResolution;
 import tech.kayys.wayang.rag.RagRuntimeConfig;
 import tech.kayys.wayang.rag.core.model.RagChunk;
 import tech.kayys.wayang.rag.core.model.RagQuery;
-import tech.kayys.wayang.rag.core.model.RagResult;
-import tech.kayys.wayang.rag.core.model.RagScoredChunk;
+import tech.kayys.wayang.rag.RagResult;
+import tech.kayys.wayang.rag.RagScoredChunk;
 
 import java.util.List;
 import java.util.Map;

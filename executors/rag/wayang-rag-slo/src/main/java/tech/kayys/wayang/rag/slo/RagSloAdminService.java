@@ -2,6 +2,13 @@ package tech.kayys.wayang.rag.slo;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import tech.kayys.wayang.rag.RagRuntimeConfig;
+import tech.kayys.wayang.rag.RagObservabilityMetrics;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaHistoryCompactorJob;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaHistoryCompactorStatus;
+import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalGuardrailService;
+import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalGuardrailStatus;
+import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalGuardrailBreach;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -31,7 +38,8 @@ public class RagSloAdminService {
         this(config, metrics, null, null);
     }
 
-    public RagSloAdminService(RagRuntimeConfig config, RagObservabilityMetrics metrics, EmbeddingSchemaHistoryCompactorJob compactorJob) {
+    public RagSloAdminService(RagRuntimeConfig config, RagObservabilityMetrics metrics,
+            EmbeddingSchemaHistoryCompactorJob compactorJob) {
         this(config, metrics, compactorJob, null);
     }
 

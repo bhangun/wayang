@@ -1,10 +1,12 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tech.kayys.wayang.rag.embedding.EmbeddingConfigAdminService;
+import tech.kayys.wayang.rag.embedding.EmbeddingConfigStatus;
 import tech.kayys.wayang.embedding.EmbeddingConfigRuntime;
 import tech.kayys.wayang.embedding.EmbeddingModuleConfig;
 

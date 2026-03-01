@@ -3,8 +3,9 @@ package tech.kayys.wayang.rag;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import tech.kayys.wayang.rag.core.model.RagResult;
-import tech.kayys.wayang.rag.core.model.RagScoredChunk;
+import tech.kayys.wayang.rag.RagQuery;
+import tech.kayys.wayang.rag.RagResult;
+import tech.kayys.wayang.rag.RagScoredChunk;
 
 import java.util.HashMap;
 import java.util.List;
@@ -19,10 +20,10 @@ public class SafetyFilterPlugin implements RagPipelinePlugin {
     @Inject
     RagPluginTuningConfig tuningConfig;
 
-    SafetyFilterPlugin() {
+    public SafetyFilterPlugin() {
     }
 
-    SafetyFilterPlugin(RagPluginTuningConfig tuningConfig) {
+    public SafetyFilterPlugin(RagPluginTuningConfig tuningConfig) {
         this.tuningConfig = tuningConfig;
     }
 

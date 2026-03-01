@@ -5,9 +5,9 @@ import tech.kayys.wayang.embedding.EmbeddingModelSpec;
 import tech.kayys.wayang.embedding.EmbeddingRequest;
 import tech.kayys.wayang.embedding.EmbeddingResponse;
 import tech.kayys.wayang.embedding.EmbeddingService;
-import tech.kayys.wayang.rag.core.model.RagChunk;
-import tech.kayys.wayang.rag.core.model.RagQuery;
-import tech.kayys.wayang.rag.core.model.RagScoredChunk;
+import tech.kayys.wayang.rag.RagChunk;
+import tech.kayys.wayang.rag.RagQuery;
+import tech.kayys.wayang.rag.RagScoredChunk;
 import tech.kayys.wayang.rag.core.spi.Retriever;
 import tech.kayys.wayang.rag.core.store.VectorSearchHit;
 import tech.kayys.wayang.rag.core.store.VectorStore;
@@ -39,7 +39,8 @@ public class VectorRetriever implements Retriever {
     public List<RagScoredChunk> retrieve(RagQuery query) {
         EmbeddingResponse response = embeddingService.embedForTenant(
                 namespace,
-                new EmbeddingRequest(List.of(query.text()), embeddingModel, null, true));
+                new EmbeddingRequest(List.of(query.text()), embeddingModel, null, true))
+                .await().indefinitely();
         validateEmbeddingDimension(response.dimension());
         float[] queryVector = response.first();
         if (queryVector.length != response.dimension()) {

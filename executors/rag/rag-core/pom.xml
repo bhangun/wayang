@@ -80,12 +80,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <includes>
-                        <include>tech/kayys/wayang/rag/**/*.java</include>
-                    </includes>
-                    <testIncludes>
-                        <testInclude>tech/kayys/wayang/rag/**/*.java</testInclude>
-                    </testIncludes>
+                    <release>25</release>
                 </configuration>
             </plugin>
             <plugin>

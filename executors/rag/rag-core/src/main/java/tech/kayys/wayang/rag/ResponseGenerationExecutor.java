@@ -1,4 +1,4 @@
-package main.java.tech.kayys.wayang.rag;
+package tech.kayys.wayang.rag;
 
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;

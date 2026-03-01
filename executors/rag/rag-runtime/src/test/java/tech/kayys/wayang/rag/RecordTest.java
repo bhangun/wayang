@@ -1,8 +1,13 @@
-package tech.kayys.gamelan.executor.rag.examples;
+package tech.kayys.wayang.rag;
 
 import org.junit.jupiter.api.Test;
-import tech.kayys.gamelan.executor.rag.domain.RagMode;
-import tech.kayys.gamelan.executor.rag.domain.SearchStrategy;
+import tech.kayys.wayang.rag.RagMode;
+import tech.kayys.wayang.rag.SearchStrategy;
+import tech.kayys.wayang.rag.RagChunk;
+import tech.kayys.wayang.rag.RagQuery;
+import tech.kayys.wayang.rag.RagResult;
+import tech.kayys.wayang.rag.RagScoredChunk;
+import tech.kayys.wayang.rag.RagDocument;
 
 import java.time.Instant;
 import java.util.List;
@@ -57,8 +62,8 @@ class RecordTest {
         String query = "test query";
         RagMode ragMode = RagMode.STANDARD;
         SearchStrategy searchStrategy = SearchStrategy.HYBRID;
-        var retrievalConfig = tech.kayys.gamelan.executor.rag.domain.RetrievalConfig.defaults();
-        var generationConfig = tech.kayys.gamelan.executor.rag.domain.GenerationConfig.defaults();
+        var retrievalConfig = tech.kayys.wayang.rag.RetrievalConfig.defaults();
+        var generationConfig = tech.kayys.wayang.rag.GenerationConfig.defaults();
         List<String> collections = List.of("collection1", "collection2");
         Map<String, Object> filters = Map.of("filter", "value");
 

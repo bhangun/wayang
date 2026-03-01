@@ -8,7 +8,7 @@ import java.util.Map;
 /**
  * Strongly-typed DTO for RAG retrieval configuration.
  *
- * Mirrors the fields in {@code tech.kayys.wayang.rag.domain.RetrievalConfig}.
+ * Mirrors the fields in {@code tech.kayys.wayang.rag.RetrievalConfig}.
  */
 public class RagRetrievalConfig {
 

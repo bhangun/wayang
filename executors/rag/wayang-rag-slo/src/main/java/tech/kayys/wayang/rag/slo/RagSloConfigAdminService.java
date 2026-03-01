@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
+import tech.kayys.wayang.rag.RagRuntimeConfig;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -200,7 +201,8 @@ public class RagSloConfigAdminService {
         return fallback;
     }
 
-    private static Map<String, Double> readMetricMultiplierMap(Config config, String key, Map<String, Double> fallback) {
+    private static Map<String, Double> readMetricMultiplierMap(Config config, String key,
+            Map<String, Double> fallback) {
         return config.getOptionalValue(key, String.class)
                 .map(String::trim)
                 .filter(v -> !v.isBlank())

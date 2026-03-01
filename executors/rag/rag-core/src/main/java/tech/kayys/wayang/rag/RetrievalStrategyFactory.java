@@ -1,4 +1,4 @@
-package main.java.tech.kayys.wayang.rag;
+package tech.kayys.wayang.rag;
 
 /**
  * RETRIEVAL STRATEGY FACTORY - FULL IMPLEMENTATION

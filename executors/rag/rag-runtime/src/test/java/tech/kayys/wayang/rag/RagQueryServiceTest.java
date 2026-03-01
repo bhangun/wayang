@@ -1,16 +1,21 @@
-package tech.kayys.gamelan.executor.rag.examples;
+package tech.kayys.wayang.rag;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.kayys.gamelan.executor.rag.domain.*;
-import tech.kayys.gamelan.executor.rag.langchain.NativeRagCoreService;
-import tech.kayys.wayang.rag.core.model.RagChunk;
-import tech.kayys.wayang.rag.core.model.RagQuery;
-import tech.kayys.wayang.rag.core.model.RagResult;
-import tech.kayys.wayang.rag.core.model.RagScoredChunk;
+import tech.kayys.wayang.rag.RagResponse;
+import tech.kayys.wayang.rag.RetrievalConfig;
+import tech.kayys.wayang.rag.GenerationConfig;
+import tech.kayys.wayang.rag.RagMode;
+import tech.kayys.wayang.rag.SearchStrategy;
+import tech.kayys.wayang.rag.SourceDocument;
+import tech.kayys.wayang.rag.NativeRagCoreService;
+import tech.kayys.wayang.rag.RagChunk;
+import tech.kayys.wayang.rag.RagQuery;
+import tech.kayys.wayang.rag.RagResult;
+import tech.kayys.wayang.rag.RagScoredChunk;
 
 import java.time.Instant;
 import java.util.List;
@@ -39,7 +44,8 @@ class RagQueryServiceTest {
 
     @Test
     void testQuery_Success() {
-        when(nativeRagCoreService.query(anyString(), anyString(), any(RetrievalConfig.class), any(GenerationConfig.class), anyMap()))
+        when(nativeRagCoreService.query(anyString(), anyString(), any(RetrievalConfig.class),
+                any(GenerationConfig.class), anyMap()))
                 .thenReturn(fakeResult("answer-1"));
 
         RagResponse response = ragQueryService.query("tenant", "question", "col").await().indefinitely();
@@ -51,7 +57,8 @@ class RagQueryServiceTest {
 
     @Test
     void testAdvancedQuery_Success() {
-        when(nativeRagCoreService.query(anyString(), anyString(), any(RetrievalConfig.class), any(GenerationConfig.class), anyMap()))
+        when(nativeRagCoreService.query(anyString(), anyString(), any(RetrievalConfig.class),
+                any(GenerationConfig.class), anyMap()))
                 .thenReturn(fakeResult("answer-2"));
 
         RagQueryRequest request = new RagQueryRequest(
@@ -72,7 +79,8 @@ class RagQueryServiceTest {
 
     @Test
     void testConversationalQuery_Success() {
-        when(nativeRagCoreService.query(anyString(), anyString(), any(RetrievalConfig.class), any(GenerationConfig.class), anyMap()))
+        when(nativeRagCoreService.query(anyString(), anyString(), any(RetrievalConfig.class),
+                any(GenerationConfig.class), anyMap()))
                 .thenReturn(fakeResult("answer-3"));
 
         RagResponse response = ragQueryService.conversationalQuery(

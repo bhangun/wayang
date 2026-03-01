@@ -1,12 +1,15 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag.langchain;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
+import tech.kayys.wayang.rag.RagChunk;
 import tech.kayys.wayang.rag.RagEvalDataset;
 import tech.kayys.wayang.rag.RagEvalQueryCase;
-import tech.kayys.wayang.rag.core.model.RagChunk;
-import tech.kayys.wayang.rag.core.model.RagScoredChunk;
+import tech.kayys.wayang.rag.RagQuery;
+import tech.kayys.wayang.rag.RagResult;
+import tech.kayys.wayang.rag.RagScoredChunk;
+import tech.kayys.wayang.rag.NativeRagCoreService;
 import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalRequest;
 import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalResponse;
 import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalService;
@@ -27,79 +30,80 @@ import static org.mockito.Mockito.when;
 
 class RagRetrievalEvalServiceTest {
 
-    @Test
-    void shouldComputeRecallMrrAndLatency() {
-        NativeRagCoreService nativeService = mock(NativeRagCoreService.class);
-        when(nativeService.retrieve(eq("tenant-a"), eq("q1"), any(), anyMap()))
-                .thenReturn(List.of(
-                        scored("chunk-2", "doc-2", Map.of("source", "s2"), 0.88),
-                        scored("chunk-1", "doc-1", Map.of("source", "s1"), 0.83)));
-        when(nativeService.retrieve(eq("tenant-a"), eq("q2"), any(), anyMap()))
-                .thenReturn(List.of(scored("chunk-3", "doc-3", Map.of("source", "s3"), 0.77)));
+        @Test
+        void shouldComputeRecallMrrAndLatency() {
+                NativeRagCoreService nativeService = mock(NativeRagCoreService.class);
+                when(nativeService.retrieve(eq("tenant-a"), eq("q1"), any(), anyMap()))
+                                .thenReturn(List.of(
+                                                scored("chunk-2", "doc-2", Map.of("source", "s2"), 0.88),
+                                                scored("chunk-1", "doc-1", Map.of("source", "s1"), 0.83)));
+                when(nativeService.retrieve(eq("tenant-a"), eq("q2"), any(), anyMap()))
+                                .thenReturn(List.of(scored("chunk-3", "doc-3", Map.of("source", "s3"), 0.77)));
 
-        RagRetrievalEvalService service = new RagRetrievalEvalService(
-                nativeService,
-                new ObjectMapper(),
-                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneId.of("UTC")));
+                RagRetrievalEvalService service = new RagRetrievalEvalService(
+                                nativeService,
+                                new ObjectMapper(),
+                                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneId.of("UTC")));
 
-        RagEvalDataset dataset = new RagEvalDataset(
-                "baseline-fixture",
-                "tenant-a",
-                5,
-                0.2,
-                "documentId",
-                Map.of("collection", "docs"),
-                List.of(
-                        new RagEvalQueryCase("c1", "q1", List.of("doc-1"), Map.of()),
-                        new RagEvalQueryCase("c2", "q2", List.of("doc-9"), Map.of())));
+                RagEvalDataset dataset = new RagEvalDataset(
+                                "baseline-fixture",
+                                "tenant-a",
+                                5,
+                                0.2,
+                                "documentId",
+                                Map.of("collection", "docs"),
+                                List.of(
+                                                new RagEvalQueryCase("c1", "q1", List.of("doc-1"), Map.of()),
+                                                new RagEvalQueryCase("c2", "q2", List.of("doc-9"), Map.of())));
 
-        RagRetrievalEvalResponse response = service.evaluate(new RagRetrievalEvalRequest(
-                null,
-                null,
-                null,
-                null,
-                Map.of(),
-                null,
-                dataset));
+                RagRetrievalEvalResponse response = service.evaluate(new RagRetrievalEvalRequest(
+                                null,
+                                null,
+                                null,
+                                null,
+                                Map.of(),
+                                null,
+                                dataset));
 
-        assertEquals("baseline-fixture", response.datasetName());
-        assertEquals("tenant-a", response.tenantId());
-        assertEquals(2, response.queryCount());
-        assertEquals(1, response.hitCount());
-        assertEquals(0.5, response.recallAtK(), 1e-9);
-        assertEquals(0.25, response.mrr(), 1e-9);
-        assertTrue(response.latencyP95Ms() >= 0.0);
-        assertEquals(Instant.parse("2026-01-01T00:00:00Z"), response.evaluatedAt());
-    }
+                assertEquals("baseline-fixture", response.datasetName());
+                assertEquals("tenant-a", response.tenantId());
+                assertEquals(2, response.queryCount());
+                assertEquals(1, response.hitCount());
+                assertEquals(0.5, response.recallAtK(), 1e-9);
+                assertEquals(0.25, response.mrr(), 1e-9);
+                assertTrue(response.latencyP95Ms() >= 0.0);
+                assertEquals(Instant.parse("2026-01-01T00:00:00Z"), response.evaluatedAt());
+        }
 
-    @Test
-    void shouldLoadDatasetFromClasspathFixture() {
-        NativeRagCoreService nativeService = mock(NativeRagCoreService.class);
-        when(nativeService.retrieve(eq("tenant-b"), eq("who"), any(), anyMap()))
-                .thenReturn(List.of(scored("chunk-7", "doc-7", Map.of("source", "guide.md"), 0.91)));
+        @Test
+        void shouldLoadDatasetFromClasspathFixture() {
+                NativeRagCoreService nativeService = mock(NativeRagCoreService.class);
+                when(nativeService.retrieve(eq("tenant-b"), eq("who"), any(), anyMap()))
+                                .thenReturn(List.of(scored("chunk-7", "doc-7", Map.of("source", "guide.md"), 0.91)));
 
-        RagRetrievalEvalService service = new RagRetrievalEvalService(
-                nativeService,
-                new ObjectMapper(),
-                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneId.of("UTC")));
+                RagRetrievalEvalService service = new RagRetrievalEvalService(
+                                nativeService,
+                                new ObjectMapper(),
+                                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneId.of("UTC")));
 
-        RagRetrievalEvalResponse response = service.evaluate(new RagRetrievalEvalRequest(
-                null,
-                null,
-                null,
-                null,
-                Map.of(),
-                "classpath:rag-eval/fixture.json",
-                null));
+                RagRetrievalEvalResponse response = service.evaluate(new RagRetrievalEvalRequest(
+                                null,
+                                null,
+                                null,
+                                null,
+                                Map.of(),
+                                "classpath:rag-eval/fixture.json",
+                                null));
 
-        assertEquals("classpath-fixture", response.datasetName());
-        assertEquals("tenant-b", response.tenantId());
-        assertEquals("source", response.matchField());
-        assertEquals(1.0, response.recallAtK(), 1e-9);
-        assertEquals(1.0, response.mrr(), 1e-9);
-    }
+                assertEquals("classpath-fixture", response.datasetName());
+                assertEquals("tenant-b", response.tenantId());
+                assertEquals("source", response.matchField());
+                assertEquals(1.0, response.recallAtK(), 1e-9);
+                assertEquals(1.0, response.mrr(), 1e-9);
+        }
 
-    private static RagScoredChunk scored(String chunkId, String documentId, Map<String, Object> metadata, double score) {
-        return new RagScoredChunk(new RagChunk(chunkId, documentId, 0, "text", metadata), score);
-    }
+        private static RagScoredChunk scored(String chunkId, String documentId, Map<String, Object> metadata,
+                        double score) {
+                return new RagScoredChunk(new RagChunk(chunkId, documentId, 0, "text", metadata), score);
+        }
 }

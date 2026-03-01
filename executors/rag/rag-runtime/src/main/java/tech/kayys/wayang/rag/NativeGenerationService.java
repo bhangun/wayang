@@ -2,8 +2,9 @@ package tech.kayys.wayang.rag;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import tech.kayys.wayang.rag.domain.GenerationConfig;
-import tech.kayys.wayang.rag.core.model.RagQuery;
-import tech.kayys.wayang.rag.core.model.RagScoredChunk;
+import tech.kayys.wayang.rag.RagQuery;
+import tech.kayys.wayang.rag.RagResult;
+import tech.kayys.wayang.rag.RagScoredChunk;
 
 import java.util.List;
 import java.util.Locale;
@@ -33,7 +34,8 @@ public class NativeGenerationService {
 
     private String generateContext(RagQuery query, List<RagScoredChunk> context, GenerationConfig generationConfig) {
         StringBuilder sb = new StringBuilder();
-        if (generationConfig != null && generationConfig.systemPrompt() != null && !generationConfig.systemPrompt().isBlank()) {
+        if (generationConfig != null && generationConfig.systemPrompt() != null
+                && !generationConfig.systemPrompt().isBlank()) {
             sb.append(generationConfig.systemPrompt()).append("\n\n");
         }
         sb.append("Q: ").append(query.text()).append("\n");

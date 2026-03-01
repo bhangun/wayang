@@ -8,7 +8,7 @@ import java.util.Map;
 /**
  * Strongly-typed DTO for RAG generation (LLM) configuration.
  *
- * Mirrors the fields in {@code tech.kayys.wayang.rag.domain.GenerationConfig}.
+ * Mirrors the fields in {@code tech.kayys.wayang.rag.GenerationConfig}.
  */
 public class RagGenerationConfig {
 

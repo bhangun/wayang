@@ -1,6 +1,12 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaAdminService;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaHistoryCompactorJob;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaHistoryCompactorMetrics;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaHistoryCompactorStatus;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaHistoryCompactionStatus;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaHistoryCompactionRequest;
 import org.eclipse.microprofile.config.Config;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,9 +65,10 @@ class EmbeddingSchemaHistoryCompactorJobTest {
                 false,
                 Set.of()));
 
-        ArgumentCaptor<EmbeddingSchemaHistoryCompactionRequest> requestCaptor =
-                ArgumentCaptor.forClass(EmbeddingSchemaHistoryCompactionRequest.class);
-        verify(schemaAdminService, times(2)).compactHistory(org.mockito.ArgumentMatchers.anyString(), requestCaptor.capture());
+        ArgumentCaptor<EmbeddingSchemaHistoryCompactionRequest> requestCaptor = ArgumentCaptor
+                .forClass(EmbeddingSchemaHistoryCompactionRequest.class);
+        verify(schemaAdminService, times(2)).compactHistory(org.mockito.ArgumentMatchers.anyString(),
+                requestCaptor.capture());
         assertEquals(100, requestCaptor.getAllValues().get(0).maxEvents());
         assertEquals(30, requestCaptor.getAllValues().get(0).maxAgeDays());
         assertEquals(false, requestCaptor.getAllValues().get(0).dryRun());
@@ -90,7 +97,8 @@ class EmbeddingSchemaHistoryCompactorJobTest {
     void shouldExposeCompactionRuntimeStatus() {
         when(schemaAdminService.tenantIdsWithHistory()).thenReturn(Set.of("ok-tenant", "bad-tenant"));
         when(schemaAdminService.compactHistory(eq("ok-tenant"), org.mockito.ArgumentMatchers.any()))
-                .thenReturn(new EmbeddingSchemaHistoryCompactionStatus("ok-tenant", 10, 7, 3, false, java.time.Instant.now()));
+                .thenReturn(new EmbeddingSchemaHistoryCompactionStatus("ok-tenant", 10, 7, 3, false,
+                        java.time.Instant.now()));
         doThrow(new IllegalStateException("boom"))
                 .when(schemaAdminService).compactHistory(eq("bad-tenant"), org.mockito.ArgumentMatchers.any());
 
@@ -110,7 +118,8 @@ class EmbeddingSchemaHistoryCompactorJobTest {
         assertNotNull(status.lastCycleStartedAt());
         assertNotNull(status.lastCycleFinishedAt());
         assertEquals(1.0, meterRegistry.find("wayang.rag.embedding.schema.compaction.cycle.count").counter().count());
-        assertEquals(1.0, meterRegistry.find("wayang.rag.embedding.schema.compaction.tenants_processed.count").counter().count());
+        assertEquals(1.0,
+                meterRegistry.find("wayang.rag.embedding.schema.compaction.tenants_processed.count").counter().count());
         assertEquals(3.0, meterRegistry.find("wayang.rag.embedding.schema.compaction.removed.count").counter().count());
         assertEquals(1.0, meterRegistry.find("wayang.rag.embedding.schema.compaction.failure.count").counter().count());
     }

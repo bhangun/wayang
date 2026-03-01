@@ -1,7 +1,13 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaAdminService;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaContract;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaMigrationRequest;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaMigrationStatus;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaHistoryCompactionStatus;
+import tech.kayys.wayang.rag.embedding.EmbeddingSchemaHistoryCompactionRequest;
 import tech.kayys.wayang.rag.embedding.RagEmbeddingStoreFactory;
 
 import org.junit.jupiter.api.BeforeEach;

@@ -5,7 +5,8 @@ import tech.kayys.wayang.embedding.EmbeddingModelSpec;
 import tech.kayys.wayang.embedding.EmbeddingRequest;
 import tech.kayys.wayang.embedding.EmbeddingResponse;
 import tech.kayys.wayang.embedding.EmbeddingService;
-import tech.kayys.wayang.rag.core.model.RagChunk;
+import tech.kayys.wayang.rag.RagChunk;
+import tech.kayys.wayang.rag.RagDocument;
 import tech.kayys.wayang.rag.core.store.VectorStore;
 
 import java.util.List;
@@ -37,7 +38,8 @@ public class RagIndexer {
         List<String> inputs = chunks.stream().map(RagChunk::text).toList();
         EmbeddingResponse response = embeddingService.embedForTenant(
                 namespace,
-                new EmbeddingRequest(inputs, embeddingModel, null, true));
+                new EmbeddingRequest(inputs, embeddingModel, null, true))
+                .await().indefinitely();
         validateEmbeddingDimension(response.dimension());
 
         List<float[]> vectors = response.embeddings();

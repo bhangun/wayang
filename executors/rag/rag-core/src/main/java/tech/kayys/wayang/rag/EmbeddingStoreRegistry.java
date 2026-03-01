@@ -1,4 +1,4 @@
-package main.java.tech.kayys.wayang.rag;
+package tech.kayys.wayang.rag;
 
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -17,9 +17,9 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.gamelan.executor.rag.retrieval.RetrievalConfig;
-import tech.kayys.gamelan.executor.rag.retrieval.ScoredDocument;
-import tech.kayys.gamelan.executor.rag.embedding.EmbeddingModelFactory;
+import tech.kayys.wayang.rag.RetrievalConfig;
+import tech.kayys.wayang.rag.ScoredDocument;
+import tech.kayys.wayang.rag.EmbeddingModelFactory;
 
 import java.time.Duration;
 import java.util.*;

@@ -1,4 +1,4 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag;
 
 import org.junit.jupiter.api.Test;
 import tech.kayys.wayang.rag.core.model.RagChunk;

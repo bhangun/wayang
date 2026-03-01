@@ -1,6 +1,6 @@
 package tech.kayys.wayang.rag.embedding;
 
-import tech.kayys.wayang.rag.core.model.RagChunk;
+import tech.kayys.wayang.rag.RagChunk;
 import tech.kayys.wayang.rag.core.store.VectorSearchHit;
 import tech.kayys.wayang.rag.core.store.VectorStore;
 
@@ -106,7 +106,8 @@ class OwnedRagEmbeddingStoreAdapter implements RagEmbeddingStore {
             strictFilters.put("embeddingModel", embeddingModel);
             strictFilters.put("embeddingDimension", embeddingDimension);
             strictFilters.put("embeddingVersion", embeddingVersion);
-            List<VectorSearchHit<RagChunk>> hits = vectorStore.search(namespace, queryEmbedding, topK, minScore, strictFilters);
+            List<VectorSearchHit<RagChunk>> hits = vectorStore.search(namespace, queryEmbedding, topK, minScore,
+                    strictFilters);
             if (metrics != null) {
                 metrics.recordSearchSuccess(namespace, System.currentTimeMillis() - started, hits.size());
             }
@@ -145,7 +146,8 @@ class OwnedRagEmbeddingStoreAdapter implements RagEmbeddingStore {
     }
 
     private RagChunk toRagChunk(String id, String text, Map<String, Object> metadata) {
-        String documentId = String.valueOf(metadata.getOrDefault("documentId", metadata.getOrDefault("source", namespace)));
+        String documentId = String
+                .valueOf(metadata.getOrDefault("documentId", metadata.getOrDefault("source", namespace)));
         int chunkIndex = parseInt(metadata.get("chunkIndex"), 0);
         return new RagChunk(id, documentId, chunkIndex, text, metadata);
     }
@@ -178,7 +180,8 @@ class OwnedRagEmbeddingStoreAdapter implements RagEmbeddingStore {
         Object version = metadata.get("embeddingVersion");
         if (version != null && !Objects.equals(embeddingVersion, String.valueOf(version))) {
             throw new IllegalArgumentException(
-                    "Metadata embeddingVersion mismatch: expected '" + embeddingVersion + "' but got '" + version + "'");
+                    "Metadata embeddingVersion mismatch: expected '" + embeddingVersion + "' but got '" + version
+                            + "'");
         }
     }
 

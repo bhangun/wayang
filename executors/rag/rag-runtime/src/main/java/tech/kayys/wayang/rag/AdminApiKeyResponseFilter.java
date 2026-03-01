@@ -1,4 +1,4 @@
-package tech.kayys.gamelan.executor.rag.langchain;
+package tech.kayys.wayang.rag;
 
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -17,7 +17,8 @@ import java.io.IOException;
 public class AdminApiKeyResponseFilter implements ContainerResponseFilter {
 
     @Override
-    public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) throws IOException {
+    public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext)
+            throws IOException {
         Object slot = requestContext.getProperty(AdminApiKeyFilter.ADMIN_KEY_SLOT_PROPERTY);
         if (slot == null) {
             return;

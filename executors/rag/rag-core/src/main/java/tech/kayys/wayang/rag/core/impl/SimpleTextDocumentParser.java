@@ -1,6 +1,6 @@
 package tech.kayys.wayang.rag.core.impl;
 
-import tech.kayys.wayang.rag.core.model.RagDocument;
+import tech.kayys.wayang.rag.RagDocument;
 import tech.kayys.wayang.rag.core.spi.DocumentParser;
 
 import java.util.Map;

@@ -1,15 +1,16 @@
-package tech.kayys.gamelan.executor.rag.examples;
+package tech.kayys.wayang.rag;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.gamelan.executor.rag.domain.*;
-import tech.kayys.gamelan.executor.rag.langchain.*;
-import tech.kayys.gamelan.executor.rag.langchain.RagObservabilityMetrics;
-import tech.kayys.wayang.rag.core.model.RagChunk;
-import tech.kayys.wayang.rag.core.model.RagDocument;
+import tech.kayys.wayang.rag.ChunkingConfig;
+import tech.kayys.wayang.rag.ChunkingStrategy;
+import tech.kayys.wayang.rag.RagMetrics;
+import tech.kayys.wayang.rag.*;
+import tech.kayys.wayang.rag.RagChunk;
+import tech.kayys.wayang.rag.RagDocument;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;

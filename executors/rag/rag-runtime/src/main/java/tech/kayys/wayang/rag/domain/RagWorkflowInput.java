@@ -1,4 +1,4 @@
-package tech.kayys.gamelan.executor.rag.domain;
+package tech.kayys.wayang.rag.domain;
 
 public class RagWorkflowInput {
     private final String tenantId;

@@ -8,7 +8,7 @@ public record RagPluginExecutionContext(
         int topK,
         float minSimilarity,
         Map<String, Object> filters,
-        Object generationConfig,
+        GenerationConfig generationConfig,
         boolean retrievalOnly) {
 
     public RagPluginExecutionContext {

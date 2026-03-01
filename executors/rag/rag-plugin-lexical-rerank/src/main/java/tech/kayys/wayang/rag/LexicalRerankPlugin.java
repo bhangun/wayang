@@ -20,10 +20,10 @@ public class LexicalRerankPlugin implements RagPipelinePlugin {
     @Inject
     RagPluginTuningConfig tuningConfig;
 
-    LexicalRerankPlugin() {
+    public LexicalRerankPlugin() {
     }
 
-    LexicalRerankPlugin(RagPluginTuningConfig tuningConfig) {
+    public LexicalRerankPlugin(RagPluginTuningConfig tuningConfig) {
         this.tuningConfig = tuningConfig;
     }
 

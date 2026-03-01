@@ -14,6 +14,26 @@ import java.util.Map;
 public class WorkingNodeProvider implements NodeProvider {
 
     @Override
+    public String id() {
+        return "tech.kayys.wayang.memory.working";
+    }
+
+    @Override
+    public String name() {
+        return "Working Memory Plugin";
+    }
+
+    @Override
+    public String version() {
+        return "1.0.0";
+    }
+
+    @Override
+    public String description() {
+        return "Short-lived scratchpad for the current reasoning chain.";
+    }
+
+    @Override
     public List<NodeDefinition> nodes() {
         return List.of(
                 // Working Memory Node

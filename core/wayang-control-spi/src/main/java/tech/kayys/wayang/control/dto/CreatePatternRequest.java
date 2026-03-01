@@ -1,4 +1,6 @@
-package tech.kayys.wayang.project.dto;
+package tech.kayys.wayang.control.dto;
+
+import tech.kayys.wayang.control.dto.error.ErrorHandlingConfig;
 
 public record CreatePatternRequest(
         String patternName,

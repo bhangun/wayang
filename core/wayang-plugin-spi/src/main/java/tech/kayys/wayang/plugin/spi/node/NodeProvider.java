@@ -19,13 +19,15 @@ package tech.kayys.wayang.plugin.spi.node;
 
 import java.util.List;
 
+import tech.kayys.wayang.plugin.WayangPlugin;
+
 /**
  * SPI for modules to contribute fully-described workflow nodes at runtime.
  *
  * <p>
- * Each implementation returns one or more {@link NodeDefinition}s that
- * describe the node's metadata, schemas (config / input / output), and
- * default configuration.
+ * Extends {@link WayangPlugin} so that every node provider has a compulsory
+ * identity (id, name, version, description). This removes the need to
+ * separately implement {@code WayangPlugin} when contributing nodes.
  * </p>
  *
  * <p>
@@ -35,18 +37,31 @@ import java.util.List;
  * </p>
  *
  * <h3>Example</h3>
- * 
- * <pre>{@code
+ *
+ * <pre>
+ * {@code
  * public class MyNodeProvider implements NodeProvider {
- *     &#64;Override
+ *     &#64;Override public String id()          { return "com.example.my-plugin"; }
+ *     &#64;Override public String name()        { return "My Plugin"; }
+ *     &#64;Override public String version()     { return "1.0.0"; }
+ *     &#64;Override public String description() { return "Custom node set."; }
+ *
+ *     @Override
  *     public List<NodeDefinition> nodes() {
  *         return List.of(
  *             new NodeDefinition("my-node", "My Node", "Custom", ...));
  *     }
  * }
- * }</pre>
+ * }
+ * </pre>
+ *
+ * <p>
+ * For annotation-based node declaration (without implementing this interface),
+ * use {@code @MultiNodePlugin} + {@code @Node} on the plugin class. Both paths
+ * converge in the {@code ControlPlaneNodeRegistry}.
+ * </p>
  */
-public interface NodeProvider {
+public interface NodeProvider extends WayangPlugin {
 
     /**
      * @return an immutable list of node definitions contributed by this module.

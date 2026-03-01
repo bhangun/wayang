@@ -14,6 +14,26 @@ import java.util.Map;
 public class EpisodicNodeProvider implements NodeProvider {
 
     @Override
+    public String id() {
+        return "tech.kayys.wayang.memory.episodic";
+    }
+
+    @Override
+    public String name() {
+        return "Episodic Memory Plugin";
+    }
+
+    @Override
+    public String version() {
+        return "1.0.0";
+    }
+
+    @Override
+    public String description() {
+        return "Stores and retrieves event-based episodic memories.";
+    }
+
+    @Override
     public List<NodeDefinition> nodes() {
         return List.of(
                 // Episodic Memory Node

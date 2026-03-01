@@ -3,8 +3,9 @@ set -euo pipefail
 
 SERVICE_NAME="wayang"
 WAYANG_HOME="${WAYANG_HOME:-$HOME/.wayang}"
-WAYANG_GOLLEK_HOME="${WAYANG_GOLLEK_HOME:-${GOLLEK_HOME:-$WAYANG_HOME/gollek}}"
-WAYANG_BIN="${WAYANG_BIN:-$HOME/.local/bin/wayang}"
+WAYANG_GOLLEK_HOME="${WAYANG_GOLLEK_HOME:-$WAYANG_HOME/gollek}"
+LEGACY_GOLLEK_HOME="${GOLLEK_HOME:-$HOME/.gollek}"
+WAYANG_BIN="${WAYANG_BIN:-}"
 SYSTEMD_USER_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 UNIT_FILE="${SYSTEMD_USER_DIR}/${SERVICE_NAME}.service"
 
@@ -13,8 +14,33 @@ if ! command -v systemctl >/dev/null 2>&1; then
   exit 1
 fi
 
+if [ -z "$WAYANG_BIN" ]; then
+  for candidate in \
+    "$WAYANG_HOME/bin/wayang" \
+    "$WAYANG_HOME/bin/wayang-standalone-linux-x86_64" \
+    "$WAYANG_HOME/bin/wayang-standalone-linux-aarch_64" \
+    "$HOME/.local/bin/wayang"; do
+    if [ -x "$candidate" ]; then
+      WAYANG_BIN="$candidate"
+      break
+    fi
+  done
+fi
+
+if [ -z "$WAYANG_BIN" ] && command -v wayang >/dev/null 2>&1; then
+  WAYANG_BIN="$(command -v wayang)"
+fi
+
+if [ -z "$WAYANG_BIN" ] || [ ! -x "$WAYANG_BIN" ]; then
+  echo "Unable to find Wayang executable. Set WAYANG_BIN explicitly." >&2
+  exit 1
+fi
+
 mkdir -p "$WAYANG_HOME" "$WAYANG_HOME/config" "$WAYANG_HOME/logs" "$WAYANG_HOME/plugins" "$WAYANG_HOME/secrets"
-mkdir -p "$WAYANG_GOLLEK_HOME/models" "$WAYANG_GOLLEK_HOME/storage"
+if ! mkdir -p "$WAYANG_GOLLEK_HOME/models" "$WAYANG_GOLLEK_HOME/storage"; then
+  WAYANG_GOLLEK_HOME="$LEGACY_GOLLEK_HOME"
+  mkdir -p "$WAYANG_GOLLEK_HOME/models" "$WAYANG_GOLLEK_HOME/storage"
+fi
 mkdir -p "$SYSTEMD_USER_DIR"
 
 cat > "$UNIT_FILE" << UNIT

@@ -1,10 +1,10 @@
-package tech.kayys.wayang.project.dto;
+package tech.kayys.wayang.control.dto;
 
 public record PatternCatalogEntry(
-        String id,
-        String name,
-        String description,
-        String category,
-        EIPPatternType patternType,
-        String documentation) {
+                String id,
+                String name,
+                String description,
+                String category,
+                EIPPatternType patternType,
+                String documentation) {
 }

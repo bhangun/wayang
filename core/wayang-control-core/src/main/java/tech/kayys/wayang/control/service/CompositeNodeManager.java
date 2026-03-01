@@ -3,12 +3,11 @@ package tech.kayys.wayang.control.service;
 import jakarta.enterprise.context.ApplicationScoped;
 import tech.kayys.wayang.control.canvas.schema.CanvasData;
 import tech.kayys.wayang.control.canvas.schema.CanvasNode;
-import tech.kayys.wayang.control.dto.NodePort;
-import tech.kayys.wayang.control.dto.PortDirection;
+import tech.kayys.wayang.control.dto.node.NodePort;
+import tech.kayys.wayang.control.dto.node.PortDirection;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Service for managing composite nodes and recursive composition.

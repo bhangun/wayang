@@ -14,6 +14,26 @@ import java.util.Map;
 public class SemanticNodeProvider implements NodeProvider {
 
     @Override
+    public String id() {
+        return "tech.kayys.wayang.memory.semantic";
+    }
+
+    @Override
+    public String name() {
+        return "Semantic Memory Plugin";
+    }
+
+    @Override
+    public String version() {
+        return "1.0.0";
+    }
+
+    @Override
+    public String description() {
+        return "Stores and retrieves generalized facts and knowledge.";
+    }
+
+    @Override
     public List<NodeDefinition> nodes() {
         return List.of(
                 // Semantic Memory Node

@@ -1,9 +1,9 @@
-package tech.kayys.wayang.project.dto;
+package tech.kayys.wayang.control.dto;
 
 import java.time.Instant;
 
 public record ExecutionResponse(
-        String runId,
-        String status,
-        Instant startedAt) {
+                String runId,
+                String status,
+                Instant startedAt) {
 }

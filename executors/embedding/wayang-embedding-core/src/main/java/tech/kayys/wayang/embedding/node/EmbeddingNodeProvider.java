@@ -12,6 +12,26 @@ import java.util.Map;
 public class EmbeddingNodeProvider implements NodeProvider {
 
     @Override
+    public String id() {
+        return "tech.kayys.wayang.embedding";
+    }
+
+    @Override
+    public String name() {
+        return "Embedding Plugin";
+    }
+
+    @Override
+    public String version() {
+        return "1.0.0";
+    }
+
+    @Override
+    public String description() {
+        return "Generates vector embeddings for input text.";
+    }
+
+    @Override
     public List<NodeDefinition> nodes() {
         return List.of(
                 new NodeDefinition(

@@ -11,6 +11,26 @@ import java.util.Map;
 public class GuardrailNodeProvider implements NodeProvider {
 
         @Override
+        public String id() {
+                return "tech.kayys.wayang.guardrails";
+        }
+
+        @Override
+        public String name() {
+                return "Guardrails Plugin";
+        }
+
+        @Override
+        public String version() {
+                return "1.0.0";
+        }
+
+        @Override
+        public String description() {
+                return "Provides PII, toxicity, bias and hallucination detection nodes.";
+        }
+
+        @Override
         public List<NodeDefinition> nodes() {
                 return List.of(
                                 new NodeDefinition(

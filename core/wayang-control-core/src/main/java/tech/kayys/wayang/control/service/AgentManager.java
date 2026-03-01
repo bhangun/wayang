@@ -47,8 +47,8 @@ public class AgentManager implements AgentManagerSpi {
                     agent.agentName = request.agentName();
                     agent.description = request.description();
                     agent.agentType = request.agentType();
-                    agent.tools = mapTools(request.tools());
-                    agent.capabilities = mapCapabilities(request.capabilities());
+                    agent.tools = request.tools();
+                    agent.capabilities = request.capabilities();
                     agent.llmConfig = request.llmConfig();
                     agent.memoryConfig = request.memoryConfig();
                     agent.guardrails = request.guardrails();
@@ -109,53 +109,18 @@ public class AgentManager implements AgentManagerSpi {
                 java.util.List.of("Orchestrator unavailable")));
     }
 
-    private List<tech.kayys.wayang.control.dto.AgentTool> mapTools(List<tech.kayys.wayang.agent.AgentTool> tools) {
-        if (tools == null) {
-            return null;
-        }
-
-        return tools.stream().map(tool -> {
-            tech.kayys.wayang.control.dto.AgentTool dto = new tech.kayys.wayang.control.dto.AgentTool();
-            dto.toolId = tool.toolId();
-            dto.name = tool.name();
-            dto.description = tool.description();
-            dto.type = mapToolType(tool.type());
-            dto.configuration = tool.config() == null ? null : tool.config().entrySet().stream()
-                    .collect(java.util.stream.Collectors.toMap(
-                            java.util.Map.Entry::getKey,
-                            e -> String.valueOf(e.getValue())));
-            return dto;
-        }).toList();
-    }
-
-    private List<AgentCapability> mapCapabilities(List<tech.kayys.wayang.agent.AgentCapability> capabilities) {
-        if (capabilities == null) {
-            return null;
-        }
-
-        return capabilities.stream().map(capability -> {
-            AgentCapability dto = new AgentCapability();
-            dto.name = capability.name();
-            dto.type = mapCapabilityType(capability.type());
-            dto.enabled = true;
-            dto.configuration = capability.config() == null ? null : capability.config().toString();
-            return dto;
-        }).toList();
-    }
-
     private ToolType mapToolType(String type) {
         if (type == null) {
-            return ToolType.API_REST;
+            return ToolType.API_CALL;
         }
 
         return switch (type.toUpperCase(Locale.ROOT)) {
-            case "API", "API_CALL", "REST" -> ToolType.API_REST;
-            case "GRPC", "API_GRPC" -> ToolType.API_GRPC;
-            case "DB", "DATABASE", "DATABASE_QUERY" -> ToolType.DATABASE;
-            case "FILE", "FILE_OPERATION", "FILE_SYSTEM" -> ToolType.FILE_SYSTEM;
-            case "CODE", "CODE_EXECUTION", "PYTHON", "SCRIPT" -> ToolType.PYTHON_SCRIPT;
-            case "SEARCH", "WEB_SEARCH", "WEB_BROWSER" -> ToolType.WEB_BROWSER;
-            default -> ToolType.API_REST;
+            case "API", "API_CALL", "REST" -> ToolType.API_CALL;
+            case "DB", "DATABASE", "DATABASE_QUERY" -> ToolType.DATABASE_QUERY;
+            case "FILE", "FILE_OPERATION", "FILE_SYSTEM" -> ToolType.FILE_OPERATION;
+            case "CODE", "CODE_EXECUTION", "PYTHON", "SCRIPT" -> ToolType.CODE_EXECUTION;
+            case "SEARCH", "WEB_SEARCH", "WEB_BROWSER" -> ToolType.WEB_SEARCH;
+            default -> ToolType.CUSTOM;
         };
     }
 
@@ -169,8 +134,8 @@ public class AgentManager implements AgentManagerSpi {
             case REASONING -> CapabilityType.REASONING;
             case TOOL_USE -> CapabilityType.TOOL_USE;
             case MEMORY -> CapabilityType.MEMORY;
-            case LEARNING -> CapabilityType.WEB_SEARCH;
-            case CODE_GENERATION, CODE_ANALYSIS -> CapabilityType.CODE_EXECUTION;
+            case LEARNING -> CapabilityType.LEARNING;
+            case CODE_GENERATION, CODE_ANALYSIS -> CapabilityType.TOOL_USE;
             default -> CapabilityType.TOOL_USE;
         };
     }

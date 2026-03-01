@@ -137,8 +137,9 @@ jobs:
           - Default home directory layout under `default-home/.wayang/`
 
           All state defaults to `~/.wayang/*`. Gollek data defaults to
-          `~/.wayang/gollek/*` and only falls back to `~/.gollek/*` if
-          `GOLLEK_HOME` is explicitly set.
+          `~/.wayang/gollek/*` and falls back to `~/.gollek/*` only when
+          `~/.wayang/gollek/*` cannot be created, or when you explicitly
+          set `GOLLEK_HOME`.
           README
 
           cat > "${WAYANG_ROOT}/service-bundle/default-home/.wayang/config/env.example" << 'ENV'

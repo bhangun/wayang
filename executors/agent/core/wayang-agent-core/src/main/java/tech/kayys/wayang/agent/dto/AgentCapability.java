@@ -1,4 +1,4 @@
-package tech.kayys.wayang.project.dto;
+package tech.kayys.wayang.agent.dto;
 
 import java.util.Map;
 
@@ -8,6 +8,6 @@ import java.util.Map;
 public class AgentCapability {
     public String name;
     public String description;
-    public CapabilityType type;
+    public String type;
     public Map<String, Object> config;
 }

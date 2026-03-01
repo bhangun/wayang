@@ -1,6 +1,8 @@
-package tech.kayys.wayang.project.dto;
+package tech.kayys.wayang.control.dto.error;
 
 import java.util.List;
+import tech.kayys.wayang.control.dto.RetryStrategy;
+import tech.kayys.wayang.control.dto.DeadLetterConfig;
 
 /**
  * Error Handling Configuration

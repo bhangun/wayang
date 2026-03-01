@@ -14,6 +14,26 @@ import java.util.Map;
 public class HitlNodeProvider implements NodeProvider {
 
     @Override
+    public String id() {
+        return "tech.kayys.wayang.hitl";
+    }
+
+    @Override
+    public String name() {
+        return "Human-in-the-Loop Plugin";
+    }
+
+    @Override
+    public String version() {
+        return "1.0.0";
+    }
+
+    @Override
+    public String description() {
+        return "Enables human review and approval steps in workflows.";
+    }
+
+    @Override
     public List<NodeDefinition> nodes() {
         return List.of(
                 new NodeDefinition(

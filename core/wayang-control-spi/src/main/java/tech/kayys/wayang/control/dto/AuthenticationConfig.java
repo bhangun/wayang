@@ -1,4 +1,4 @@
-package tech.kayys.wayang.project.dto;
+package tech.kayys.wayang.control.dto;
 
 import java.util.Map;
 

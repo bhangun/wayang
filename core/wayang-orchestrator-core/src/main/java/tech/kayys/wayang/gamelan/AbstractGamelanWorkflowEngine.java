@@ -20,23 +20,20 @@ package tech.kayys.wayang.gamelan;
 import io.smallrye.mutiny.Uni;
 import jakarta.annotation.PreDestroy;
 import tech.kayys.gamelan.sdk.client.GamelanClient;
-import tech.kayys.gamelan.engine.workflow.WorkflowDefinition;
-import tech.kayys.gamelan.engine.run.RunResponse;
-import tech.kayys.wayang.integration.designer.RouteDesign;
-import tech.kayys.wayang.integration.designer.DesignNode;
-import tech.kayys.wayang.integration.designer.DesignConnection;
+
 import tech.kayys.gamelan.engine.node.NodeDefinition;
 import tech.kayys.gamelan.engine.node.NodeId;
 import tech.kayys.gamelan.engine.node.NodeType;
+import tech.kayys.gamelan.engine.run.RunResponse;
+import tech.kayys.gamelan.engine.workflow.WorkflowDefinition;
+import tech.kayys.wayang.orchestrator.spi.WayangOrchestratorSpi;
+import tech.kayys.wayang.schema.WayangSpec;
+import tech.kayys.wayang.schema.canvas.CanvasNode;
 
 import java.util.List;
 import java.util.Map;
 
-/**
- * Abstract base class for Gamelan-based Workflow Engine.
- * Handles common logic for deployment and transport-agnostic client usage.
- */
-public abstract class AbstractGamelanWorkflowEngine implements AutoCloseable {
+public abstract class AbstractGamelanWorkflowEngine implements WayangOrchestratorSpi, AutoCloseable {
 
     protected GamelanClient client;
     protected final GamelanEngineConfig config;
@@ -49,39 +46,53 @@ public abstract class AbstractGamelanWorkflowEngine implements AutoCloseable {
         return client;
     }
 
-    /**
-     * Deploy a Wayang Route Design as a Gamelan Workflow Definition
-     */
-    public Uni<WorkflowDefinition> deploy(RouteDesign routeDesign) {
-        var builder = client.workflows().create(routeDesign.name() != null ? routeDesign.name() : routeDesign.routeId())
-                .description(routeDesign.description())
-                .version(routeDesign.metadata() != null ? routeDesign.metadata().version() : "1.0.0")
-                .tenantId(routeDesign.tenantId());
+    @Override
+    public Uni<String> execute(String name, WayangSpec spec, Map<String, Object> inputs) {
+        var builder = client.workflows().create(name)
+                .description("Wayang Deployed Definition")
+                .version(spec.getSpecVersion() != null ? spec.getSpecVersion() : "1.0.0")
+                .tenantId("default"); // Replace with actual tenant context if needed
 
-        // Map Wayang nodes to Gamelan nodes
-        if (routeDesign.nodes() != null) {
-            for (DesignNode node : routeDesign.nodes()) {
-                // Create Gamelan node definition
+        // Map Wayang canvas nodes to Gamelan nodes
+        if (spec.getCanvas() != null && spec.getCanvas().nodes != null) {
+            for (CanvasNode node : spec.getCanvas().nodes) {
+                // Create Gamelan node definition based on Wayang canvas
                 NodeDefinition gNode = NodeDefinition.builder()
-                        .id(NodeId.of(node.nodeId()))
-                        .name(node.label() != null ? node.label() : node.nodeId())
+                        .id(NodeId.of(node.id))
+                        .name(node.config != null && node.config.containsKey("label")
+                                ? node.config.get("label").toString()
+                                : (node.label != null ? node.label : node.id))
                         .type(NodeType.EXECUTOR) // Default to EXECUTOR for Wayang nodes
-                        .executorType(node.nodeType())
-                        .configuration(node.configuration())
+                        // Gamelan executor type must match the Wayang node type
+                        .executorType(node.type)
+                        .configuration(node.config)
                         .build();
 
                 builder.addNode(gNode);
             }
         }
 
-        return builder.execute();
+        // Map Wayang connections to Gamelan dependencies (logic omitted for brevity,
+        // handled by subclass if needed)
+
+        // 1. Deploy Workflow Definition to Gamelan
+        return builder.execute().flatMap(workflowDef ->
+        // 2. Start a Run on that definition
+        client.runs().create(workflowDef.id().value())
+                // TODO: Pass in 'inputs' mapping if Gamelan client supports it
+                .execute()
+                .map(RunResponse::getRunId));
     }
 
-    /**
-     * Start a workflow run
-     */
-    public Uni<RunResponse> startRun(String workflowDefinitionId) {
-        return client.runs().create(workflowDefinitionId).execute();
+    @Override
+    public Uni<String> getStatus(String executionId) {
+        return client.runs().get(executionId)
+                .map(run -> run.getStatus() != null ? run.getStatus() : "UNKNOWN");
+    }
+
+    @Override
+    public Uni<Boolean> stop(String executionId) {
+        return client.runs().cancel(executionId, "Stopped via Wayang").replaceWith(true);
     }
 
     /**

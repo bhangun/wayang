@@ -29,6 +29,8 @@ import tech.kayys.wayang.plugin.UIReference;
 import tech.kayys.wayang.plugin.execution.ExecutionMode;
 import tech.kayys.wayang.plugin.executor.ExecutorBinding;
 import tech.kayys.wayang.plugin.multi.MultiNodePlugin;
+import tech.kayys.wayang.plugin.spi.node.Node;
+import tech.kayys.wayang.plugin.spi.node.Nodes;
 import tech.kayys.wayang.schema.validator.SchemaValidator;
 
 /**

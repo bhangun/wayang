@@ -14,6 +14,26 @@ import java.util.Map;
 public class ShortTermNodeProvider implements NodeProvider {
 
     @Override
+    public String id() {
+        return "tech.kayys.wayang.memory.shortterm";
+    }
+
+    @Override
+    public String name() {
+        return "Short Term Memory Plugin";
+    }
+
+    @Override
+    public String version() {
+        return "1.0.0";
+    }
+
+    @Override
+    public String description() {
+        return "Temporary context storage for the current session.";
+    }
+
+    @Override
     public List<NodeDefinition> nodes() {
         return List.of(
                 // Short Term Memory Node

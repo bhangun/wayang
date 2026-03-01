@@ -14,6 +14,26 @@ import java.util.Map;
 public class AgentNodeProvider implements NodeProvider {
 
         @Override
+        public String id() {
+                return "tech.kayys.wayang.agent";
+        }
+
+        @Override
+        public String name() {
+                return "Agent Plugin";
+        }
+
+        @Override
+        public String version() {
+                return "1.0.0";
+        }
+
+        @Override
+        public String description() {
+                return "Contributes AI agent node definitions for workflows.";
+        }
+
+        @Override
         public List<NodeDefinition> nodes() {
                 return List.of(
                                 new NodeDefinition(

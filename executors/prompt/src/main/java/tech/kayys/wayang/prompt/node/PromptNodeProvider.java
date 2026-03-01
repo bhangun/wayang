@@ -12,6 +12,26 @@ import java.util.Map;
 public class PromptNodeProvider implements NodeProvider {
 
     @Override
+    public String id() {
+        return "tech.kayys.wayang.prompt";
+    }
+
+    @Override
+    public String name() {
+        return "Prompt Plugin";
+    }
+
+    @Override
+    public String version() {
+        return "1.0.0";
+    }
+
+    @Override
+    public String description() {
+        return "Renders and manages prompt templates for AI workflows.";
+    }
+
+    @Override
     public List<NodeDefinition> nodes() {
         return List.of(
                 new NodeDefinition(

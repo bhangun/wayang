@@ -12,6 +12,26 @@ import java.util.Map;
 public class WebSearchNodeProvider implements NodeProvider {
 
     @Override
+    public String id() {
+        return "tech.kayys.wayang.websearch";
+    }
+
+    @Override
+    public String name() {
+        return "Web Search Plugin";
+    }
+
+    @Override
+    public String version() {
+        return "1.0.0";
+    }
+
+    @Override
+    public String description() {
+        return "Performs web searches using various providers.";
+    }
+
+    @Override
     public List<NodeDefinition> nodes() {
         return List.of(
                 new NodeDefinition(

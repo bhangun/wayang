@@ -1,3 +1,20 @@
+/*
+ * PolyForm Noncommercial License 1.0.0
+ *
+ * Copyright (c) 2026 Kayys.tech
+ *
+ * This software is licensed for non-commercial use only.
+ * You may use, modify, and distribute this software for personal,
+ * educational, or research purposes.
+ *
+ * Commercial use, including SaaS or revenue-generating services,
+ * requires a separate commercial license from Kayys.tech.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+ *
+ * @author Bhangun
+ */
+
 package tech.kayys.wayang.control.api;
 
 import io.smallrye.mutiny.Uni;
@@ -10,9 +27,11 @@ import tech.kayys.wayang.agent.AgentTask;
 import tech.kayys.wayang.control.service.AgentManager;
 import tech.kayys.wayang.control.dto.CreateAgentRequest;
 
-import java.util.Collections;
 import java.util.UUID;
 
+/**
+ * REST API for AI Agent management.
+ */
 @Path("/api/v1/agents")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -25,15 +44,9 @@ public class AgentResource {
         public Uni<Response> createAgent(@QueryParam("projectId") UUID projectId,
                         @Valid CreateAgentRequest request,
                         @HeaderParam("X-Tenant-Id") @DefaultValue("default") String tenantId) {
-                // Enforce tenant? AgentManager.createAgent takes (projectId, request).
-                // We assume projectId ownership check handles tenant or we add it to
-                // AgentManager later.
-
                 return agentManager.createAgent(projectId, request)
                                 .map(agent -> Response.status(Response.Status.CREATED).entity(agent).build());
         }
-
-        // Additional get methods
 
         @POST
         @Path("/{agentId}/execute")
@@ -44,7 +57,7 @@ public class AgentResource {
                                 taskRequest.taskId(),
                                 taskRequest.instruction(),
                                 taskRequest.context(),
-                                Collections.emptyList());
+                                java.util.Collections.emptyList());
 
                 return agentManager.executeTask(agentId, agentTask)
                                 .map(result -> Response.ok(result).build());

@@ -11,7 +11,10 @@ import tech.kayys.wayang.control.dto.CreateTemplateRequest;
 
 import java.util.UUID;
 
-@Path("/api/v1/control-plane/templates")
+/**
+ * REST API for Workflow Template management.
+ */
+@Path("/api/v1/templates")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class TemplateResource {
@@ -20,35 +23,25 @@ public class TemplateResource {
         WorkflowManager workflowManager;
 
         @POST
-        public Uni<Response> createTemplate(
-                        @QueryParam("projectId") UUID projectId,
-                        @Valid CreateTemplateRequest request,
-                        @HeaderParam("X-Tenant-Id") @DefaultValue("default") String tenantId) {
-
+        public Uni<Response> createTemplate(@QueryParam("projectId") UUID projectId,
+                        @Valid CreateTemplateRequest request) {
                 return workflowManager.createWorkflowTemplate(projectId, request)
                                 .map(template -> Response.status(Response.Status.CREATED).entity(template).build());
         }
 
-        @POST
-        @Path("/{templateId}/publish")
-        public Uni<Response> publishTemplate(
-                        @PathParam("templateId") UUID templateId,
-                        @HeaderParam("X-Tenant-Id") @DefaultValue("default") String tenantId) {
-
-                return workflowManager.publishWorkflowTemplate(templateId)
-                                .map(workflowDefId -> Response.ok(
-                                                new PublishResponse(
-                                                                true,
-                                                                workflowDefId,
-                                                                "Template published successfully"))
-                                                .build());
+        @GET
+        @Path("/{templateId}")
+        public Uni<Response> getTemplate(@PathParam("templateId") UUID templateId) {
+                return workflowManager.getWorkflowTemplate(templateId)
+                                .map(template -> template != null ? Response.ok(template).build()
+                                                : Response.status(Response.Status.NOT_FOUND).build());
         }
 
-        // Execute logic to be handled by OrchestrationResource or dedicated RunResource
-}
-
-record PublishResponse(
-                boolean success,
-                String workflowDefinitionId,
-                String message) {
+        @POST
+        @Path("/{templateId}/publish")
+        public Uni<Response> publishTemplate(@PathParam("templateId") UUID templateId) {
+                return workflowManager.publishWorkflowTemplate(templateId)
+                                .map(definitionId -> Response.ok(java.util.Map.of("workflowDefinitionId", definitionId))
+                                                .build());
+        }
 }

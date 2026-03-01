@@ -14,6 +14,26 @@ import java.util.Map;
 public class LongTermNodeProvider implements NodeProvider {
 
     @Override
+    public String id() {
+        return "tech.kayys.wayang.memory.longterm";
+    }
+
+    @Override
+    public String name() {
+        return "Long Term Memory Plugin";
+    }
+
+    @Override
+    public String version() {
+        return "1.0.0";
+    }
+
+    @Override
+    public String description() {
+        return "Persistent storage for cross-session knowledge.";
+    }
+
+    @Override
     public List<NodeDefinition> nodes() {
         return List.of(
                 // Long Term Memory Node

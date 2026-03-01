@@ -11,10 +11,10 @@ import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.RestResponse;
 import tech.kayys.wayang.plugin.CommunicationProtocol;
 
-import tech.kayys.wayang.plugin.ControlPlaneExecutorRegistry;
-import tech.kayys.wayang.plugin.executor.ExecutorRegistration;
-import tech.kayys.wayang.plugin.executor.ExecutorStatus;
-import tech.kayys.wayang.plugin.executor.ExecutorMetadata;
+import tech.kayys.wayang.plugin.registry.ControlPlaneExecutorRegistry;
+import tech.kayys.wayang.plugin.registry.executor.ExecutorRegistration;
+import tech.kayys.wayang.plugin.registry.executor.ExecutorStatus;
+import tech.kayys.wayang.plugin.registry.executor.ExecutorMetadata;
 import java.net.URI;
 import java.time.Instant;
 import java.util.ArrayList;

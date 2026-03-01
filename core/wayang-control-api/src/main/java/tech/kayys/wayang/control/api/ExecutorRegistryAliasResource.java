@@ -10,7 +10,7 @@ import jakarta.ws.rs.core.MediaType;
 import java.util.List;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
-import tech.kayys.wayang.plugin.executor.ExecutorStatus;
+import tech.kayys.wayang.plugin.registry.executor.ExecutorStatus;
 
 /**
  * Backward-compatible executor listing endpoint for UI clients.

@@ -7,17 +7,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.kayys.gamelan.sdk.client.GamelanClient;
-import tech.kayys.gamelan.sdk.client.WorkflowDefinitionOperations;
-import tech.kayys.wayang.control.integration.designer.DesignMetadata;
-import tech.kayys.wayang.control.integration.designer.DesignNode;
-import tech.kayys.wayang.control.integration.designer.RouteDesign;
-import tech.kayys.gamelan.sdk.client.WorkflowDefinitionOperations;
-import tech.kayys.gamelan.sdk.client.WorkflowDefinitionBuilder;
-import tech.kayys.gamelan.engine.workflow.WorkflowDefinition;
 import tech.kayys.gamelan.engine.node.NodeDefinition;
+import tech.kayys.gamelan.engine.workflow.WorkflowDefinition;
+import tech.kayys.gamelan.engine.workflow.WorkflowDefinitionId;
+import tech.kayys.gamelan.sdk.client.WorkflowDefinitionBuilder;
+import tech.kayys.gamelan.sdk.client.WorkflowDefinitionOperations;
+import tech.kayys.wayang.schema.WayangSpec;
+import tech.kayys.wayang.schema.canvas.CanvasData;
+import tech.kayys.wayang.schema.canvas.CanvasNode;
+import tech.kayys.gamelan.engine.run.RunResponse;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -55,23 +56,20 @@ public class AbstractGamelanWorkflowEngineTest {
 
     @Test
     void testDeployMapping() {
-        RouteDesign routeDesign = mock(RouteDesign.class);
-        DesignMetadata metadata = mock(DesignMetadata.class);
-        DesignNode node = mock(DesignNode.class);
+        String name = "Test Workflow";
+        WayangSpec spec = new WayangSpec();
+        CanvasData canvas = new CanvasData();
+        CanvasNode node = new CanvasNode();
+        node.id = "node-1";
+        node.type = "java-executor";
+        node.label = "Node 1";
+        canvas.nodes.add(node);
+        spec.setCanvas(canvas);
+        spec.setSpecVersion("1.2.3");
+
         WorkflowDefinition expectedDefinition = mock(WorkflowDefinition.class);
-
-        when(routeDesign.routeId()).thenReturn("test-route");
-        when(routeDesign.name()).thenReturn("Test Route");
-        when(routeDesign.description()).thenReturn("Test Description");
-        when(routeDesign.tenantId()).thenReturn("test-tenant");
-        when(routeDesign.metadata()).thenReturn(metadata);
-        when(metadata.version()).thenReturn("1.2.3");
-        when(routeDesign.nodes()).thenReturn(List.of(node));
-
-        when(node.nodeId()).thenReturn("node-1");
-        when(node.label()).thenReturn("Node 1");
-        when(node.nodeType()).thenReturn("java-executor");
-        when(node.configuration()).thenReturn(null);
+        WorkflowDefinitionId defId = WorkflowDefinitionId.of("def-123");
+        when(expectedDefinition.id()).thenReturn(defId);
 
         when(workflowOperations.create(anyString())).thenReturn(definitionBuilder);
         when(definitionBuilder.description(anyString())).thenReturn(definitionBuilder);
@@ -80,15 +78,39 @@ public class AbstractGamelanWorkflowEngineTest {
         when(definitionBuilder.addNode(any(NodeDefinition.class))).thenReturn(definitionBuilder);
         when(definitionBuilder.execute()).thenReturn(Uni.createFrom().item(expectedDefinition));
 
-        WorkflowDefinition result = engine.deploy(routeDesign).await().indefinitely();
+        String resultId = engine.deploy(name, spec).await().indefinitely();
 
-        assertEquals(expectedDefinition, result);
-        verify(workflowOperations).create("Test Route");
-        verify(definitionBuilder).description("Test Description");
+        assertEquals("def-123", resultId);
+        verify(workflowOperations).create(name);
         verify(definitionBuilder).version("1.2.3");
-        verify(definitionBuilder).tenantId("test-tenant");
         verify(definitionBuilder, times(1)).addNode(any(NodeDefinition.class));
         verify(definitionBuilder).execute();
+    }
+
+    @Test
+    void testRun() {
+        String defId = "def-123";
+        Map<String, Object> inputs = Map.of("param1", "value1");
+
+        RunResponse runResponse = mock(RunResponse.class);
+        when(runResponse.getRunId()).thenReturn("run-456");
+
+        tech.kayys.gamelan.sdk.client.WorkflowRunOperations runOps = mock(
+                tech.kayys.gamelan.sdk.client.WorkflowRunOperations.class);
+        tech.kayys.gamelan.sdk.client.CreateRunBuilder createRunBuilder = mock(
+                tech.kayys.gamelan.sdk.client.CreateRunBuilder.class);
+
+        when(client.runs()).thenReturn(runOps);
+        when(runOps.create(defId)).thenReturn(createRunBuilder);
+        when(createRunBuilder.input(anyString(), any())).thenReturn(createRunBuilder);
+        when(createRunBuilder.execute()).thenReturn(Uni.createFrom().item(runResponse));
+
+        String result = engine.run(defId, inputs).await().indefinitely();
+
+        assertEquals("run-456", result);
+        verify(runOps).create(defId);
+        verify(createRunBuilder).input("param1", "value1");
+        verify(createRunBuilder).execute();
     }
 
     @Test

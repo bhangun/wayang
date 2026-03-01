@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.kayys.wayang.control.spi.PluginManagerSpi;
 import tech.kayys.wayang.plugin.WayangPlugin;
-import tech.kayys.wayang.plugin.ControlPlanePluginManager;
+import tech.kayys.wayang.plugin.registry.ControlPlanePluginManager;
 
 import java.util.List;
 

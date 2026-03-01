@@ -6,12 +6,17 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.kayys.wayang.control.domain.WayangDefinition;
+
 import tech.kayys.wayang.schema.DefinitionType;
 import tech.kayys.wayang.schema.WayangSpec;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+
+import jakarta.inject.Inject;
+import tech.kayys.wayang.orchestrator.spi.WayangOrchestratorSpi;
 
 /**
  * Service for managing WayangDefinitions — CRUD, versioning, and lifecycle.
@@ -20,6 +25,9 @@ import java.util.UUID;
 public class WayangDefinitionService {
 
     private static final Logger LOG = LoggerFactory.getLogger(WayangDefinitionService.class);
+
+    @Inject
+    WayangOrchestratorSpi orchestrator;
 
     /**
      * Create a new WayangDefinition.
@@ -86,15 +94,78 @@ public class WayangDefinitionService {
     public Uni<WayangDefinition> publish(UUID definitionId, String publishedBy) {
         LOG.info("Publishing WayangDefinition {}", definitionId);
 
+        return WayangDefinition.<WayangDefinition>findById(definitionId)
+                .flatMap(def -> {
+                    if (def == null) {
+                        return Uni.createFrom().failure(
+                                new IllegalArgumentException("Definition not found: " + definitionId));
+                    }
+
+                    // Deploy to orchestrator before marking as published
+                    return orchestrator.deploy(def.name, def.spec)
+                            .flatMap(orchestratorId -> Panache.withTransaction(() -> {
+                                def.status = "PUBLISHED";
+                                def.workflowDefinitionId = orchestratorId;
+                                def.publishedAt = Instant.now();
+                                def.publishedBy = publishedBy;
+                                return def.persist().map(d -> (WayangDefinition) d);
+                            }));
+                });
+    }
+
+    /**
+     * Run a published definition.
+     */
+    public Uni<String> run(UUID definitionId, Map<String, Object> inputs) {
+        LOG.info("Running WayangDefinition {}", definitionId);
+
+        return WayangDefinition.<WayangDefinition>findById(definitionId)
+                .flatMap(def -> {
+                    if (def == null) {
+                        return Uni.createFrom().failure(
+                                new IllegalArgumentException("Definition not found: " + definitionId));
+                    }
+                    if (def.workflowDefinitionId == null) {
+                        return Uni.createFrom().failure(
+                                new IllegalStateException("Definition is not deployed/published: " + definitionId));
+                    }
+
+                    return orchestrator.run(def.workflowDefinitionId, inputs);
+                });
+    }
+
+    /**
+     * Activate a definition (e.g. for AI Agents).
+     */
+    public Uni<WayangDefinition> activate(UUID definitionId) {
+        LOG.info("Activating WayangDefinition {}", definitionId);
+
         return Panache.withTransaction(() -> WayangDefinition.<WayangDefinition>findById(definitionId)
                 .flatMap(def -> {
                     if (def == null) {
                         return Uni.createFrom().failure(
                                 new IllegalArgumentException("Definition not found: " + definitionId));
                     }
-                    def.status = "PUBLISHED";
-                    def.publishedAt = Instant.now();
-                    def.publishedBy = publishedBy;
+                    def.status = "ACTIVE";
+                    def.updatedAt = Instant.now();
+                    return def.persist().map(d -> (WayangDefinition) d);
+                }));
+    }
+
+    /**
+     * Deactivate a definition.
+     */
+    public Uni<WayangDefinition> deactivate(UUID definitionId) {
+        LOG.info("Deactivating WayangDefinition {}", definitionId);
+
+        return Panache.withTransaction(() -> WayangDefinition.<WayangDefinition>findById(definitionId)
+                .flatMap(def -> {
+                    if (def == null) {
+                        return Uni.createFrom().failure(
+                                new IllegalArgumentException("Definition not found: " + definitionId));
+                    }
+                    def.status = "INACTIVE";
+                    def.updatedAt = Instant.now();
                     return def.persist().map(d -> (WayangDefinition) d);
                 }));
     }

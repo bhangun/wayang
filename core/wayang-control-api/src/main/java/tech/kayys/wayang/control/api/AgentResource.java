@@ -23,10 +23,14 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import tech.kayys.wayang.agent.AgentTask;
-import tech.kayys.wayang.control.service.AgentManager;
+import tech.kayys.wayang.control.dto.AgentTask;
+import tech.kayys.wayang.control.service.WayangDefinitionService;
+import tech.kayys.wayang.control.domain.WayangDefinition;
 import tech.kayys.wayang.control.dto.CreateAgentRequest;
+import tech.kayys.wayang.schema.DefinitionType;
+import tech.kayys.wayang.schema.WayangSpec;
 
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -38,14 +42,26 @@ import java.util.UUID;
 public class AgentResource {
 
         @Inject
-        AgentManager agentManager;
+        WayangDefinitionService definitionService;
 
         @POST
         public Uni<Response> createAgent(@QueryParam("projectId") UUID projectId,
                         @Valid CreateAgentRequest request,
                         @HeaderParam("X-Tenant-Id") @DefaultValue("default") String tenantId) {
-                return agentManager.createAgent(projectId, request)
-                                .map(agent -> Response.status(Response.Status.CREATED).entity(agent).build());
+
+                WayangSpec spec = new WayangSpec();
+                spec.getAgents().add(Map.of(
+                                "name", request.agentName(),
+                                "type", request.agentType(),
+                                "tools", request.tools(),
+                                "capabilities", request.capabilities(),
+                                "llm", request.llmConfig(),
+                                "memory", request.memoryConfig(),
+                                "guardrails", request.guardrails()));
+
+                return definitionService.create(tenantId, projectId, request.agentName(),
+                                request.description(), DefinitionType.AI_AGENT, spec, "system")
+                                .map(def -> Response.status(Response.Status.CREATED).entity(def).build());
         }
 
         @POST
@@ -53,13 +69,13 @@ public class AgentResource {
         public Uni<Response> executeTask(@PathParam("agentId") UUID agentId,
                         @Valid tech.kayys.wayang.control.dto.AgentTask taskRequest,
                         @HeaderParam("X-Tenant-Id") @DefaultValue("default") String tenantId) {
-                AgentTask agentTask = new AgentTask(
-                                taskRequest.taskId(),
-                                taskRequest.instruction(),
-                                taskRequest.context(),
-                                java.util.Collections.emptyList());
 
-                return agentManager.executeTask(agentId, agentTask)
-                                .map(result -> Response.ok(result).build());
+                Map<String, Object> inputs = Map.of(
+                                "taskId", taskRequest.taskId(),
+                                "instruction", taskRequest.instruction(),
+                                "context", taskRequest.context());
+
+                return definitionService.run(agentId, inputs)
+                                .map(executionId -> Response.ok(Map.of("executionId", executionId)).build());
         }
 }

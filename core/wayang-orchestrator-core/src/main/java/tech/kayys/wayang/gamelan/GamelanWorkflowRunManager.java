@@ -22,12 +22,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import tech.kayys.gamelan.sdk.client.GamelanClient;
 import tech.kayys.gamelan.engine.run.RunResponse;
-import tech.kayys.gamelan.engine.workflow.WorkflowRun;
-import tech.kayys.gamelan.engine.run.CreateRunRequest;
-
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Gamelan-backed implementation of Wayang Workflow Run Management

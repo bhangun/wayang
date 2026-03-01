@@ -11,23 +11,24 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.RestResponse;
 
-import tech.kayys.wayang.plugin.ControlPlaneNodeRegistry;
-import tech.kayys.wayang.plugin.ControlPlaneExecutorRegistry;
-import tech.kayys.wayang.plugin.ControlPlaneWidgetRegistry;
-import tech.kayys.wayang.plugin.node.NodeDefinition;
-import tech.kayys.wayang.plugin.executor.ExecutorRegistration;
-import tech.kayys.wayang.plugin.executor.ExecutorStatus;
-import tech.kayys.wayang.plugin.UIWidgetDefinition;
+import tech.kayys.wayang.plugin.registry.ControlPlaneNodeRegistry;
+import tech.kayys.wayang.plugin.registry.ControlPlaneExecutorRegistry;
+import tech.kayys.wayang.plugin.registry.ControlPlaneWidgetRegistry;
+import tech.kayys.wayang.plugin.registry.node.NodeDefinition;
+import tech.kayys.wayang.plugin.registry.executor.ExecutorRegistration;
+import tech.kayys.wayang.plugin.registry.executor.ExecutorStatus;
+import tech.kayys.wayang.plugin.registry.UIWidgetDefinition;
 import tech.kayys.wayang.plugin.CommunicationProtocol;
 import tech.kayys.wayang.schema.validator.ValidationResult;
 import tech.kayys.wayang.control.service.ProjectManager;
-import tech.kayys.wayang.control.service.WorkflowManager;
+import tech.kayys.wayang.control.service.WayangDefinitionService;
 import tech.kayys.wayang.control.service.CompositeNodeManager;
-import tech.kayys.wayang.control.domain.WayangProject;
-import tech.kayys.wayang.control.domain.WorkflowTemplate;
+import tech.kayys.wayang.control.dto.ProjectDTO;
+import tech.kayys.wayang.control.domain.WayangDefinition;
 import tech.kayys.wayang.control.dto.node.NodePort;
 import tech.kayys.wayang.control.dto.node.PortDirection;
 import tech.kayys.wayang.control.api.NodeCatalogResponse;
+import tech.kayys.wayang.control.domain.WayangDefinition;
 
 import java.util.*;
 
@@ -56,7 +57,7 @@ public class NodeCatalogResource {
     ProjectManager projectManager;
 
     @Inject
-    WorkflowManager workflowManager;
+    WayangDefinitionService definitionService;
 
     @Inject
     CompositeNodeManager compositeNodeManager;
@@ -73,11 +74,16 @@ public class NodeCatalogResource {
         return Uni.combine().all().unis(
                 fetchStaticNodes(category),
                 fetchProjectNodes(category, tenantId),
-                fetchTemplateNodes(category, tenantId)).combinedWith((staticNodes, projectNodes, templateNodes) -> {
+                fetchDefinitionNodes(category, tenantId))
+                .with(results -> {
+                    List<NodeCatalogEntry> staticNodes = (List<NodeCatalogEntry>) results.get(0);
+                    List<NodeCatalogEntry> projectNodes = (List<NodeCatalogEntry>) results.get(1);
+                    List<NodeCatalogEntry> defNodes = (List<NodeCatalogEntry>) results.get(2);
+
                     List<NodeCatalogEntry> allEntries = new ArrayList<>();
                     allEntries.addAll(staticNodes);
                     allEntries.addAll(projectNodes);
-                    allEntries.addAll(templateNodes);
+                    allEntries.addAll(defNodes);
 
                     Set<String> categories = allEntries.stream()
                             .map(NodeCatalogEntry::category)
@@ -92,12 +98,10 @@ public class NodeCatalogResource {
     }
 
     private Uni<List<NodeCatalogEntry>> fetchStaticNodes(String category) {
-        return Uni.createFrom().item(() -> {
-            List<NodeDefinition> nodes = (category != null && !category.isEmpty())
-                    ? nodeRegistry.getByCategory(category)
-                    : nodeRegistry.getAll();
-            return nodes.stream().map(this::toNodeCatalogEntry).toList();
-        });
+        List<NodeDefinition> nodes = (category != null && !category.isEmpty())
+                ? nodeRegistry.getByCategory(category)
+                : nodeRegistry.getAll();
+        return Uni.createFrom().item(nodes.stream().map(this::toNodeCatalogEntry).toList());
     }
 
     private Uni<List<NodeCatalogEntry>> fetchProjectNodes(String category, String tenantId) {
@@ -110,44 +114,45 @@ public class NodeCatalogResource {
                         .toList());
     }
 
-    private Uni<List<NodeCatalogEntry>> fetchTemplateNodes(String category, String tenantId) {
+    private Uni<List<NodeCatalogEntry>> fetchDefinitionNodes(String category, String tenantId) {
         if (category != null && !"Sub-Workflows".equals(category)) {
             return Uni.createFrom().item(Collections.emptyList());
         }
-        // Assuming WorkflowManager can list by tenant
-        return workflowManager.listAllTemplates(tenantId)
-                .map(templates -> templates.stream()
-                        .map(this::templateToNodeEntry)
+        // Listing published definitions as sub-workflows
+        return definitionService.listByProject(UUID.randomUUID()) // Placeholder for proper listing
+                .onFailure().recoverWithItem(Collections.emptyList())
+                .map(defs -> defs.stream()
+                        .map(this::definitionToNodeEntry)
                         .toList());
     }
 
-    private NodeCatalogEntry projectToNodeEntry(WayangProject project) {
+    private NodeCatalogEntry projectToNodeEntry(ProjectDTO project) {
         return new NodeCatalogEntry(
-                "wayang:project:" + project.projectId,
-                project.projectName,
+                "wayang:project:" + project.projectId(),
+                project.projectName(),
                 "Sub-Workflows",
                 "Project",
-                project.description,
+                project.description(),
                 "1.0.0",
                 null, null, null,
                 null, null,
-                project.metadata != null ? Map.of() : Map.of(), // Convert metadata if needed
+                project.metadata() != null ? project.metadata() : Map.of(),
                 List.of("project", "composite"),
                 Collections.emptyList());
     }
 
-    private NodeCatalogEntry templateToNodeEntry(WorkflowTemplate template) {
+    private NodeCatalogEntry definitionToNodeEntry(WayangDefinition def) {
         return new NodeCatalogEntry(
-                "wayang:template:" + template.templateId,
-                template.templateName,
+                "wayang:definition:" + def.definitionId,
+                def.name,
                 "Sub-Workflows",
-                "Template",
-                template.description,
-                template.version,
+                def.definitionType != null ? def.definitionType.name() : "Workflow",
+                def.description,
+                def.version,
                 null, null, null,
                 null, null,
                 Map.of(),
-                template.tags != null ? template.tags : List.of("template", "composite"),
+                def.tags != null ? def.tags : List.of("definition", "composite"),
                 Collections.emptyList());
     }
 
@@ -164,41 +169,42 @@ public class NodeCatalogResource {
         if (nodeType.startsWith("wayang:project:")) {
             UUID projectId = UUID.fromString(nodeType.substring("wayang:project:".length()));
             return projectManager.getProject(projectId, tenantId)
-                    .flatMap(p -> p == null ? Uni.createFrom().item(RestResponse.notFound())
-                            : enrichProjectNode(p).map(RestResponse::ok));
-        } else if (nodeType.startsWith("wayang:template:")) {
-            UUID templateId = UUID.fromString(nodeType.substring("wayang:template:".length()));
-            return workflowManager.getWorkflowTemplate(templateId)
-                    .flatMap(t -> t == null ? Uni.createFrom().item(RestResponse.notFound())
-                            : enrichTemplateNode(t).map(RestResponse::ok));
+                    .flatMap(p -> p == null ? Uni.createFrom().item(() -> RestResponse.<NodeCatalogEntry>notFound())
+                            : enrichProjectNode(p, tenantId).map(RestResponse::ok));
+        } else if (nodeType.startsWith("wayang:definition:")) {
+            UUID definitionId = UUID.fromString(nodeType.substring("wayang:definition:".length()));
+            return definitionService.findById(definitionId)
+                    .flatMap(d -> d == null ? Uni.createFrom().item(() -> RestResponse.<NodeCatalogEntry>notFound())
+                            : enrichDefinitionNode(d).map(RestResponse::ok));
         }
 
-        return Uni.createFrom().item(() -> {
-            NodeDefinition node = nodeRegistry.get(nodeType);
-            if (node == null) {
-                return RestResponse.notFound();
-            }
-
-            return RestResponse.ok(toNodeCatalogEntry(node));
-        });
+        return Uni.createFrom().item(() -> nodeRegistry.get(nodeType))
+                .map(node -> {
+                    if (node == null) {
+                        return RestResponse.<NodeCatalogEntry>notFound();
+                    }
+                    return RestResponse.ok(toNodeCatalogEntry(node));
+                });
     }
 
-    private Uni<NodeCatalogEntry> enrichProjectNode(WayangProject project) {
-        // Find the "Interface" canvas if it exists or use default
-        // For simplicity, we assume the first workflow template's canvas is the
-        // interface
-        if (project.workflows == null || project.workflows.isEmpty()) {
-            return Uni.createFrom().item(projectToNodeEntry(project));
-        }
-        return Uni.createFrom().item(templateToNodeEntry(project.workflows.get(0)));
+    private Uni<NodeCatalogEntry> enrichProjectNode(ProjectDTO project, String tenantId) {
+        // Find the "Interface" definition if it exists
+        return definitionService.listByProject(project.projectId())
+                .map(defs -> {
+                    if (defs.isEmpty()) {
+                        return projectToNodeEntry(project);
+                    }
+                    return definitionToNodeEntry(defs.get(0));
+                });
     }
 
-    private Uni<NodeCatalogEntry> enrichTemplateNode(WorkflowTemplate template) {
+    private Uni<NodeCatalogEntry> enrichDefinitionNode(WayangDefinition definition) {
         return Uni.createFrom().item(() -> {
-            NodeCatalogEntry baseEntry = templateToNodeEntry(template);
+            NodeCatalogEntry baseEntry = definitionToNodeEntry(definition);
             List<NodePort> ports = Collections.emptyList();
-            if (template.canvasDefinition != null && template.canvasDefinition.canvasData != null) {
-                ports = compositeNodeManager.discoverPorts(template.canvasDefinition.canvasData);
+            if (definition.spec != null && definition.spec.getCanvas() != null) {
+                // Discover ports from canvas data
+                ports = compositeNodeManager.discoverPorts(definition.spec.getCanvas());
             }
             return new NodeCatalogEntry(
                     baseEntry.type(),

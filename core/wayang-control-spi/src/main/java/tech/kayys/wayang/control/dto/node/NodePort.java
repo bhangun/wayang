@@ -2,8 +2,8 @@ package tech.kayys.wayang.control.dto.node;
 
 import java.util.Map;
 
-import tech.kayys.wayang.control.canvas.schema.PortType;
-import tech.kayys.wayang.control.canvas.schema.Position;
+import tech.kayys.wayang.schema.node.PortType;
+import tech.kayys.wayang.schema.layout.Position;
 
 /**
  * 

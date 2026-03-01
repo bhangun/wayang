@@ -79,6 +79,9 @@ public class WayangDefinition extends PanacheEntityBase {
     @Column(name = "status")
     public String status = "DRAFT"; // DRAFT, VALIDATED, PUBLISHED, DEPLOYED, ARCHIVED
 
+    @Column(name = "workflow_definition_id")
+    public String workflowDefinitionId; // From Orchestrator
+
     @Column(name = "branch_name")
     public String branchName = "main";
 

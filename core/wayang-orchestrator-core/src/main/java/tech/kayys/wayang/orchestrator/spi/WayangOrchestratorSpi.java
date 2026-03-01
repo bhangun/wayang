@@ -13,28 +13,30 @@ import java.util.Map;
 public interface WayangOrchestratorSpi {
 
     /**
-     * Deploys and executes a Wayang workflow/agent based on its definition spec.
-     *
-     * @param name   The name or ID of the execution instance.
-     * @param spec   The full Wayang definition specification to execute.
-     * @param inputs Initial inputs or variables to provide to the workflow.
-     * @return The ID of the resulting execution or deployment.
+     * Deploy a Wayang definition to the orchestrator.
+     * 
+     * @param name Name for the definition
+     * @param spec The Wayang specification
+     * @return Unique definition ID
      */
-    Uni<String> execute(String name, WayangSpec spec, Map<String, Object> inputs);
+    Uni<String> deploy(String name, WayangSpec spec);
 
     /**
-     * Gets the status of a specific execution.
-     *
-     * @param executionId The ID returned by the execute method.
-     * @return A status string (e.g., RUNNING, COMPLETED, FAILED).
+     * Run a deployed definition.
+     * 
+     * @param definitionId The ID returned from deploy
+     * @param inputs       Runtime inputs
+     * @return Unique execution ID
+     */
+    Uni<String> run(String definitionId, Map<String, Object> inputs);
+
+    /**
+     * Get the status of an execution.
      */
     Uni<String> getStatus(String executionId);
 
     /**
-     * Stops an active execution.
-     *
-     * @param executionId The ID of the execution to stop.
-     * @return True if stopped successfully, false otherwise.
+     * Stop a running execution.
      */
     Uni<Boolean> stop(String executionId);
 }

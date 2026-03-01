@@ -1,8 +1,8 @@
 package tech.kayys.wayang.control.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import tech.kayys.wayang.control.canvas.schema.CanvasData;
-import tech.kayys.wayang.control.canvas.schema.CanvasNode;
+import tech.kayys.wayang.schema.canvas.CanvasData;
+import tech.kayys.wayang.schema.canvas.CanvasNode;
 import tech.kayys.wayang.control.dto.node.NodePort;
 import tech.kayys.wayang.control.dto.node.PortDirection;
 

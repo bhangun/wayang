@@ -5,9 +5,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.kayys.wayang.control.service.WorkflowManager;
-import tech.kayys.wayang.control.dto.CreateTemplateRequest;
-import tech.kayys.wayang.control.domain.WorkflowTemplate;
+import tech.kayys.wayang.control.service.WayangDefinitionService;
+import tech.kayys.wayang.control.domain.WayangDefinition;
+import tech.kayys.wayang.schema.DefinitionType;
+import tech.kayys.wayang.schema.WayangSpec;
 
 import java.util.UUID;
 
@@ -17,41 +18,33 @@ public class WorkflowGrpcServiceImpl extends WorkflowServiceGrpc.WorkflowService
     private static final Logger LOG = LoggerFactory.getLogger(WorkflowGrpcServiceImpl.class);
 
     @Inject
-    WorkflowManager workflowManager;
+    WayangDefinitionService definitionService;
 
     @Override
     public void createWorkflowTemplate(ControlPlaneProto.CreateWorkflowTemplateRequest request,
                                       StreamObserver<ControlPlaneProto.WorkflowTemplateResponse> responseObserver) {
         try {
-            LOG.info("Creating workflow template: {}", request.getTemplateName());
+            LOG.info("Creating workflow template (Definition): {}", request.getTemplateName());
 
             var projectId = UUID.fromString(request.getProjectId());
             
-            // Convert gRPC request to internal DTO
-            var createRequest = new tech.kayys.wayang.control.dto.CreateTemplateRequest(
-                request.getTemplateName(),
-                request.getDescription(),
-                request.getVersion(),
-                tech.kayys.wayang.control.dto.TemplateType.valueOf(request.getTemplateType()),
-                request.getCanvasDefinition(),
-                request.getTagsList()
-            );
+            WayangSpec spec = new WayangSpec();
+            // In a real implementation, map request fields to spec
 
-            // Call the service
-            var templateUni = workflowManager.createWorkflowTemplate(projectId, createRequest);
+            var defUni = definitionService.create("default", projectId, request.getTemplateName(),
+                request.getDescription(), DefinitionType.WORKFLOW_TEMPLATE, spec, "system");
             
-            // Handle async response
-            templateUni.subscribe().with(
-                template -> {
+            defUni.subscribe().with(
+                def -> {
                     var response = ControlPlaneProto.WorkflowTemplateResponse.newBuilder()
                         .setSuccess(true)
-                        .setTemplate(convertToProto(template))
+                        .setTemplate(convertToProto(def))
                         .build();
                     responseObserver.onNext(response);
                     responseObserver.onCompleted();
                 },
                 throwable -> {
-                    LOG.error("Error creating workflow template", throwable);
+                    LOG.error("Error creating workflow definition", throwable);
                     responseObserver.onError(throwable);
                 }
             );
@@ -65,31 +58,31 @@ public class WorkflowGrpcServiceImpl extends WorkflowServiceGrpc.WorkflowService
     public void getWorkflowTemplate(ControlPlaneProto.GetWorkflowTemplateRequest request,
                                    StreamObserver<ControlPlaneProto.WorkflowTemplateResponse> responseObserver) {
         try {
-            LOG.debug("Getting workflow template: {}", request.getTemplateId());
+            LOG.debug("Getting workflow definition: {}", request.getTemplateId());
 
-            var templateId = UUID.fromString(request.getTemplateId());
+            var defId = UUID.fromString(request.getTemplateId());
 
-            var templateUni = workflowManager.getWorkflowTemplate(templateId);
+            var defUni = definitionService.findById(defId);
             
-            templateUni.subscribe().with(
-                template -> {
-                    if (template != null) {
+            defUni.subscribe().with(
+                def -> {
+                    if (def != null) {
                         var response = ControlPlaneProto.WorkflowTemplateResponse.newBuilder()
                             .setSuccess(true)
-                            .setTemplate(convertToProto(template))
+                            .setTemplate(convertToProto(def))
                             .build();
                         responseObserver.onNext(response);
                     } else {
                         var response = ControlPlaneProto.WorkflowTemplateResponse.newBuilder()
                             .setSuccess(false)
-                            .setMessage("Template not found")
+                            .setMessage("Definition not found")
                             .build();
                         responseObserver.onNext(response);
                     }
                     responseObserver.onCompleted();
                 },
                 throwable -> {
-                    LOG.error("Error getting workflow template: " + request.getTemplateId(), throwable);
+                    LOG.error("Error getting workflow definition: " + request.getTemplateId(), throwable);
                     responseObserver.onError(throwable);
                 }
             );
@@ -103,29 +96,13 @@ public class WorkflowGrpcServiceImpl extends WorkflowServiceGrpc.WorkflowService
     public void listWorkflowTemplates(ControlPlaneProto.ListWorkflowTemplatesRequest request,
                                      StreamObserver<ControlPlaneProto.ListWorkflowTemplatesResponse> responseObserver) {
         try {
-            LOG.debug("Listing workflow templates for tenant: {}", request.getTenantId());
+            LOG.debug("Listing workflow definitions for project: {}", request.getTenantId());
 
-            var tenantId = request.getTenantId();
-
-            var templatesUni = workflowManager.listAllTemplates(tenantId);
+            // List by tenant/project if needed. For now using a placeholder projectId if present in request
+            // or listing all. WayangDefinitionService.listByProject expects a UUID.
             
-            templatesUni.subscribe().with(
-                templates -> {
-                    var builder = ControlPlaneProto.ListWorkflowTemplatesResponse.newBuilder()
-                        .setSuccess(true);
-                    
-                    for (var template : templates) {
-                        builder.addTemplates(convertToProto(template));
-                    }
-                    
-                    responseObserver.onNext(builder.build());
-                    responseObserver.onCompleted();
-                },
-                throwable -> {
-                    LOG.error("Error listing workflow templates for tenant: " + tenantId, throwable);
-                    responseObserver.onError(throwable);
-                }
-            );
+            responseObserver.onError(new UnsupportedOperationException("Listing definitions via gRPC needs projectId context"));
+            
         } catch (Exception e) {
             LOG.error("Error in listWorkflowTemplates", e);
             responseObserver.onError(e);
@@ -136,23 +113,23 @@ public class WorkflowGrpcServiceImpl extends WorkflowServiceGrpc.WorkflowService
     public void publishWorkflowTemplate(ControlPlaneProto.PublishWorkflowTemplateRequest request,
                                        StreamObserver<ControlPlaneProto.PublishWorkflowTemplateResponse> responseObserver) {
         try {
-            LOG.info("Publishing workflow template: {}", request.getTemplateId());
+            LOG.info("Publishing workflow definition: {}", request.getTemplateId());
 
-            var templateId = UUID.fromString(request.getTemplateId());
+            var defId = UUID.fromString(request.getTemplateId());
 
-            var publishUni = workflowManager.publishWorkflowTemplate(templateId);
+            var publishUni = definitionService.publish(defId, "system");
             
             publishUni.subscribe().with(
-                workflowDefId -> {
+                def -> {
                     var response = ControlPlaneProto.PublishWorkflowTemplateResponse.newBuilder()
                         .setSuccess(true)
-                        .setWorkflowDefinitionId(workflowDefId)
+                        .setWorkflowDefinitionId(def.workflowDefinitionId)
                         .build();
                     responseObserver.onNext(response);
                     responseObserver.onCompleted();
                 },
                 throwable -> {
-                    LOG.error("Error publishing workflow template: " + request.getTemplateId(), throwable);
+                    LOG.error("Error publishing workflow definition: " + request.getTemplateId(), throwable);
                     responseObserver.onError(throwable);
                 }
             );
@@ -162,22 +139,22 @@ public class WorkflowGrpcServiceImpl extends WorkflowServiceGrpc.WorkflowService
         }
     }
 
-    // Helper method to convert internal template to proto
-    private ControlPlaneProto.WorkflowTemplate convertToProto(WorkflowTemplate template) {
+    private ControlPlaneProto.WorkflowTemplate convertToProto(WayangDefinition def) {
         var builder = ControlPlaneProto.WorkflowTemplate.newBuilder()
-            .setTemplateId(template.templateId.toString())
-            .setProjectId(template.project.projectId.toString())
-            .setTemplateName(template.templateName)
-            .setDescription(template.description != null ? template.description : "")
-            .setVersion(template.version != null ? template.version : "")
-            .setTemplateType(template.templateType != null ? template.templateType.name() : "")
-            .setCanvasDefinition(template.canvasDefinition != null ? template.canvasDefinition : "")
-            .addAllTags(template.tags != null ? template.tags : java.util.Collections.emptyList())
-            .setCreatedAt(template.createdAt != null ? template.createdAt.toEpochMilli() : 0L)
-            .setUpdatedAt(template.updatedAt != null ? template.updatedAt.toEpochMilli() : 0L)
-            .setIsPublished(template.isPublished)
-            .setWorkflowDefinitionId(template.workflowDefinitionId != null ? template.workflowDefinitionId : "");
+            .setTemplateId(def.definitionId.toString())
+            .setProjectId(def.projectId.toString())
+            .setTemplateName(def.name)
+            .setDescription(def.description != null ? def.description : "")
+            .setVersion(String.valueOf(def.versionNumber))
+            .setTemplateType(def.definitionType.name())
+            .setCanvasDefinition("") // Canvas data handled via Definition specs now
+            .addAllTags(java.util.Collections.emptyList())
+            .setCreatedAt(def.createdAt != null ? def.createdAt.toEpochMilli() : 0L)
+            .setUpdatedAt(def.updatedAt != null ? def.updatedAt.toEpochMilli() : 0L)
+            .setIsPublished("PUBLISHED".equals(def.status))
+            .setWorkflowDefinitionId(def.workflowDefinitionId != null ? def.workflowDefinitionId : "");
 
         return builder.build();
     }
+}
 }

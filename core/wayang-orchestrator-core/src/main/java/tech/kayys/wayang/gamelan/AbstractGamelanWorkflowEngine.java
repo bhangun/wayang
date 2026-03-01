@@ -47,7 +47,7 @@ public abstract class AbstractGamelanWorkflowEngine implements WayangOrchestrato
     }
 
     @Override
-    public Uni<String> execute(String name, WayangSpec spec, Map<String, Object> inputs) {
+    public Uni<String> deploy(String name, WayangSpec spec) {
         var builder = client.workflows().create(name)
                 .description("Wayang Deployed Definition")
                 .version(spec.getSpecVersion() != null ? spec.getSpecVersion() : "1.0.0")
@@ -75,13 +75,17 @@ public abstract class AbstractGamelanWorkflowEngine implements WayangOrchestrato
         // Map Wayang connections to Gamelan dependencies (logic omitted for brevity,
         // handled by subclass if needed)
 
-        // 1. Deploy Workflow Definition to Gamelan
-        return builder.execute().flatMap(workflowDef ->
-        // 2. Start a Run on that definition
-        client.runs().create(workflowDef.id().value())
-                // TODO: Pass in 'inputs' mapping if Gamelan client supports it
-                .execute()
-                .map(RunResponse::getRunId));
+        // Deploy Workflow Definition to Gamelan and return its native ID
+        return builder.execute().map(workflowDef -> workflowDef.id().value());
+    }
+
+    @Override
+    public Uni<String> run(String definitionId, Map<String, Object> inputs) {
+        var builder = client.runs().create(definitionId);
+        if (inputs != null) {
+            inputs.forEach(builder::input);
+        }
+        return builder.execute().map(RunResponse::getRunId);
     }
 
     @Override

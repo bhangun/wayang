@@ -69,6 +69,11 @@
             <artifactId>wayang-control-spi</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-orchestrator-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Quarkus Dependencies -->
         <dependency>

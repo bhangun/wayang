@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import tech.kayys.wayang.schema.node.NodePort;
-import tech.kayys.wayang.schema.common.Position;
+import tech.kayys.wayang.schema.layout.Position;
 import tech.kayys.wayang.schema.layout.Dimensions;
 import tech.kayys.wayang.schema.node.NodeStyle;
 import tech.kayys.wayang.schema.node.NodeValidation;
@@ -25,6 +25,11 @@ public class CanvasNode {
     public List<NodePort> ports = new ArrayList<>();
     public NodeValidation validation;
     public Map<String, Object> ui;
+
+    // Composite / Sub-workflow support
+    public boolean isComposite = false;
+    public String subWorkflowId;
+    public String sourceType; // PROJECT, TEMPLATE
 
     // AI-enhanced features
     public List<String> aiSuggestions = new ArrayList<>();

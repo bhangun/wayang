@@ -8,8 +8,10 @@ import tech.kayys.wayang.agent.mcp.model.MCPPrompt;
 import tech.kayys.wayang.prompt.core.*;
 import tech.kayys.wayang.prompt.registry.PromptTemplateRegistry;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -34,7 +36,7 @@ public class WayangPromptProvider implements MCPPromptProvider {
     @Override
     public Uni<List<MCPPrompt>> listPrompts() {
         // Combine MCP prompts with wayang-prompt templates
-        return templateRegistry.listAllTemplates("default") // Use default tenant
+        return templateRegistry.listByTenant("default", 0, 100)
                 .map(templates -> {
                     List<MCPPrompt> result = templates.stream()
                             .map(this::convertToMCPPrompt)
@@ -46,159 +48,125 @@ public class WayangPromptProvider implements MCPPromptProvider {
 
     @Override
     public Uni<MCPPrompt> getPrompt(String name) {
-        return Uni.createFrom().item(() -> {
-            // Check MCP prompts first
-            if (mcpPrompts.containsKey(name)) {
-                return mcpPrompts.get(name);
-            }
+        // Check MCP prompts first
+        if (mcpPrompts.containsKey(name)) {
+            return Uni.createFrom().item(mcpPrompts.get(name));
+        }
 
-            // Try to get from wayang-prompt registry
-            return templateRegistry.getTemplate(name, "default")
-                    .map(this::convertToMCPPrompt)
-                    .await().indefinitely();
-        });
+        // Try to get from wayang-prompt registry
+        return templateRegistry.findById(name, "default")
+                .map(this::convertToMCPPrompt);
     }
 
     @Override
     public Uni<String> renderPrompt(String name, Map<String, Object> arguments) {
-        return Uni.createFrom().item(() -> {
-            // Check if it's an MCP prompt
-            if (mcpPrompts.containsKey(name)) {
-                return renderMCPPrompt(mcpPrompts.get(name), arguments);
-            }
+        // Check if it's an MCP prompt
+        if (mcpPrompts.containsKey(name)) {
+            return Uni.createFrom().item(renderMCPPrompt(mcpPrompts.get(name), arguments));
+        }
 
-            // Use wayang-prompt engine
-            return renderWayangPrompt(name, arguments);
-        });
+        // Use wayang-prompt engine
+        return renderWayangPromptReactive(name, arguments);
     }
 
     @Override
     public Uni<Void> registerPrompt(MCPPrompt prompt) {
-        return Uni.createFrom().item(() -> {
-            mcpPrompts.put(prompt.getName(), prompt);
-
-            // Optionally register in wayang-prompt registry
-            PromptTemplate template = convertToPromptTemplate(prompt);
-            templateRegistry.registerTemplate(template);
-
-            return null;
-        });
+        mcpPrompts.put(prompt.getName(), prompt);
+        return Uni.createFrom().voidItem();
     }
 
     @Override
     public Uni<Void> unregisterPrompt(String name) {
-        return Uni.createFrom().item(() -> {
-            mcpPrompts.remove(name);
-            return null;
-        });
+        mcpPrompts.remove(name);
+        return Uni.createFrom().voidItem();
     }
 
-    /**
-     * Render MCP prompt with simple variable substitution.
-     */
     private String renderMCPPrompt(MCPPrompt prompt, Map<String, Object> arguments) {
-        // Validate required arguments
         for (MCPPrompt.PromptArgument arg : prompt.getArguments()) {
             if (arg.isRequired() && !arguments.containsKey(arg.getName())) {
-                throw new IllegalArgumentException(
-                        "Missing required argument: " + arg.getName());
+                throw new IllegalArgumentException("Missing required argument: " + arg.getName());
             }
         }
 
-        // Simple variable substitution
         String result = prompt.getTemplate();
+        if (result == null)
+            return "";
         for (Map.Entry<String, Object> entry : arguments.entrySet()) {
             String placeholder = "{{" + entry.getKey() + "}}";
             String value = entry.getValue() != null ? entry.getValue().toString() : "";
             result = result.replace(placeholder, value);
         }
-
         return result;
     }
 
-    /**
-     * Render using wayang-prompt engine with full template engine support.
-     */
-    private String renderWayangPrompt(String name, Map<String, Object> arguments) {
-        try {
-            // Get the template
-            PromptTemplate template = templateRegistry.getTemplate(name, "default")
-                    .await().indefinitely();
+    private Uni<String> renderWayangPromptReactive(String name, Map<String, Object> arguments) {
+        return templateRegistry.findById(name, "default")
+                .map(template -> {
+                    List<PromptVariableValue> variables = arguments.entrySet().stream()
+                            .map(entry -> new PromptVariableValue(
+                                    entry.getKey(),
+                                    entry.getValue(),
+                                    tech.kayys.wayang.prompt.core.PromptVariableDefinition.VariableSource.INPUT,
+                                    false,
+                                    System.currentTimeMillis()))
+                            .collect(Collectors.toList());
 
-            // Convert arguments to PromptVariableValue list
-            List<PromptVariableValue> variables = arguments.entrySet().stream()
-                    .map(entry -> new PromptVariableValue(
-                            entry.getKey(),
-                            entry.getValue() != null ? entry.getValue().toString() : ""))
-                    .collect(Collectors.toList());
+                    PromptVersion activeVersion = template.resolveActiveVersion()
+                            .orElseThrow(() -> new RuntimeException("No active version for template: " + name));
 
-            // Determine rendering strategy
-            RenderingEngine engine = getRenderingEngine(template);
-
-            // Render the template
-            return engine.expand(template.getBody(), variables);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to render prompt: " + name, e);
-        }
+                    RenderingEngine engine = renderingEngineRegistry.forStrategy(activeVersion.getRenderingStrategy());
+                    return engine.expand(template.getBody(), variables);
+                })
+                .onFailure().transform(e -> new RuntimeException("Failed to render prompt: " + name, e));
     }
 
-    /**
-     * Get appropriate rendering engine for template.
-     */
-    private RenderingEngine getRenderingEngine(PromptTemplate template) {
-        // Check metadata for rendering strategy hint
-        String strategy = template.getMetadata().getOrDefault("renderingStrategy", "SIMPLE");
-
-        return switch (strategy.toUpperCase()) {
-            case "JINJA2" -> renderingEngineRegistry.getEngine(PromptVersion.RenderingStrategy.JINJA2);
-            case "FREEMARKER" -> renderingEngineRegistry.getEngine(PromptVersion.RenderingStrategy.FREEMARKER);
-            default -> renderingEngineRegistry.getEngine(PromptVersion.RenderingStrategy.SIMPLE);
-        };
-    }
-
-    /**
-     * Convert PromptTemplate to MCPPrompt.
-     */
     private MCPPrompt convertToMCPPrompt(PromptTemplate template) {
-        List<MCPPrompt.PromptArgument> arguments = template.getVariables().stream()
-                .map(var -> new MCPPrompt.PromptArgument(
-                        var.name(),
-                        var.description(),
-                        var.required()))
+        Set<String> placeholders = template.getPlaceholders();
+        List<MCPPrompt.PromptArgument> arguments = placeholders.stream()
+                .map(p -> new MCPPrompt.PromptArgument(
+                        p,
+                        "Template variable",
+                        true))
                 .collect(Collectors.toList());
+
+        // Convert Map<String, String> to Map<String, Object>
+        Map<String, Object> mcpMetadata = template.getMetadata() != null ? template.getMetadata().entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)) : Map.of();
 
         return MCPPrompt.builder()
-                .name(template.getId())
-                .description(template.getMetadata().getOrDefault("description", ""))
+                .name(template.getTemplateId())
+                .description(template.getDescription())
                 .arguments(arguments)
                 .template(template.getBody())
-                .metadata(template.getMetadata())
+                .metadata(mcpMetadata)
                 .build();
     }
 
-    /**
-     * Convert MCPPrompt to PromptTemplate.
-     */
     private PromptTemplate convertToPromptTemplate(MCPPrompt mcpPrompt) {
-        List<PromptTemplate.VariableDescriptor> variables = mcpPrompt.getArguments().stream()
-                .map(arg -> new PromptTemplate.VariableDescriptor(
-                        arg.getName(),
-                        arg.getDescription(),
-                        arg.isRequired(),
-                        null // default value
-                ))
-                .collect(Collectors.toList());
+        Instant now = Instant.now();
 
-        return PromptTemplate.builder()
-                .id(mcpPrompt.getName())
-                .version("1.0.0")
-                .tenantId("default")
-                .status(PromptTemplate.TemplateStatus.PUBLISHED)
-                .role(PromptRole.SYSTEM) // Default role
-                .body(mcpPrompt.getTemplate())
-                .variables(variables)
-                .metadata(mcpPrompt.getMetadata())
-                .build();
+        // Convert Map<String, Object> to Map<String, String>
+        Map<String, String> promptMetadata = mcpPrompt.getMetadata() != null
+                ? mcpPrompt.getMetadata().entrySet().stream()
+                        .collect(Collectors.toMap(
+                                Map.Entry::getKey,
+                                e -> e.getValue() != null ? e.getValue().toString() : ""))
+                : Map.of();
+
+        return new PromptTemplate(
+                mcpPrompt.getName(),
+                mcpPrompt.getName(),
+                mcpPrompt.getDescription(),
+                "default",
+                null,
+                PromptTemplate.TemplateStatus.DRAFT,
+                List.of(),
+                List.of(),
+                List.of(),
+                "system",
+                now,
+                "system",
+                now,
+                promptMetadata);
     }
 }

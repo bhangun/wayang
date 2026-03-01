@@ -15,6 +15,7 @@ import tech.kayys.gamelan.engine.node.NodeExecutionTask;
 import tech.kayys.wayang.agent.AgentType;
 import tech.kayys.wayang.memory.spi.AgentMemory;
 import tech.kayys.wayang.memory.spi.MemoryEntry;
+import tech.kayys.wayang.tool.dto.ToolExecutionResult;
 import tech.kayys.wayang.tool.spi.ToolExecutor;
 
 import java.time.Instant;
@@ -60,15 +61,16 @@ public class AgentExecutorIntegrationTest {
     @Test
     public void testToolExecution() {
         // Verify tool executor is injected and usable
-        Mockito.when(toolExecutor.execute(Mockito.any(), Mockito.any(), Mockito.any()))
-                .thenReturn(Uni.createFrom().item(Map.of("status", "ok")));
+        ToolExecutionResult toolResult = ToolExecutionResult.success("my-tool", Map.of("status", "ok"), 100);
+        Mockito.when(toolExecutor.execute(Mockito.anyString(), Mockito.anyMap(), Mockito.anyMap()))
+                .thenReturn(Uni.createFrom().item(toolResult));
 
-        Map<String, Object> result = executor.callTool("my-tool", Map.of())
+        ToolExecutionResult result = executor.callTool("my-tool", Map.of())
                 .subscribe().withSubscriber(UniAssertSubscriber.create())
                 .awaitItem()
                 .getItem();
 
-        Assertions.assertEquals("ok", result.get("status"));
+        Assertions.assertEquals("ok", result.output().get("status"));
         Mockito.verify(toolExecutor).execute(Mockito.eq("my-tool"), Mockito.any(), Mockito.any());
     }
 
@@ -83,7 +85,7 @@ public class AgentExecutorIntegrationTest {
 
         @Override
         protected AgentType getAgentType() {
-            return AgentType.BASIC;
+            return AgentType.COMMON;
         }
 
         @Override
@@ -92,7 +94,7 @@ public class AgentExecutorIntegrationTest {
         }
 
         // Helper to test tool injection
-        public Uni<Map<String, Object>> callTool(String toolId, Map<String, Object> args) {
+        public Uni<ToolExecutionResult> callTool(String toolId, Map<String, Object> args) {
             if (this.toolExecutor == null) {
                 return Uni.createFrom().failure(new IllegalStateException("ToolExecutor not injected"));
             }

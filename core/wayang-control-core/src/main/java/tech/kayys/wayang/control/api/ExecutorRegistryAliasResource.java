@@ -15,7 +15,7 @@ import tech.kayys.wayang.plugin.executor.ExecutorStatus;
 /**
  * Backward-compatible executor listing endpoint for UI clients.
  */
-@Path("/api/v1/executors")
+@Path("/api/v1/registry/executors")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Control Plane - Executors", description = "Executor registry and management")
 public class ExecutorRegistryAliasResource {

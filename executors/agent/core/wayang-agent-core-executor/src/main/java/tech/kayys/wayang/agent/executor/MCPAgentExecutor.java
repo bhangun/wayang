@@ -2,15 +2,13 @@ package tech.kayys.wayang.agent.executor;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
+import tech.kayys.gamelan.engine.node.NodeExecutionResult;
+import tech.kayys.gamelan.engine.node.NodeExecutionTask;
 import tech.kayys.wayang.agent.a2a.AgentCommunicationProtocol;
 import tech.kayys.wayang.agent.a2a.model.AgentMessage;
 import tech.kayys.wayang.agent.mcp.MCPPromptProvider;
 import tech.kayys.wayang.agent.mcp.MCPResourceProvider;
 import tech.kayys.wayang.agent.mcp.MCPToolProvider;
-import tech.kayys.wayang.agent.model.AgentMemoryManager;
-import tech.kayys.wayang.agent.model.ToolExecutor;
-import tech.kayys.wayang.executor.gamelan.AbstractAgentExecutor;
-import tech.kayys.wayang.executor.gamelan.ExecutionContext;
 
 import java.util.Map;
 
@@ -37,8 +35,8 @@ public abstract class MCPAgentExecutor extends AbstractAgentExecutor {
     @Inject
     protected AgentCommunicationProtocol communicationProtocol;
 
-    public MCPAgentExecutor(AgentMemoryManager memoryManager, ToolExecutor toolExecutor) {
-        super(memoryManager, toolExecutor);
+    public MCPAgentExecutor() {
+        super();
     }
 
     /**
@@ -60,7 +58,7 @@ public abstract class MCPAgentExecutor extends AbstractAgentExecutor {
      */
     protected Uni<Object> executeMCPTool(String toolName, Map<String, Object> arguments) {
         return toolProvider.executeTool(toolName, arguments)
-                .map(result -> result.getOutput());
+                .map(result -> result.output());
     }
 
     /**
@@ -111,20 +109,20 @@ public abstract class MCPAgentExecutor extends AbstractAgentExecutor {
      * Enhanced execution with MCP and A2A support.
      */
     @Override
-    protected Uni<Map<String, Object>> executeInternal(ExecutionContext context) {
+    protected Uni<NodeExecutionResult> doExecute(NodeExecutionTask task) {
         // Register this agent for A2A communication
         registerForCommunication();
 
         // Execute with MCP capabilities
-        return executeWithMCP(context)
+        return executeWithMCP(task)
                 .eventually(() -> unregisterFromCommunication());
     }
 
     /**
      * Execute with MCP capabilities.
-     * Subclasses should implement this instead of executeInternal.
+     * Subclasses should implement this instead of doExecute.
      */
-    protected abstract Uni<Map<String, Object>> executeWithMCP(ExecutionContext context);
+    protected abstract Uni<NodeExecutionResult> executeWithMCP(NodeExecutionTask task);
 
     /**
      * Register this agent for A2A communication.

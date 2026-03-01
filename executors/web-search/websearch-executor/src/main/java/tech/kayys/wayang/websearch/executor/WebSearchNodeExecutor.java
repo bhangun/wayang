@@ -4,13 +4,17 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
-import tech.kayys.gamelan.executor.AbstractNodeExecutor;
-import tech.kayys.gamelan.executor.NodeExecutionContext;
-import tech.kayys.gamelan.executor.NodeExecutionResult;
+import tech.kayys.gamelan.engine.error.ErrorInfo;
+import tech.kayys.gamelan.engine.node.NodeExecutionResult;
+import tech.kayys.gamelan.engine.node.NodeExecutionTask;
+import tech.kayys.gamelan.sdk.executor.core.AbstractWorkflowExecutor;
+import tech.kayys.gamelan.sdk.executor.core.Executor;
+import tech.kayys.gamelan.sdk.executor.core.SimpleNodeExecutionResult;
 import tech.kayys.wayang.node.websearch.SearchOrchestrator;
 import tech.kayys.wayang.node.websearch.api.SearchRequest;
 import tech.kayys.wayang.node.websearch.node.WebSearchNodeTypes;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -19,7 +23,10 @@ import java.util.Map;
  * Standardized to align with NodeProvider SPI and reactive patterns.
  */
 @ApplicationScoped
-public class WebSearchNodeExecutor extends AbstractNodeExecutor {
+@Executor(executorType = "web-search-executor-v2", supportedNodeTypes = {
+        WebSearchNodeTypes.WEB_SEARCH
+}, description = "Performs web searches using various providers (Alternative Implementation)")
+public class WebSearchNodeExecutor extends AbstractWorkflowExecutor {
 
     private static final Logger LOG = Logger.getLogger(WebSearchNodeExecutor.class);
 
@@ -27,63 +34,64 @@ public class WebSearchNodeExecutor extends AbstractNodeExecutor {
     SearchOrchestrator searchOrchestrator;
 
     @Override
-    public List<String> getSupportedNodeTypes() {
-        return List.of(
-                WebSearchNodeTypes.WEB_SEARCH,
-                "web-search",
-                "search",
-                "web-search-node");
-    }
+    public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
+        LOG.infof("Executing web search for node: %s", task.nodeId().value());
 
-    @Override
-    public Uni<NodeExecutionResult> execute(NodeExecutionContext context) {
-        LOG.infof("Executing web search for node: %s", context.nodeId());
-
+        Map<String, Object> context = task.context();
         String query = extractSearchQuery(context);
-        if (query == null || query.isBlank()) {
-            return Uni.createFrom().failure(new IllegalArgumentException("Search query is required"));
-        }
 
-        Map<String, Object> config = context.config();
+        if (query == null || query.isBlank()) {
+            return Uni.createFrom().item(SimpleNodeExecutionResult.failure(
+                    task.runId(), task.nodeId(), task.attempt(),
+                    ErrorInfo.of(new IllegalArgumentException("Search query is required")),
+                    task.token()));
+        }
 
         SearchRequest.Builder builder = SearchRequest.builder()
                 .query(query)
-                .searchType((String) config.getOrDefault("searchType", "text"))
-                .maxResults(((Number) config.getOrDefault("maxResults", 10)).intValue())
-                .safeSearch(((Boolean) config.getOrDefault("safeSearch", true)));
+                .searchType((String) context.getOrDefault("searchType", "text"))
+                .maxResults(((Number) context.getOrDefault("maxResults", 10)).intValue())
+                .safeSearch(((Boolean) context.getOrDefault("safeSearch", true)));
 
-        if (config.containsKey("providers")) {
-            builder.providers((List<String>) config.get("providers"));
+        if (context.containsKey("providers")) {
+            builder.providers((List<String>) context.get("providers"));
         }
 
         return searchOrchestrator.search(builder.build())
-                .map(response -> NodeExecutionResult.success(Map.of(
-                        "results", response.results(),
-                        "totalResults", response.totalResults(),
-                        "provider", response.providerUsed(),
-                        "durationMs", response.durationMs())))
-                .onFailure().recoverWithUni(throwable -> {
+                .map(response -> {
+                    Map<String, Object> output = Map.of(
+                            "results", response.results(),
+                            "totalResults", response.totalResults(),
+                            "provider", response.providerUsed(),
+                            "durationMs", response.durationMs());
+
+                    return SimpleNodeExecutionResult.success(
+                            task.runId(), task.nodeId(), task.attempt(),
+                            output, task.token(), Duration.ZERO);
+                })
+                .onFailure().recoverWithItem(throwable -> {
                     LOG.error("Web search failed", throwable);
-                    return Uni.createFrom()
-                            .item(NodeExecutionResult.failure("Web search failed: " + throwable.getMessage()));
+                    return SimpleNodeExecutionResult.failure(
+                            task.runId(), task.nodeId(), task.attempt(),
+                            ErrorInfo.of(throwable), task.token());
                 });
     }
 
-    private String extractSearchQuery(NodeExecutionContext context) {
+    private String extractSearchQuery(Map<String, Object> context) {
         // Try 'query' from input first
-        String query = context.inputAsString("query");
-        if (query != null && !query.isBlank())
-            return query;
+        Object query = context.get("query");
+        if (query != null && !query.toString().isBlank())
+            return query.toString();
 
         // Try 'text' from input
-        query = context.inputAsString("text");
-        if (query != null && !query.isBlank())
-            return query;
+        query = context.get("text");
+        if (query != null && !query.toString().isBlank())
+            return query.toString();
 
         // Try fallback 'input'
-        query = context.inputAsString("input");
-        if (query != null && !query.isBlank())
-            return query;
+        query = context.get("input");
+        if (query != null && !query.toString().isBlank())
+            return query.toString();
 
         return null;
     }

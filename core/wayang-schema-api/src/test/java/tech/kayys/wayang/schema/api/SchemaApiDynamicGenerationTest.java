@@ -3,7 +3,6 @@ package tech.kayys.wayang.schema.api;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 import tech.kayys.wayang.eip.schema.EIPSchema;
-import tech.kayys.wayang.schema.catalog.BuiltinSchemaCatalog;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
@@ -33,7 +32,7 @@ public class SchemaApiDynamicGenerationTest {
     public void testDynamicDeadLetterChannelSchema() {
         // Fetch the DeadLetterChannel schema
         given()
-                .when().get("/v1/schema/catalog/" + BuiltinSchemaCatalog.EIP_DEAD_LETTER_CHANNEL)
+                .when().get("/v1/schema/catalog/" + "dead-letter-channel")
                 .then()
                 .statusCode(200)
                 .body("schema", containsString("\"channelName\""))
@@ -43,7 +42,7 @@ public class SchemaApiDynamicGenerationTest {
     @Test
     public void testDynamicOrchestratorAgentSchema() {
         given()
-                .when().get("/v1/schema/catalog/" + BuiltinSchemaCatalog.AGENT_ORCHESTRATOR)
+                .when().get("/v1/schema/catalog/" + "agent-orchestrator")
                 .then()
                 .statusCode(200)
                 .body("id", notNullValue())
@@ -56,7 +55,7 @@ public class SchemaApiDynamicGenerationTest {
     @Test
     public void testDynamicAnalyticAgentSchema() {
         given()
-                .when().get("/v1/schema/catalog/" + BuiltinSchemaCatalog.AGENT_ANALYTIC)
+                .when().get("/v1/schema/catalog/" + "agent-analytic")
                 .then()
                 .statusCode(200)
                 .body("id", notNullValue())
@@ -69,7 +68,7 @@ public class SchemaApiDynamicGenerationTest {
     @Test
     public void testDynamicHumanTaskSchema() {
         given()
-                .when().get("/v1/schema/catalog/" + BuiltinSchemaCatalog.HITL_HUMAN_TASK)
+                .when().get("/v1/schema/catalog/" + "hitl-human-task")
                 .then()
                 .statusCode(200)
                 .body("id", notNullValue())

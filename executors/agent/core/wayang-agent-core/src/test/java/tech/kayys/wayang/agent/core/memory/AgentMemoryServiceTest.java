@@ -37,7 +37,7 @@ class AgentMemoryServiceTest {
     @Test
     void testStoreMemory() {
         Mockito.when(embeddingService.embed(any()))
-                .thenReturn(new EmbeddingResponse(List.of(new float[512]), 512, "tfidf", "tfidf-512"));
+                .thenReturn(Uni.createFrom().item(new EmbeddingResponse(List.of(new float[512]), 512, "tfidf", "tfidf-512")));
         Mockito.when(vectorStore.store(any(Memory.class))).thenReturn(Uni.createFrom().item("mem-123"));
 
         String id = memoryService.storeMemory("agent-1", "some content", Map.of("role", "user"))
@@ -57,7 +57,7 @@ class AgentMemoryServiceTest {
         ScoredMemory scored1 = new ScoredMemory(mem1, 0.9);
 
         Mockito.when(embeddingService.embed(any()))
-                .thenReturn(new EmbeddingResponse(List.of(new float[512]), 512, "tfidf", "tfidf-512"));
+                .thenReturn(Uni.createFrom().item(new EmbeddingResponse(List.of(new float[512]), 512, "tfidf", "tfidf-512")));
         Mockito.when(vectorStore.search(any(), anyInt(), anyDouble(), anyMap()))
                 .thenReturn(Uni.createFrom().item(List.of(scored1)));
 

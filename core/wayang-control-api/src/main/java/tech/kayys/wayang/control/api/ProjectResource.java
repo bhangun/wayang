@@ -1,4 +1,4 @@
-package tech.kayys.wayang.resources;
+package tech.kayys.wayang.control.api;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;

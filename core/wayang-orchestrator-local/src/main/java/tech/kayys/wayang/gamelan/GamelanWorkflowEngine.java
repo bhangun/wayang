@@ -21,7 +21,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import tech.kayys.gamelan.sdk.client.GamelanClient;
 import tech.kayys.gamelan.engine.workflow.WorkflowDefinitionService;
-import tech.kayys.gamelan.engine.run.WorkflowRunManager;
+import tech.kayys.gamelan.engine.workflow.WorkflowRunManager;
 
 /**
  * Gamelan-based implementation of Wayang Workflow Engine (Local Transport).

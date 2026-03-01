@@ -2,19 +2,57 @@ package tech.kayys.wayang.guardrails.detector;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
+import tech.kayys.wayang.guardrails.plugin.GuardrailDetectorPlugin;
+
 import java.util.*;
 
 @ApplicationScoped
-public class ToxicityDetector {
+public class ToxicityDetector implements GuardrailDetectorPlugin {
+
+    @Override
+    public String id() {
+        return "toxicity-detector";
+    }
 
     private static final Set<String> TOXIC_WORDS = Set.of(
             "hate", "stupid", "idiot", "kill", "worthless", "ugly",
             "disgusting", "pathetic", "moron", "scum", "trash");
 
+    @Override
+    public String name() {
+        return "Toxicity Detector";
+    }
+
+    @Override
+    public String version() {
+        return "1.0.0";
+    }
+
+    @Override
+    public String description() {
+        return "Detects toxic content in text";
+    }
+
     private static final Set<String> HATE_INDICATORS = Set.of(
             "race", "gender", "religion", "ethnicity", "sexual orientation");
 
-    public Uni<ToxicityResult> detect(String text) {
+    @Override
+    public CheckPhase[] applicablePhases() {
+        return new CheckPhase[] { CheckPhase.POST_EXECUTION };
+    }
+
+    @Override
+    public String getCategory() {
+        return "toxicity";
+    }
+
+    @Override
+    public DetectionSeverity getSeverity() {
+        return DetectionSeverity.BLOCK;
+    }
+
+    @Override
+    public Uni<DetectionResult> detect(String text, Map<String, Object> metadata) {
         return Uni.createFrom().item(() -> {
             String lowerText = text.toLowerCase();
 
@@ -27,9 +65,19 @@ public class ToxicityDetector {
                             toxicWordsFound.stream().anyMatch(lowerText::contains));
 
             double toxicityScore = calculateToxicityScore(lowerText, toxicWordsFound);
-            boolean isToxic = toxicityScore > 0.5 || hasHateSpeech;
 
-            return new ToxicityResult(isToxic, toxicityScore, toxicWordsFound, hasHateSpeech);
+            if (toxicityScore > 0.8 || hasHateSpeech) {
+                return DetectionResult.blocked(getCategory(),
+                        "High toxicity detected" + (hasHateSpeech ? " (Potential Hate Speech)" : ""));
+            } else if (toxicityScore > 0.5) {
+                List<Finding> findings = toxicWordsFound.stream()
+                        .map(word -> new Finding("TOXIC_WORD", word, lowerText.indexOf(word),
+                                lowerText.indexOf(word) + word.length(), 1.0))
+                        .toList();
+                return DetectionResult.warning(getCategory(), "Moderate toxicity detected", findings);
+            }
+
+            return DetectionResult.safe(getCategory());
         });
     }
 
@@ -52,36 +100,5 @@ public class ToxicityDetector {
         double capsModifier = 1.0 + (capsWords * 0.1);
 
         return Math.min(wordScore * intensityModifier * capsModifier, 1.0);
-    }
-
-    public static class ToxicityResult {
-        private final boolean toxic;
-        private final double score;
-        private final List<String> toxicWords;
-        private final boolean hateSpeech;
-
-        public ToxicityResult(boolean toxic, double score, List<String> toxicWords, boolean hateSpeech) {
-            this.toxic = toxic;
-            this.score = score;
-            this.toxicWords = toxicWords;
-            this.hateSpeech = hateSpeech;
-        }
-
-        // Getters
-        public boolean isToxic() {
-            return toxic;
-        }
-
-        public double getScore() {
-            return score;
-        }
-
-        public List<String> getToxicWords() {
-            return toxicWords;
-        }
-
-        public boolean isHateSpeech() {
-            return hateSpeech;
-        }
     }
 }

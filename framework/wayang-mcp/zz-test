@@ -1,10 +1,10 @@
 }
 
 // src/main/java/com/example/generator/testing/SecurityTestGenerator.java
-package com.example.generator.testing;
+packagetech.kayys.generator.testing;
 
-import com.example.generator.ApiOperation;
-import com.example.generator.ApiSpecification;
+importtech.kayys.generator.ApiOperation;
+importtech.kayys.generator.ApiSpecification;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -557,7 +557,7 @@ public class SecurityTestGenerator {
 }
 
 // src/main/java/com/example/generator/testing/TestConfiguration.java
-package com.example.generator.testing;
+packagetech.kayys.generator.testing;
 
 import java.util.List;
 
@@ -639,10 +639,10 @@ public class TestConfiguration {
     public List<String> getChaosExperiments() { return chaosExperiments; }
     public void setChaosExperiments(List<String> chaosExperiments) { this.chaosExperiments = chaosExperiments; }
 }// src/main/java/com/example/generator/testing/TestFrameworkManager.java
-package com.example.generator.testing;
+packagetech.kayys.generator.testing;
 
-import com.example.generator.ApiSpecification;
-import com.example.generator.McpServerModel;
+importtech.kayys.generator.ApiSpecification;
+importtech.kayys.generator.McpServerModel;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -786,10 +786,10 @@ public class TestFrameworkManager {
 }
 
 // src/main/java/com/example/generator/testing/ContractTestGenerator.java
-package com.example.generator.testing;
+packagetech.kayys.generator.testing;
 
-import com.example.generator.ApiOperation;
-import com.example.generator.ApiSpecification;
+importtech.kayys.generator.ApiOperation;
+importtech.kayys.generator.ApiSpecification;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -1051,10 +1051,10 @@ public class ContractTestGenerator {
 }
 
 // src/main/java/com/example/generator/testing/LoadTestGenerator.java
-package com.example.generator.testing;
+packagetech.kayys.generator.testing;
 
-import com.example.generator.ApiOperation;
-import com.example.generator.ApiSpecification;
+importtech.kayys.generator.ApiOperation;
+importtech.kayys.generator.ApiSpecification;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 

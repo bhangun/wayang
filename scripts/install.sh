@@ -7,8 +7,8 @@ set -euo pipefail
 
 readonly SCRIPT_NAME="$(basename "$0")"
 readonly GITHUB_REPO="bhangun/wayang"
-readonly INSTALL_DIR="${WAYANG_INSTALL_DIR:-$HOME/.wayang}"
-readonly BIN_DIR="${WAYANG_BIN_DIR:-$HOME/.local/bin}"
+INSTALL_DIR="${WAYANG_INSTALL_DIR:-$HOME/.wayang}"
+BIN_DIR="${WAYANG_BIN_DIR:-$HOME/.local/bin}"
 
 # Colors for output
 readonly RED='\033[0;31m'
@@ -73,6 +73,8 @@ Examples:
 Environment Variables:
     WAYANG_INSTALL_DIR    Installation directory
     WAYANG_BIN_DIR        Binary directory
+    WAYANG_GOLLEK_HOME    Gollek data directory (defaults to ~/.wayang/gollek)
+    GOLLEK_HOME           Alternate Gollek data directory (e.g. ~/.gollek)
 EOF
 }
 
@@ -116,6 +118,7 @@ install_with_curl() {
     
     local artifact_name="wayang-standalone-${os}-${arch}"
     local download_url="https://github.com/$GITHUB_REPO/releases/download/${version}/${artifact_name}"
+    local gollek_dir="${WAYANG_GOLLEK_HOME:-${GOLLEK_HOME:-$INSTALL_DIR/gollek}}"
     
     if [[ "$os" == "windows" ]]; then
         artifact_name="${artifact_name}.exe"
@@ -125,6 +128,8 @@ install_with_curl() {
     # Create directories
     mkdir -p "$INSTALL_DIR"
     mkdir -p "$BIN_DIR"
+    mkdir -p "$INSTALL_DIR/config" "$INSTALL_DIR/logs" "$INSTALL_DIR/plugins" "$INSTALL_DIR/secrets"
+    mkdir -p "$gollek_dir/models" "$gollek_dir/storage"
     
     # Download binary
     info "Downloading from: $download_url"

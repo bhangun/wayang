@@ -35,7 +35,7 @@
         </dependency>
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-control-plane-core</artifactId>
+            <artifactId>wayang-control-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

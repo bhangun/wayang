@@ -1,5 +1,5 @@
 // src/main/java/com/example/generator/plugin/PluginConfiguration.java
-package com.example.generator.plugin;
+packagetech.kayys.generator.plugin;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
@@ -26,9 +26,9 @@ public interface PluginConfiguration {
 }
 
 // src/main/java/com/example/generator/plugin/PluginAwareGeneratorService.java
-package com.example.generator.plugin;
+packagetech.kayys.generator.plugin;
 
-import com.example.generator.*;
+importtech.kayys.generator.*;
 import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -338,10 +338,10 @@ public class PluginAwareGeneratorService {
 }
 
 // src/main/java/com/example/generator/plugin/builtin/InsomniaSpecProcessor.java
-package com.example.generator.plugin.builtin;
+packagetech.kayys.generator.plugin.builtin;
 
-import com.example.generator.*;
-import com.example.generator.plugin.*;
+importtech.kayys.generator.*;
+importtech.kayys.generator.plugin.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -646,10 +646,10 @@ public class InsomniaSpecProcessor implements SpecificationProcessor {
 }
 
 // src/main/java/com/example/generator/plugin/builtin/CustomValidationPlugin.java
-package com.example.generator.plugin.builtin;
+packagetech.kayys.generator.plugin.builtin;
 
-import com.example.generator.McpServerModel;
-import com.example.generator.plugin.*;
+importtech.kayys.generator.McpServerModel;
+importtech.kayys.generator.plugin.*;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.Arrays;

@@ -1,5 +1,5 @@
 // src/main/java/com/example/generator/plugin/PluginResource.java
-package com.example.generator.plugin;
+packagetech.kayys.generator.plugin;
 
 import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
@@ -321,9 +321,9 @@ public class PluginResource {
 
 // Update the main generator resource to use plugin-aware service
 // src/main/java/com/example/generator/McpGeneratorResourceEnhanced.java
-package com.example.generator;
+packagetech.kayys.generator;
 
-import com.example.generator.plugin.PluginAwareGeneratorService;
+importtech.kayys.generator.plugin.PluginAwareGeneratorService;
 import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;

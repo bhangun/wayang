@@ -133,7 +133,7 @@ public class MemoryServiceImpl implements MemoryService {
     @Override
     public Uni<List<ConversationMemory>> findSimilarMemories(String sessionId, String query, int limit) {
         LOG.info("Finding similar memories for session: {}, query: {}", sessionId, query);
-        
+
         return embeddingService.embedOne(query)
             .onItem().transformToUni(queryVector -> {
                 // This would normally call a vector store, but for now we'll simulate it
@@ -141,7 +141,7 @@ public class MemoryServiceImpl implements MemoryService {
                 // In a real scenario, tech.kayys.wayang.memory.service.VectorMemoryStore would be used.
                 return ConversationMemoryEntity.<ConversationMemoryEntity>find("sessionId = ?1", sessionId)
                     .list()
-                    .onItem().transform(entities -> 
+                    .onItem().transform(entities ->
                         entities.stream()
                             .map(entity -> {
                                 double similarity = calculateCosineSimilarity(queryVector, entity.getEmbedding());
@@ -153,6 +153,19 @@ public class MemoryServiceImpl implements MemoryService {
                             .collect(Collectors.toList())
                     );
             });
+    }
+
+    private double calculateCosineSimilarity(float[] vectorA, List<Float> vectorB) {
+        if (vectorB == null || vectorA.length != vectorB.size()) return 0.0;
+        double dotProduct = 0.0;
+        double normA = 0.0;
+        double normB = 0.0;
+        for (int i = 0; i < vectorA.length; i++) {
+            dotProduct += vectorA[i] * vectorB.get(i);
+            normA += Math.pow(vectorA[i], 2);
+            normB += Math.pow(vectorB.get(i), 2);
+        }
+        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
     // Private helper methods
@@ -234,7 +247,7 @@ public class MemoryServiceImpl implements MemoryService {
                 for (float v : vector) {
                     embeddingList.add(v);
                 }
-                
+
                 return new ConversationMemory(
                     result.getId(),
                     "assistant",
@@ -245,19 +258,6 @@ public class MemoryServiceImpl implements MemoryService {
                     1.0
                 );
             });
-    }
-
-    private double calculateCosineSimilarity(float[] vectorA, List<Float> vectorB) {
-        if (vectorB == null || vectorA.length != vectorB.size()) return 0.0;
-        double dotProduct = 0.0;
-        double normA = 0.0;
-        double normB = 0.0;
-        for (int i = 0; i < vectorA.length; i++) {
-            dotProduct += vectorA[i] * vectorB.get(i);
-            normA += Math.pow(vectorA[i], 2);
-            normB += Math.pow(vectorB.get(i), 2);
-        }
-        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
     private Uni<Void> addMemoryToSession(String sessionId, ConversationMemory memory) {

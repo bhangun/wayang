@@ -491,3 +491,48 @@ sequenceDiagram
 * Rate limits + quota policies in the gateway
 * Metrics + traces exported (OpenTelemetry)
 * Backup/restore for metadata DB
+
+
+
+
+1. Design Time (UI Configuration & Validation)
+When a user is building an integration workflow (e.g., visually dragging and dropping a Router, Splitter, or Dead Letter Channel onto a canvas), the UI client needs to know what configuration fields are required, their data types, and whether they are valid.
+
+What we did: We defined explicit JSON Schemas in EIPSchema.java and exposed them via the Wayang Schema Catalog. Now, the UI can dynamically consume these schemas to render form fields and perform immediate payload validation before the user even saves the workflow.
+2. Execution Time (Workflow Runtime)
+Once a workflow is deployed and triggered (e.g., by an incoming HTTP request or a Kafka message), the engine starts stepping through the workflow nodes. When the engine reaches an EIP-specific node, it needs to execute the logic for that pattern.
+
+When the Executors are used: The engine constructs a NodeExecutionTask and routes it to the corresponding @Executor bean (like RouterExecutor or AggregatorExecutor) based on the executorType.
+What we did: The task carries a context Map containing the user's configuration payload from the UI. Previously, the executors manually pulled data out of this map using legacy *Config classes. We replaced this with strongly-typed DTOs. Now, the executor immediately uses Jackson's ObjectMapper to parse the raw map directly into a DTO (e.g., 
+
+SplitterDto
+).
+Why this architectural pattern is powerful:
+By creating this end-to-end mapping, we've established a strict system contract:
+
+The Contract: The JSON Schema dictates the exact shape of the payload.
+The Guarantee: The UI validates that the payload matches the Schema before sending it to the backend.
+The Execution: By the time the NodeExecutionTask reaches our 
+
+SplitterExecutor
+, we confidently map the payload into a 
+
+SplitterDto
+ because we know the data structure is guaranteed to match what we expect.
+
+
+
+For instance, if the workflow hits a Throttler node, the engine routes the task to the 
+
+ThrottlerExecutor
+. The executor maps the context to a 
+
+ThrottlerDto
+, reads the exact 
+
+rate
+ requested by the user, applies the rate-limiting logic, and then returns a success signal to the engine to allow the workflow to move to the next step.
+
+Does this align with your architectural vision for the Wayang platform? Let me know if you are ready to wrap up or if there is another module you want to tackle next!
+
+

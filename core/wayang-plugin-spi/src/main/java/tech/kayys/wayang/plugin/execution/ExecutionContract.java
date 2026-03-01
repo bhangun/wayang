@@ -22,7 +22,8 @@ import java.util.Map;
 
 import tech.kayys.wayang.plugin.TraceContext;
 import tech.kayys.wayang.plugin.executor.ExecutorDescriptor;
-import tech.kayys.wayang.plugin.node.NodeDescriptor;
+// NodeDescriptor is the lightweight routing info embedded in each execution contract.
+// NodeDefinition (from plugin-registry) is the full metadata kept in the node registry.
 
 /**
  * Execution Contract - Language-neutral contract between Engine and Executor
@@ -38,8 +39,11 @@ public class ExecutionContract {
     public String executionId;
     public String workflowRunId;
 
-    // Node information
-    public NodeDescriptor node;
+    // Node information (lightweight routing descriptor, not the full
+    // NodeDefinition)
+    public String nodeType;
+    public String nodeVersion;
+    public String nodeInstanceId;
 
     // Executor information
     public ExecutorDescriptor executor;

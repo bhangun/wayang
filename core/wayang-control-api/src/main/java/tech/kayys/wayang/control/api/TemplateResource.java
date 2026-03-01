@@ -1,4 +1,4 @@
-package tech.kayys.wayang.resources;
+package tech.kayys.wayang.control.api;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
@@ -48,7 +48,7 @@ public class TemplateResource {
 }
 
 record PublishResponse(
-        boolean success,
-        String workflowDefinitionId,
-        String message) {
+                boolean success,
+                String workflowDefinitionId,
+                String message) {
 }

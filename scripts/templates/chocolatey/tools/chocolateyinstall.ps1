@@ -22,7 +22,9 @@ if (!(Test-Path $installDir)) {
 }
 
 # Download and install
-$exePath = Join-Path $installDir "wayang.exe"
+$wayangHome = Join-Path $env:USERPROFILE ".wayang"
+$gollekHome = Join-Path $wayangHome "gollek"
+$exePath = Join-Path $wayangHome "wayang.exe"
 
 $packageArgs = @{
     PackageName    = $packageName
@@ -34,6 +36,14 @@ $packageArgs = @{
     SilentArgs     = ''
     ValidExitCodes = @(0)
 }
+
+# Ensure default local state directories exist
+New-Item -ItemType Directory -Force -Path (Join-Path $wayangHome "config") | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $wayangHome "logs") | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $wayangHome "plugins") | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $wayangHome "secrets") | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $gollekHome "models") | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $gollekHome "storage") | Out-Null
 
 # Download the binary
 Get-ChocolateyWebFile -PackageName $packageName `
@@ -57,4 +67,5 @@ Install-BinFile -Name "wayang" -Path $exePath
 
 Write-Host "Wayang v$version has been installed successfully!"
 Write-Host ""
+Write-Host "Default data directory: $wayangHome"
 Write-Host "To get started, run: wayang --help"

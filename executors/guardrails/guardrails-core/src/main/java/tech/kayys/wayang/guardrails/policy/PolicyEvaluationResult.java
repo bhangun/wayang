@@ -1,14 +1,14 @@
 package tech.kayys.wayang.guardrails.policy;
 
-record PolicyEvaluationResult(
+public record PolicyEvaluationResult(
         boolean allowed,
         String reason,
         String policyId) {
-    static PolicyEvaluationResult allowed() {
+    public static PolicyEvaluationResult success() {
         return new PolicyEvaluationResult(true, null, null);
     }
 
-    static PolicyEvaluationResult denied(String reason, String policyId) {
+    public static PolicyEvaluationResult denied(String reason, String policyId) {
         return new PolicyEvaluationResult(false, reason, policyId);
     }
 }

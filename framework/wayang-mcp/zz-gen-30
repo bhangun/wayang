@@ -1,7 +1,7 @@
 }
 
 // src/main/java/com/example/generator/SpecificationDetector.java
-package com.example.generator;
+packagetech.kayys.generator;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -67,7 +67,7 @@ public class SpecificationDetector {
 }
 
 // src/main/java/com/example/generator/PostmanParser.java
-package com.example.generator;
+packagetech.kayys.generator;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -475,7 +475,7 @@ public class PostmanParser {
 }
 
 // src/main/java/com/example/generator/OpenApiConverter.java
-package com.example.generator;
+packagetech.kayys.generator;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
@@ -664,7 +664,7 @@ public class OpenApiConverter {
 }
 
 // src/main/java/com/example/generator/ApiSpecification.java
-package com.example.generator;
+packagetech.kayys.generator;
 
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import java.util.List;
@@ -699,7 +699,7 @@ public class ApiSpecification {
 }
 
 // src/main/java/com/example/generator/ApiOperation.java
-package com.example.generator;
+packagetech.kayys.generator;
 
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import java.util.List;
@@ -744,7 +744,7 @@ public class ApiOperation {
 }
 
 // src/main/java/com/example/generator/ApiParameter.java
-package com.example.generator;
+packagetech.kayys.generator;
 
 public class ApiParameter {
     private String name;
@@ -914,7 +914,7 @@ public class ApiParameter {
 </project>
 
 // src/main/java/com/example/generator/McpGeneratorResource.java
-package com.example.generator;
+packagetech.kayys.generator;
 
 import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
@@ -1155,7 +1155,7 @@ public class McpGeneratorResource {
 }
 
 // src/main/java/com/example/generator/McpServerGeneratorService.java
-package com.example.generator;
+packagetech.kayys.generator;
 
 import io.quarkus.logging.Log;
 import io.quarkus.qute.Template;
@@ -2429,7 +2429,7 @@ api.mock.enabled=true
 }
 
 // src/main/java/com/example/generator/McpServerModel.java
-package com.example.generator;
+packagetech.kayys.generator;
 
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
@@ -2486,7 +2486,7 @@ public class McpServerModel {
 }
 
 // src/main/java/com/example/generator/McpToolModel.java
-package com.example.generator;
+packagetech.kayys.generator;
 
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 
@@ -2552,7 +2552,7 @@ public class McpToolModel {
 }
 
 // src/main/java/com/example/generator/McpParameterModel.java
-package com.example.generator;
+packagetech.kayys.generator;
 
 public class McpParameterModel {
     private String name;
@@ -2607,7 +2607,7 @@ public class McpParameterModel {
 }
 
 // src/main/java/com/example/generator/McpServerConfig.java
-package com.example.generator;
+packagetech.kayys.generator;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
@@ -2635,7 +2635,7 @@ public interface McpServerConfig {
 }
 
 // src/main/java/com/example/generator/OpenApiValidator.java
-package com.example.generator;
+packagetech.kayys.generator;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;

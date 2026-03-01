@@ -2,10 +2,32 @@ package tech.kayys.wayang.guardrails.detector;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
+import tech.kayys.wayang.guardrails.plugin.GuardrailDetectorPlugin;
+
 import java.util.*;
 
 @ApplicationScoped
-public class BiasDetector {
+public class BiasDetector implements GuardrailDetectorPlugin {
+
+    @Override
+    public String id() {
+        return "bias-detector";
+    }
+
+    @Override
+    public String name() {
+        return "Bias Detector";
+    }
+
+    @Override
+    public String version() {
+        return "1.0.0";
+    }
+
+    @Override
+    public String description() {
+        return "Detects bias in text";
+    }
 
     private static final Map<String, List<String>> GENDER_STEREOTYPES = Map.of(
             "female", List.of("nurturing", "emotional", "weak", "kitchen", "motherly"),
@@ -14,7 +36,23 @@ public class BiasDetector {
     private static final List<String> RACIAL_BIAS_INDICATORS = List.of(
             "all", "always", "never", "typical", "those people", "they always");
 
-    public Uni<BiasResult> detect(String text) {
+    @Override
+    public CheckPhase[] applicablePhases() {
+        return new CheckPhase[] { CheckPhase.POST_EXECUTION };
+    }
+
+    @Override
+    public String getCategory() {
+        return "bias";
+    }
+
+    @Override
+    public DetectionSeverity getSeverity() {
+        return DetectionSeverity.WARN;
+    }
+
+    @Override
+    public Uni<DetectionResult> detect(String text, Map<String, Object> metadata) {
         return Uni.createFrom().item(() -> {
             String lowerText = text.toLowerCase();
 
@@ -22,10 +60,26 @@ public class BiasDetector {
             List<String> racialBiases = detectRacialBias(lowerText);
             boolean hasAgeBias = detectAgeBias(lowerText);
 
-            boolean hasBias = !genderBiases.isEmpty() || !racialBiases.isEmpty() || hasAgeBias;
+            List<Finding> findings = new ArrayList<>();
+            genderBiases.forEach(b -> findings
+                    .add(new Finding("GENDER_BIAS", b, lowerText.indexOf(b), lowerText.indexOf(b) + b.length(), 1.0)));
+            racialBiases.forEach(b -> findings
+                    .add(new Finding("RACIAL_BIAS", b, lowerText.indexOf(b), lowerText.indexOf(b) + b.length(), 1.0)));
+            if (hasAgeBias) {
+                findings.add(new Finding("AGE_BIAS", "Potential age-related stereotype", -1, -1, 1.0));
+            }
+
+            if (findings.isEmpty()) {
+                return DetectionResult.safe(getCategory());
+            }
+
             double biasScore = calculateBiasScore(genderBiases, racialBiases, hasAgeBias);
 
-            return new BiasResult(hasBias, biasScore, genderBiases, racialBiases, hasAgeBias);
+            if (biasScore > 0.7) {
+                return DetectionResult.blocked(getCategory(), "High bias likelihood detected");
+            }
+
+            return DetectionResult.warning(getCategory(), "Potential bias detected", findings);
         });
     }
 
@@ -35,7 +89,7 @@ public class BiasDetector {
         GENDER_STEREOTYPES.forEach((gender, stereotypes) -> {
             stereotypes.forEach(stereotype -> {
                 if (text.contains(stereotype)) {
-                    biases.add(String.format("%s stereotype: %s", gender, stereotype));
+                    biases.add(stereotype);
                 }
             });
         });
@@ -46,7 +100,6 @@ public class BiasDetector {
     private List<String> detectRacialBias(String text) {
         return RACIAL_BIAS_INDICATORS.stream()
                 .filter(text::contains)
-                .map(indicator -> String.format("generalization: %s", indicator))
                 .toList();
     }
 
@@ -65,43 +118,5 @@ public class BiasDetector {
         score += hasAgeBias ? 0.4 : 0.0;
 
         return Math.min(score, 1.0);
-    }
-
-    public static class BiasResult {
-        private final boolean biased;
-        private final double score;
-        private final List<String> genderBiases;
-        private final List<String> racialBiases;
-        private final boolean ageBias;
-
-        public BiasResult(boolean biased, double score, List<String> genderBiases,
-                List<String> racialBiases, boolean ageBias) {
-            this.biased = biased;
-            this.score = score;
-            this.genderBiases = genderBiases;
-            this.racialBiases = racialBiases;
-            this.ageBias = ageBias;
-        }
-
-        // Getters
-        public boolean isBiased() {
-            return biased;
-        }
-
-        public double getScore() {
-            return score;
-        }
-
-        public List<String> getGenderBiases() {
-            return genderBiases;
-        }
-
-        public List<String> getRacialBiases() {
-            return racialBiases;
-        }
-
-        public boolean hasAgeBias() {
-            return ageBias;
-        }
     }
 }

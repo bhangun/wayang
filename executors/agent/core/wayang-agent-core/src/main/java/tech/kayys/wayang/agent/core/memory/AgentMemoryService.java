@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.kayys.wayang.embedding.EmbeddingException;
 import tech.kayys.wayang.embedding.EmbeddingRequest;
+import tech.kayys.wayang.embedding.EmbeddingResponse;
 import tech.kayys.wayang.embedding.EmbeddingService;
 import tech.kayys.wayang.memory.model.Memory;
 import tech.kayys.wayang.memory.service.VectorMemoryStore;
@@ -78,7 +79,7 @@ public class AgentMemoryService {
                     DEFAULT_MEMORY_EMBEDDING_MODEL,
                     null,
                     true);
-            return embeddingService.embed(request).first();
+            return embeddingService.embed(request).map(EmbeddingResponse::first).await().indefinitely();
         } catch (EmbeddingException ex) {
             log.warn("Embedding generation failed, using zero vector fallback: {}", ex.getMessage());
             return new float[512];

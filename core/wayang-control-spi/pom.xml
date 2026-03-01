@@ -32,7 +32,7 @@
         <!-- Wayang Schema -->
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-schema</artifactId>
+            <artifactId>wayang-schema-core</artifactId>
             <version>${project.version}</version>
         </dependency>
 

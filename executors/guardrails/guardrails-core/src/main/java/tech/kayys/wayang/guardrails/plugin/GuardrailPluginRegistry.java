@@ -11,7 +11,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Registry for guardrails plugins that manages discovery and retrieval of guardrail detectors.
+ * Registry for guardrails plugins that manages discovery and retrieval of
+ * guardrail detectors.
  */
 @ApplicationScoped
 public class GuardrailPluginRegistry {
@@ -29,13 +30,13 @@ public class GuardrailPluginRegistry {
      */
     public List<GuardrailDetectorPlugin> getAllDetectorPlugins() {
         List<GuardrailDetectorPlugin> plugins = new ArrayList<>();
-        
+
         if (detectorPlugins.isResolvable()) {
             for (GuardrailDetectorPlugin plugin : detectorPlugins) {
                 plugins.add(plugin);
             }
         }
-        
+
         return plugins;
     }
 
@@ -48,14 +49,14 @@ public class GuardrailPluginRegistry {
                 if (cachedPreExecutionDetectors == null) {
                     cachedPreExecutionDetectors = getAllDetectorPlugins().stream()
                             .filter(plugin -> Arrays.asList(plugin.applicablePhases())
-                                    .contains(GuardrailDetectorPlugin.CheckPhase.PRE_EXECUTION))
+                                    .contains(CheckPhase.PRE_EXECUTION))
                             .collect(Collectors.toList());
-                    
+
                     LOG.infof("Discovered %d pre-execution guardrail detectors", cachedPreExecutionDetectors.size());
                 }
             }
         }
-        
+
         return new ArrayList<>(cachedPreExecutionDetectors);
     }
 
@@ -68,14 +69,14 @@ public class GuardrailPluginRegistry {
                 if (cachedPostExecutionDetectors == null) {
                     cachedPostExecutionDetectors = getAllDetectorPlugins().stream()
                             .filter(plugin -> Arrays.asList(plugin.applicablePhases())
-                                    .contains(GuardrailDetectorPlugin.CheckPhase.POST_EXECUTION))
+                                    .contains(CheckPhase.POST_EXECUTION))
                             .collect(Collectors.toList());
-                    
+
                     LOG.infof("Discovered %d post-execution guardrail detectors", cachedPostExecutionDetectors.size());
                 }
             }
         }
-        
+
         return new ArrayList<>(cachedPostExecutionDetectors);
     }
 
@@ -101,9 +102,19 @@ public class GuardrailPluginRegistry {
      * Run all applicable detectors on the provided text for the given phase.
      */
     public Uni<List<tech.kayys.wayang.guardrails.detector.DetectionResult>> runDetectorsForPhase(
-            String text, 
+            String text,
             CheckPhase phase) {
-        
+        return runDetectorsForPhase(text, phase, Map.of());
+    }
+
+    /**
+     * Run all applicable detectors with metadata.
+     */
+    public Uni<List<tech.kayys.wayang.guardrails.detector.DetectionResult>> runDetectorsForPhase(
+            String text,
+            CheckPhase phase,
+            Map<String, Object> metadata) {
+
         List<GuardrailDetectorPlugin> detectors = switch (phase) {
             case PRE_EXECUTION -> getPreExecutionDetectors();
             case POST_EXECUTION -> getPostExecutionDetectors();
@@ -114,9 +125,12 @@ public class GuardrailPluginRegistry {
         }
 
         List<Uni<tech.kayys.wayang.guardrails.detector.DetectionResult>> detectorUnis = detectors.stream()
-                .map(detector -> detector.detect(text))
+                .map(detector -> detector.detect(text, metadata))
                 .collect(Collectors.toList());
 
-        return Uni.combine().all().unis(detectorUnis).combinedWith(results -> (List<tech.kayys.wayang.guardrails.detector.DetectionResult>) results);
+        return Uni.combine().all().unis(detectorUnis)
+                .with(results -> results.stream()
+                        .map(r -> (tech.kayys.wayang.guardrails.detector.DetectionResult) r)
+                        .collect(Collectors.toList()));
     }
 }

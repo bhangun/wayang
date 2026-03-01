@@ -31,7 +31,7 @@ public class ConversationMemoryEntity extends PanacheEntityBase {
     @ElementCollection
     @CollectionTable(name = "memory_embeddings", joinColumns = @JoinColumn(name = "memory_id"))
     @Column(name = "embedding_value")
-    public List<Double> embedding;
+    public List<Float> embedding;
     
     @Column(name = "timestamp", nullable = false)
     public Instant timestamp;
@@ -55,8 +55,8 @@ public class ConversationMemoryEntity extends PanacheEntityBase {
     public void setContent(String content) { this.content = content; }
     public Map<String, String> getMetadata() { return metadata; }
     public void setMetadata(Map<String, String> metadata) { this.metadata = metadata; }
-    public List<Double> getEmbedding() { return embedding; }
-    public void setEmbedding(List<Double> embedding) { this.embedding = embedding; }
+    public List<Float> getEmbedding() { return embedding; }
+    public void setEmbedding(List<Float> embedding) { this.embedding = embedding; }
     public Instant getTimestamp() { return timestamp; }
     public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }
     public Double getRelevanceScore() { return relevanceScore; }

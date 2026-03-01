@@ -5,14 +5,16 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.kayys.gamelan.engine.error.ErrorInfo;
 import tech.kayys.gamelan.engine.node.NodeExecutionResult;
 import tech.kayys.gamelan.engine.node.NodeExecutionTask;
+import tech.kayys.gamelan.sdk.executor.core.AbstractWorkflowExecutor;
+import tech.kayys.gamelan.sdk.executor.core.Executor;
+import tech.kayys.gamelan.sdk.executor.core.SimpleNodeExecutionResult;
 import tech.kayys.wayang.embedding.EmbeddingRequest;
 import tech.kayys.wayang.embedding.EmbeddingService;
 import tech.kayys.wayang.embedding.node.EmbeddingNodeTypes;
-import tech.kayys.wayang.plugin.executor.AbstractNodeExecutor;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -20,7 +22,9 @@ import java.util.Map;
  * Node executor for generating vector embeddings.
  */
 @ApplicationScoped
-public class EmbeddingNodeExecutor extends AbstractNodeExecutor {
+@Executor(executorType = EmbeddingNodeTypes.EMBEDDING_GENERATE, supportedNodeTypes = {
+        EmbeddingNodeTypes.EMBEDDING_GENERATE }, description = "Generates text embeddings using specified models")
+public class EmbeddingNodeExecutor extends AbstractWorkflowExecutor {
 
     private static final Logger LOG = LoggerFactory.getLogger(EmbeddingNodeExecutor.class);
 
@@ -28,24 +32,19 @@ public class EmbeddingNodeExecutor extends AbstractNodeExecutor {
     EmbeddingService embeddingService;
 
     @Override
-    public String getExecutorType() {
-        return EmbeddingNodeTypes.EMBEDDING_GENERATE;
-    }
-
-    @Override
     public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
-        Instant startedAt = Instant.now();
         Map<String, Object> config = task.context();
 
         // Configuration from node instance
-        String model = (String) config.get("model");
-        String provider = (String) config.get("provider");
-        Boolean normalize = (Boolean) config.get("normalize");
+        String model = config.get("model") != null ? (String) config.get("model") : "default-model";
+        String provider = config.get("provider") != null ? (String) config.get("provider") : "default-provider";
+        Boolean normalize = config.get("normalize") != null ? (Boolean) config.get("normalize") : false;
 
         // Input from task data
-        Object input = task.input().get("text");
+        Object input = config.get("text");
         if (input == null) {
-            return Uni.createFrom().item(failure(task, "Missing 'text' input for embedding generation", startedAt));
+            return Uni.createFrom().item(SimpleNodeExecutionResult.failure(
+                    task.runId(), task.nodeId(), task.attempt(), null, task.token()));
         }
 
         List<String> inputs;
@@ -66,11 +65,13 @@ public class EmbeddingNodeExecutor extends AbstractNodeExecutor {
                             "dimension", response.dimension(),
                             "model", response.model(),
                             "provider", response.provider());
-                    return success(task, output, startedAt);
+                    return SimpleNodeExecutionResult.success(
+                            task.runId(), task.nodeId(), task.attempt(), output, task.token(), java.time.Duration.ZERO);
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     LOG.error("Embedding generation failed: {}", throwable.getMessage());
-                    return failure(task, throwable.getMessage(), startedAt);
+                    return SimpleNodeExecutionResult.failure(
+                            task.runId(), task.nodeId(), task.attempt(), ErrorInfo.of(throwable), task.token());
                 });
     }
 }

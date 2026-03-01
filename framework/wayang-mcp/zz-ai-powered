@@ -1,7 +1,7 @@
 // src/main/java/com/example/generator/ai/AIEnhancementManager.java
-package com.example.generator.ai;
+packagetech.kayys.generator.ai;
 
-import com.example.generator.*;
+importtech.kayys.generator.*;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -37,9 +37,9 @@ public class AIEnhancementManager {
         Log.info("Starting AI-powered enhancement for: {}
 
 // src/main/java/com/example/generator/ai/ResponseSummarizer.java
-package com.example.generator.ai;
+packagetech.kayys.generator.ai;
 
-import com.example.generator.*;
+importtech.kayys.generator.*;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -160,9 +160,9 @@ public class ResponseSummarizer {
 }
 
 // src/main/java/com/example/generator/ai/ErrorRecoveryEngine.java
-package com.example.generator.ai;
+packagetech.kayys.generator.ai;
 
-import com.example.generator.*;
+importtech.kayys.generator.*;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -269,9 +269,9 @@ public class ErrorRecoveryEngine {
 }
 
 // src/main/java/com/example/generator/ai/SemanticAnalyzer.java
-package com.example.generator.ai;
+packagetech.kayys.generator.ai;
 
-import com.example.generator.ApiOperation;
+importtech.kayys.generator.ApiOperation;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -591,9 +591,9 @@ public class SemanticAnalyzer {
 }
 
 // src/main/java/com/example/generator/ai/ToolOrchestrator.java
-package com.example.generator.ai;
+packagetech.kayys.generator.ai;
 
-import com.example.generator.McpToolModel;
+importtech.kayys.generator.McpToolModel;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -883,9 +883,9 @@ public class ToolOrchestrator {
 }
 
 // src/main/java/com/example/generator/ai/ParameterInferenceEngine.java
-package com.example.generator.ai;
+packagetech.kayys.generator.ai;
 
-import com.example.generator.*;
+importtech.kayys.generator.*;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 

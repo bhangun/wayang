@@ -3,7 +3,7 @@ package tech.kayys.wayang.guardrails.detector;
 import java.util.List;
 import java.util.stream.Collectors;
 
-record DetectionResults(List<DetectionResult> results) {
+public record DetectionResults(List<DetectionResult> results) {
 
     public boolean hasBlockingIssues() {
         return results.stream()
@@ -29,22 +29,12 @@ record DetectionResults(List<DetectionResult> results) {
                 .toList();
     }
 
-    public List<?> getResults() {
+    public List<DetectionResult> getResults() {
         return results;
     }
 
     public boolean hasIssues() {
         return results.stream()
-                .anyMatch(result -> {
-                    if (result instanceof PIIDetector.PIIResult pii)
-                        return pii.isDetected();
-                    if (result instanceof ToxicityDetector.ToxicityResult tox)
-                        return tox.isToxic();
-                    if (result instanceof BiasDetector.BiasResult bias)
-                        return bias.isBiased();
-                    if (result instanceof HallucinationDetector.HallucinationResult hall)
-                        return hall.isHallucinated();
-                    return false;
-                });
+                .anyMatch(r -> r.severity() != DetectionSeverity.INFO);
     }
 }

@@ -3,7 +3,7 @@ package tech.kayys.wayang.guardrails.detector;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import tech.kayys.execution.ExecutionResult;
+import tech.kayys.wayang.guardrails.NodeContext;
 import tech.kayys.wayang.guardrails.plugin.GuardrailPluginRegistry;
 
 import java.util.*;
@@ -22,7 +22,7 @@ public class DetectorOrchestrator {
                 .map(DetectionResults::new);
     }
 
-    public Uni<DetectionResults> detectOutputIssues(ExecutionResult result) {
+    public Uni<DetectionResults> detectOutputIssues(tech.kayys.wayang.guardrails.ExecutionResult result) {
         String outputText = extractText(result.outputs());
 
         return pluginRegistry.runDetectorsForPhase(outputText, CheckPhase.POST_EXECUTION)

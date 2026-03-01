@@ -1,5 +1,5 @@
 // src/main/java/com/example/generator/plugin/PluginManager.java
-package com.example.generator.plugin;
+packagetech.kayys.generator.plugin;
 
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -111,7 +111,7 @@ public class PluginManager {
 }
 
 // src/main/java/com/example/generator/plugin/GeneratorPlugin.java
-package com.example.generator.plugin;
+packagetech.kayys.generator.plugin;
 
 import java.util.Map;
 
@@ -134,7 +134,7 @@ public interface GeneratorPlugin {
 }
 
 // src/main/java/com/example/generator/plugin/TemplateProcessor.java
-package com.example.generator.plugin;
+packagetech.kayys.generator.plugin;
 
 import java.util.Map;
 
@@ -153,9 +153,9 @@ public interface TemplateProcessor {
 }
 
 // src/main/java/com/example/generator/plugin/SpecificationProcessor.java
-package com.example.generator.plugin;
+packagetech.kayys.generator.plugin;
 
-import com.example.generator.ApiSpecification;
+importtech.kayys.generator.ApiSpecification;
 import java.io.InputStream;
 
 public interface SpecificationProcessor {
@@ -174,7 +174,7 @@ public interface SpecificationProcessor {
 }
 
 // src/main/java/com/example/generator/plugin/ValidationPlugin.java
-package com.example.generator.plugin;
+packagetech.kayys.generator.plugin;
 
 import java.util.List;
 
@@ -192,7 +192,7 @@ public interface ValidationPlugin {
 }
 
 // src/main/java/com/example/generator/plugin/PluginExecutionContext.java
-package com.example.generator.plugin;
+packagetech.kayys.generator.plugin;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -243,7 +243,7 @@ public class PluginExecutionContext {
 }
 
 // src/main/java/com/example/generator/plugin/PluginResult.java
-package com.example.generator.plugin;
+packagetech.kayys.generator.plugin;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -281,7 +281,7 @@ public class PluginResult {
 }
 
 // src/main/java/com/example/generator/plugin/PluginException.java
-package com.example.generator.plugin;
+packagetech.kayys.generator.plugin;
 
 public class PluginException extends Exception {
     
@@ -305,7 +305,7 @@ public class PluginException extends Exception {
 }
 
 // src/main/java/com/example/generator/plugin/TemplateFunction.java
-package com.example.generator.plugin;
+packagetech.kayys.generator.plugin;
 
 @FunctionalInterface
 public interface TemplateFunction {
@@ -313,7 +313,7 @@ public interface TemplateFunction {
 }
 
 // src/main/java/com/example/generator/plugin/ValidationRule.java
-package com.example.generator.plugin;
+packagetech.kayys.generator.plugin;
 
 public class ValidationRule {
     
@@ -345,7 +345,7 @@ public class ValidationRule {
 }
 
 // src/main/java/com/example/generator/plugin/ValidationResult.java
-package com.example.generator.plugin;
+packagetech.kayys.generator.plugin;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -409,9 +409,9 @@ public class ValidationResult {
 }
 
 // src/main/java/com/example/generator/plugin/builtin/DefaultTemplateProcessor.java
-package com.example.generator.plugin.builtin;
+packagetech.kayys.generator.plugin.builtin;
 
-import com.example.generator.plugin.*;
+importtech.kayys.generator.plugin.*;
 import io.quarkus.qute.Engine;
 import io.quarkus.qute.Template;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -512,9 +512,9 @@ public class DefaultTemplateProcessor implements TemplateProcessor {
 }
 
 // src/main/java/com/example/generator/plugin/builtin/OpenApiValidationPlugin.java
-package com.example.generator.plugin.builtin;
+packagetech.kayys.generator.plugin.builtin;
 
-import com.example.generator.plugin.*;
+importtech.kayys.generator.plugin.*;
 import io.swagger.v3.oas.models.OpenAPI;
 import jakarta.enterprise.context.ApplicationScoped;
 

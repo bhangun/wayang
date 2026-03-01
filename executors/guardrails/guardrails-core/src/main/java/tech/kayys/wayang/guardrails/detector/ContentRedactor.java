@@ -2,8 +2,9 @@ package tech.kayys.wayang.guardrails.detector;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import tech.kayys.execution.ExecutionResult;
-
+import tech.kayys.wayang.guardrails.ExecutionResult;
+import tech.kayys.wayang.guardrails.detector.DetectionResults;
+import tech.kayys.wayang.guardrails.detector.Finding;
 import java.util.*;
 
 @ApplicationScoped

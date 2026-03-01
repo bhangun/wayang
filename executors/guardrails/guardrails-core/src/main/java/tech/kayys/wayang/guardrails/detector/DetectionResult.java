@@ -2,7 +2,7 @@ package tech.kayys.wayang.guardrails.detector;
 
 import java.util.List;
 
-record DetectionResult(
+public record DetectionResult(
         String detectorId,
         DetectionSeverity severity,
         String message,

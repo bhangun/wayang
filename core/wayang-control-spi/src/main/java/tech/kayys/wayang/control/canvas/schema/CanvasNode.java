@@ -4,9 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
-import tech.kayys.wayang.node.dto.NodePort;
+// import tech.kayys.wayang.node.dto.NodePort;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import tech.kayys.wayang.schema.node.NodePort;
 import lombok.AllArgsConstructor;
 
 /**

@@ -1,5 +1,5 @@
 package tech.kayys.wayang.guardrails.detector;
 
-enum DetectionSeverity {
+public enum DetectionSeverity {
     INFO, WARN, BLOCK
 }

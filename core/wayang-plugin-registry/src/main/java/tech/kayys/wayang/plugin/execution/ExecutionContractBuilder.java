@@ -34,7 +34,6 @@ import tech.kayys.wayang.plugin.TraceContext;
 import tech.kayys.wayang.plugin.executor.ExecutorDescriptor;
 import tech.kayys.wayang.plugin.executor.ExecutorRegistration;
 import tech.kayys.wayang.plugin.node.NodeDefinition;
-import tech.kayys.wayang.plugin.node.NodeDescriptor;
 import tech.kayys.wayang.schema.validator.SchemaValidator;
 import tech.kayys.wayang.schema.validator.ValidationResult;
 
@@ -101,11 +100,10 @@ public class ExecutionContractBuilder {
                         contract.executionId = UUID.randomUUID().toString();
                         contract.workflowRunId = workflowRunId;
 
-                        // Node descriptor
-                        contract.node = new NodeDescriptor();
-                        contract.node.type = nodeType;
-                        contract.node.version = node.version;
-                        contract.node.instanceId = nodeInstanceId;
+                        // Node identity — stored as flat strings on contract
+                        contract.nodeType = nodeType;
+                        contract.nodeVersion = node.version;
+                        contract.nodeInstanceId = nodeInstanceId;
 
                         // Executor descriptor
                         contract.executor = new ExecutorDescriptor();

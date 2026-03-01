@@ -20,18 +20,25 @@ public class ApiIndexResource {
                         "openApi", "/q/openapi"),
                 "wayang", List.of(
                         "/api/runtime",
-                        "/api/orchestration"),
+                        "/api/runtime/status",
+                        "/api/runtime/shutdown",
+                        "/api/orchestration",
+                        "/api/v1/executors"),
                 "gamelan", List.of(
                         "/api/v1/workflow-definitions",
                         "/api/v1/workflow-runs",
-                        "/api/v1/executors",
                         "/api/v1/callbacks",
                         "/api/v1/plugins"),
+                "schema", List.of(
+                        "/api/v1/schema/catalog",
+                        "/api/v1/schema/catalog/{schemaId}",
+                        "/api/v1/schema/catalog/{schemaId}/validate"),
                 "gollek", List.of(
                         "/v1/infer",
                         "/v1/models",
                         "/v1/providers",
-                        "/v1/converter/gguf"),
+                        "/v1/converter/gguf",
+                        "/v1/converter/gguf/health"),
                 "health", List.of(
                         "/health",
                         "/q/health",

@@ -1,4 +1,4 @@
-package tech.kayys.wayang.resources;
+package tech.kayys.wayang.control.api;
 
 // import ...
 // Commented out to resolve compilation errors due to missing legacy dependencies.

@@ -330,6 +330,55 @@ Notes:
 
 ---
 
+## ✅ Standalone Packaging and Stability (Community Mode)
+
+Standalone runtime is intended to wrap Wayang + Gamelan + Gollek in a single deployable unit:
+
+* Portable JAR: `wayang-runtime-standalone-*-runner.jar`
+* Native binary: built via Quarkus native image for fast startup and low memory
+
+### Default standalone operating profile
+
+* Profile: `community`
+* Tenant default: `community`
+* Port: `31713` (to avoid common collisions on `8080`)
+
+Example run:
+
+```bash
+java \
+  -Dquarkus.profile=community \
+  -Dquarkus.langchain4j.ai.gemini.api-key=community-default-key \
+  -jar wayang-runtime-standalone-1.0.0-SNAPSHOT-runner.jar
+```
+
+### API exposure in standalone mode
+
+Standalone should expose:
+
+* Wayang APIs
+* Gamelan APIs
+* Gollek APIs
+* Executors registry API (`/api/v1/executors`)
+* Schema catalog/validation APIs for GUI (`/api/v1/schema/catalog`)
+* OpenAPI docs (`/q/openapi`) and Swagger UI (`/q/swagger-ui`)
+
+### GGUF converter behavior in native/portable deployments
+
+`gguf_bridge` native library is optional at startup:
+
+* If library is present: GGUF converter runs in `native` mode.
+* If library is missing: runtime degrades safely (no startup crash), and GGUF native conversion endpoints report degraded status.
+
+Health endpoint:
+
+* `GET /v1/converter/gguf/health`
+* Returns `nativeAvailable`, `mode` (`native` or `degraded`), and reason when unavailable.
+
+This allows community standalone to remain bootable and stable even when native GGUF bridge is not bundled on the target machine.
+
+---
+
 ## 🗺️ Legend
 
 * **(Future)** = planned but not yet implemented in this repo
@@ -689,3 +738,15 @@ sequenceDiagram
         MCP -->> AG: tool result
     end
 ```
+
+
+Why this is the right split:
+
+Clear ownership: inference concerns vs cognition/orchestration concerns.
+Cleaner evolution: you can swap model backends without touching memory logic.
+Better reliability: agent memory failures won’t destabilize core inference runtime.
+Easier product positioning: Gollek = engine, Wayang = brain/orchestrator.
+Practical rule:
+
+If a feature needs cross-turn reasoning/state/agent behavior, put it in wayang/executors/memory + Wayang runtime.
+If a feature is about generating tokens from a model, keep it in Gollek.

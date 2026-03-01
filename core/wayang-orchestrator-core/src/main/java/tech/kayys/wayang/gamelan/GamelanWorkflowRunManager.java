@@ -69,7 +69,7 @@ public class GamelanWorkflowRunManager {
             builder.humanTaskId(humanTaskId);
         }
         if (resumeData != null) {
-            resumeData.forEach(builder::input);
+            resumeData.forEach(builder::data);
         }
         return builder.execute();
     }
@@ -78,6 +78,6 @@ public class GamelanWorkflowRunManager {
      * Cancel a workflow run
      */
     public Uni<Void> cancelRun(String runId, String reason) {
-        return client.runs().cancel(runId);
+        return client.runs().cancel(runId, reason != null ? reason : "Cancelled by user");
     }
 }

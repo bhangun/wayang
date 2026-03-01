@@ -31,6 +31,31 @@ class Wayang < Formula
     bin.install Dir["wayang-standalone*"].first => "wayang"
   end
 
+  def post_install
+    wayang_home = File.join(Dir.home, ".wayang")
+    gollek_home = File.join(wayang_home, "gollek")
+
+    mkdir_p File.join(wayang_home, "config")
+    mkdir_p File.join(wayang_home, "logs")
+    mkdir_p File.join(wayang_home, "plugins")
+    mkdir_p File.join(wayang_home, "secrets")
+    mkdir_p File.join(gollek_home, "models")
+    mkdir_p File.join(gollek_home, "storage")
+  end
+
+  def caveats
+    <<~EOS
+      Wayang local state defaults to:
+        #{Dir.home}/.wayang
+
+      Optional overrides:
+        export WAYANG_HOME="$HOME/.wayang"
+        export WAYANG_GOLLEK_HOME="$HOME/.wayang/gollek"
+        # or legacy fallback:
+        export GOLLEK_HOME="$HOME/.gollek"
+    EOS
+  end
+
   test do
     output = shell_output("#{bin}/wayang --version 2>&1")
     assert_match "{{projectVersion}}", output

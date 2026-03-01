@@ -66,9 +66,9 @@ public class GamelanWorkflowEngine implements AutoCloseable {
         // Map Wayang nodes to Gamelan nodes
         if (routeDesign.nodes() != null) {
             for (DesignNode node : routeDesign.nodes()) {
-                // Determine start node
+                // Determine start node - Gamelan handles this implicitly based on dependsOn
                 if (isStartNode(node, routeDesign.connections())) {
-                    builder.startNode(node.nodeId());
+                    // builder.startNode(node.nodeId()); // Not present in SDK, implicit in Gamelan
                 }
 
                 // Create Gamelan node

@@ -4,7 +4,10 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.util.List;
+import java.util.Map;
 import org.jboss.logging.Logger;
+import tech.kayys.wayang.schema.catalog.BuiltinSchemaCatalog;
 import tech.kayys.wayang.schema.api.dto.*;
 import tech.kayys.wayang.schema.validator.*;
 
@@ -26,6 +29,33 @@ public class SchemaApi {
 
     @Inject
     PluginConfigValidator pluginConfigValidator;
+
+    @GET
+    @Path("/catalog")
+    public Response listBuiltinSchemas() {
+        List<Map<String, String>> items = BuiltinSchemaCatalog.ids().stream()
+                .map(id -> Map.of(
+                        "id", id,
+                        "path", "/v1/schema/catalog/" + id))
+                .toList();
+        return Response.ok(Map.of("schemas", items)).build();
+    }
+
+    @GET
+    @Path("/catalog/{schemaId}")
+    public Response getBuiltinSchema(@PathParam("schemaId") String schemaId) {
+        String schema = BuiltinSchemaCatalog.get(schemaId);
+        if (schema == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity(Map.of(
+                            "message", "Schema not found: " + schemaId,
+                            "availableSchemas", BuiltinSchemaCatalog.ids()))
+                    .build();
+        }
+        return Response.ok(Map.of(
+                "id", schemaId,
+                "schema", schema)).build();
+    }
 
     @POST
     @Path("/validate")

@@ -280,17 +280,17 @@ public class HierarchicalMemoryManager {
     }
 
     // Utility methods
-    private double calculateSimilarity(List<Double> vec1, List<Double> vec2) {
+    private double calculateSimilarity(List<Float> vec1, List<Float> vec2) {
         if (vec1 == null || vec2 == null || vec1.isEmpty() || vec2.isEmpty()) return 0.0;
         if (vec1.size() != vec2.size()) return 0.0;
-        
+
         double dotProduct = 0.0, norm1 = 0.0, norm2 = 0.0;
         for (int i = 0; i < vec1.size(); i++) {
             dotProduct += vec1.get(i) * vec2.get(i);
             norm1 += vec1.get(i) * vec1.get(i);
             norm2 += vec2.get(i) * vec2.get(i);
         }
-        
+
         return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
     }
 

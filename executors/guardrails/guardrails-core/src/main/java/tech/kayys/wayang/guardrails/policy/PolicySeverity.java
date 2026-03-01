@@ -1,5 +1,5 @@
 package tech.kayys.wayang.guardrails.policy;
 
-enum PolicySeverity {
+public enum PolicySeverity {
     INFO, WARN, BLOCK
 }

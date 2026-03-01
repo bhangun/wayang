@@ -1,14 +1,13 @@
 package tech.kayys.wayang.guardrails.policy;
 
-import java.security.DrbgParameters.Capability;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import tech.kayys.wayang.guardrails.*;
+import tech.kayys.wayang.guardrails.detector.PIIDetector;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import tech.kayys.wayang.guardrails.GuardrailsEngine;
-import tech.kayys.wayang.guardrails.detector.PIIDetector;
 
 @ApplicationScoped
 public class PolicyBasedGuardrailsEngine implements GuardrailsEngine {
@@ -23,47 +22,54 @@ public class PolicyBasedGuardrailsEngine implements GuardrailsEngine {
 
     @Override
     public GuardrailResult preCheck(ExecuteNodeTask task) {
-        List<PolicyViolation> violations = new ArrayList<>();
+        List<String> violations = new ArrayList<>();
 
         // Check policies
-        PolicyResult policyResult = policyEngine.evaluate(
-                task.getNodeDescriptor().getCapabilities(),
-                task.getMetadata().getTenantId());
-        violations.addAll(policyResult.getViolations());
+        tech.kayys.wayang.guardrails.NodeContext context = new tech.kayys.wayang.guardrails.NodeContext(
+                task.tenantId(),
+                task.inputs(),
+                new tech.kayys.wayang.guardrails.NodeContext.NodeMetadata("system"));
 
-        // PII detection
-        PIIResult piiResult = piiDetector.detect(task.getInputPayload());
-        if (piiResult.hasPII() && !task.getNodeDescriptor().getCapabilities().contains(Capability.PII_HANDLING)) {
-            violations.add(new PolicyViolation(
-                    "PII_NOT_ALLOWED",
-                    "Node cannot handle PII data"));
+        PolicyEvaluationResult policyEvaluationResult = policyEngine.evaluatePolicies(
+                context,
+                tech.kayys.wayang.guardrails.detector.CheckPhase.PRE_EXECUTION).await().indefinitely();
+
+        if (!policyEvaluationResult.allowed()) {
+            violations.add(policyEvaluationResult.policyId());
         }
 
-        return GuardrailResult.builder()
-                .allowed(violations.isEmpty())
-                .violations(violations)
-                .build();
+        return violations.isEmpty() ? GuardrailResult.success()
+                : GuardrailResult.failure("Policy violations detected", violations);
     }
 
     @Override
     public GuardrailResult postCheck(ExecuteNodeTask task, ExecutionResult result) {
-        List<PolicyViolation> violations = new ArrayList<>();
+        List<String> violations = new ArrayList<>();
 
         // Content moderation
-        ModerationResult modResult = contentModerator.moderate(
-                result.getOutputs());
-        violations.addAll(modResult.getViolations());
-
-        // PII redaction if needed
-        if (modResult.hasPII()) {
-            Map<String, Object> redacted = redactor.redact(result.getOutputs());
-            result = result.withOutputs(redacted);
+        ModerationResult modResult = contentModerator.moderate(result.outputs());
+        if (!modResult.violations().isEmpty()) {
+            violations.addAll(modResult.violations().stream().map(PolicyViolation::code).toList());
         }
 
-        return GuardrailResult.builder()
-                .allowed(violations.isEmpty())
-                .violations(violations)
-                .modifiedResult(result)
-                .build();
+        ExecutionResult finalResult = result;
+        // PII redaction if needed
+        if (modResult.hasPII()) {
+            Map<String, Object> redacted = redactor.redact(result.outputs());
+            finalResult = new ExecutionResult(redacted, result.metadata());
+        }
+
+        return violations.isEmpty() ? GuardrailResult.success().withRedactedContent(finalResult.outputs())
+                : GuardrailResult.failure("Post-execution violations detected", violations);
+    }
+
+    @Override
+    public void registerPolicy(GuardrailPolicy policy) {
+        // Implementation for dynamic policy registration
+    }
+
+    @Override
+    public void updatePolicy(String policyId, GuardrailPolicy policy) {
+        // Implementation for dynamic policy update
     }
 }

@@ -26,15 +26,23 @@ public class StandaloneDefaultsConfigSource implements ConfigSource {
         PROPERTIES.put("quarkus.datasource.jdbc.url", H2_JDBC_URL);
         PROPERTIES.put("quarkus.datasource.jdbc.driver", "org.h2.Driver");
         PROPERTIES.put("quarkus.datasource.reactive", "false");
+        PROPERTIES.put("quarkus.http.port", "31713");
         PROPERTIES.put("quarkus.http.root-path", "/");
         PROPERTIES.put("quarkus.http.non-application-root-path", "/q");
+        PROPERTIES.put("quarkus.http.cors.enabled", "true");
+        PROPERTIES.put("quarkus.http.cors.origins", "*");
+        PROPERTIES.put("quarkus.http.cors.methods", "GET,POST,PUT,DELETE,OPTIONS");
+        PROPERTIES.put("quarkus.http.cors.headers",
+                "Content-Type,Authorization,X-Requested-With,accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers");
         PROPERTIES.put("quarkus.hibernate-orm.schema-management.strategy", "drop-and-create");
         PROPERTIES.put("quarkus.hibernate-orm.sql-load-script", "no-file");
         PROPERTIES.put("quarkus.hibernate-orm.dialect", "org.hibernate.dialect.H2Dialect");
         PROPERTIES.put("quarkus.hibernate-orm.mapping.format.global", "ignore");
         PROPERTIES.put("quarkus.swagger-ui.always-include", "true");
         PROPERTIES.put("quarkus.swagger-ui.path", "swagger-ui");
+        PROPERTIES.put("quarkus.swagger-ui.urls.default", "/q/openapi");
         PROPERTIES.put("quarkus.smallrye-openapi.path", "openapi");
+        PROPERTIES.put("mp.openapi.servers", "/");
         PROPERTIES.put("quarkus.cache.type", "caffeine");
         PROPERTIES.put("quarkus.cache.redis.executors.value-type", "java.lang.String");
         PROPERTIES.put("quarkus.redis.health.enabled", "false");

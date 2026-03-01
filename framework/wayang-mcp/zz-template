@@ -1,5 +1,5 @@
 // src/main/java/com/example/generator/template/CustomTemplateManager.java
-package com.example.generator.template;
+packagetech.kayys.generator.template;
 
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -347,7 +347,7 @@ public class CustomTemplateManager {
 }
 
 // src/main/java/com/example/generator/template/CustomTemplate.java
-package com.example.generator.template;
+packagetech.kayys.generator.template;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -389,7 +389,7 @@ public class CustomTemplate {
 }
 
 // src/main/java/com/example/generator/template/TemplateSet.java
-package com.example.generator.template;
+packagetech.kayys.generator.template;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -435,7 +435,7 @@ public class TemplateSet {
 }
 
 // src/main/java/com/example/generator/template/TemplateRenderResult.java
-package com.example.generator.template;
+packagetech.kayys.generator.template;
 
 public class TemplateRenderResult {
     
@@ -463,7 +463,7 @@ public class TemplateRenderResult {
 }
 
 // src/main/java/com/example/generator/template/TemplateResource.java
-package com.example.generator.template;
+packagetech.kayys.generator.template;
 
 import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
@@ -881,9 +881,9 @@ public class TemplateResource {
 }
 
 // src/main/java/com/example/generator/template/AdvancedTemplateProcessor.java
-package com.example.generator.template;
+packagetech.kayys.generator.template;
 
-import com.example.generator.plugin.*;
+importtech.kayys.generator.plugin.*;
 import io.quarkus.qute.Engine;
 import io.quarkus.qute.Template;
 import jakarta.enterprise.context.ApplicationScoped;

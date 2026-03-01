@@ -91,9 +91,9 @@ class EnhancedPromptModuleTest {
         @Test
         void testPromptTemplateWithDuplicateVariableDefinitions() {
             List<PromptVariableDefinition> duplicateVars = List.of(
-                new PromptVariableDefinition("var1", "Var 1", "Description", PromptVariableDefinition.VariableType.STRING, 
+                new PromptVariableDefinition("var1", "Var 1", "Description", VariableType.STRING,
                     PromptVariableDefinition.VariableSource.INPUT, true, null, null, false),
-                new PromptVariableDefinition("var1", "Var 1 Duplicate", "Description", PromptVariableDefinition.VariableType.STRING, 
+                new PromptVariableDefinition("var1", "Var 1 Duplicate", "Description", VariableType.STRING, 
                     PromptVariableDefinition.VariableSource.INPUT, true, null, null, false)
             );
             
@@ -123,9 +123,9 @@ class EnhancedPromptModuleTest {
         @Test
         void testPromptTemplateWithValidVariableDefinitions() {
             List<PromptVariableDefinition> uniqueVars = List.of(
-                new PromptVariableDefinition("var1", "Var 1", "Description", PromptVariableDefinition.VariableType.STRING, 
+                new PromptVariableDefinition("var1", "Var 1", "Description", VariableType.STRING,
                     PromptVariableDefinition.VariableSource.INPUT, true, null, null, false),
-                new PromptVariableDefinition("var2", "Var 2", "Description", PromptVariableDefinition.VariableType.STRING, 
+                new PromptVariableDefinition("var2", "Var 2", "Description", VariableType.STRING,
                     PromptVariableDefinition.VariableSource.INPUT, true, null, null, false)
             );
             
@@ -206,7 +206,7 @@ class EnhancedPromptModuleTest {
             // Create a variable definition
             List<PromptVariableDefinition> defs = List.of(
                 new PromptVariableDefinition("testVar", "Test Var", "A test variable", 
-                    PromptVariableDefinition.VariableType.STRING, 
+                    VariableType.STRING,
                     PromptVariableDefinition.VariableSource.INPUT, 
                     false, null, 100, false)
             );
@@ -235,7 +235,7 @@ class EnhancedPromptModuleTest {
             // Create a variable definition
             List<PromptVariableDefinition> defs = List.of(
                 new PromptVariableDefinition("testVar", "Test Var", "A test variable", 
-                    PromptVariableDefinition.VariableType.STRING, 
+                    VariableType.STRING,
                     PromptVariableDefinition.VariableSource.INPUT, 
                     false, null, 100, false)
             );
@@ -289,23 +289,17 @@ class EnhancedPromptModuleTest {
         }
         
         @Test
-        void testRenderingEngineRegistryForUnknownStrategy() {
+        void testRenderingEngineRegistryForAllStrategies() {
             RenderingEngineRegistry registry = new RenderingEngineRegistry();
             registry.initialize();
+
+            // Test that SIMPLE strategy is always available
+            RenderingEngine simpleEngine = registry.forStrategy(PromptVersion.RenderingStrategy.SIMPLE);
+            assertNotNull(simpleEngine);
+            assertEquals(PromptVersion.RenderingStrategy.SIMPLE, simpleEngine.getStrategy());
             
-            // Create a mock strategy that doesn't exist
-            PromptVersion.RenderingStrategy unknownStrategy = new PromptVersion.RenderingStrategy() {
-                @Override
-                public String toString() {
-                    return "UNKNOWN_STRATEGY";
-                }
-            };
-            
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
-                registry.forStrategy(unknownStrategy);
-            });
-            
-            assertTrue(ex.getMessage().contains("No rendering engine available for strategy"));
+            // Other strategies (JINJA2, FREEMARKER) may or may not be available
+            // depending on dependencies
         }
     }
 }

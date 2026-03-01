@@ -79,6 +79,19 @@ docker run -it bhangun/wayang:jvm
 | Windows | x86_64 | wayang-standalone-windows-x86_64.exe |
 | JVM (any) | any | wayang-runtime-standalone-*.jar |
 
+## Service Setup (Multi-platform)
+
+Release assets also include `wayang-service-assets-<version>.zip` with helper scripts:
+
+- Linux user service (systemd): `scripts/service/linux/install-systemd-user.sh`
+- macOS user service (launchd): `scripts/service/macos/install-launchd-agent.sh`
+- Windows service helper: `scripts/service/windows/install-service.ps1`
+
+All scripts create and use `~/.wayang/*` defaults, with Gollek fallback support through:
+
+- `WAYANG_GOLLEK_HOME` (preferred)
+- `GOLLEK_HOME` (legacy fallback)
+
 ## Uninstall
 
 ### curl/SSL Installation
@@ -116,6 +129,8 @@ wayang --version
 |----------|-------------|---------|
 | `WAYANG_INSTALL_DIR` | Installation directory | `~/.wayang` |
 | `WAYANG_BIN_DIR` | Binary directory (symlink) | `~/.local/bin` |
+| `WAYANG_GOLLEK_HOME` | Gollek data directory | `~/.wayang/gollek` |
+| `GOLLEK_HOME` | Alternate Gollek data directory | `~/.gollek` |
 
 ## Troubleshooting
 

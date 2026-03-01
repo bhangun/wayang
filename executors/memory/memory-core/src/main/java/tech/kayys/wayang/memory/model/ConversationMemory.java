@@ -15,7 +15,7 @@ public class ConversationMemory {
     private final String role;
     private final String content;
     private final Map<String, Object> metadata;
-    private final List<Double> embedding;
+    private final List<Float> embedding;
     private final Instant timestamp;
     private final Double relevanceScore;
 
@@ -25,7 +25,7 @@ public class ConversationMemory {
             @JsonProperty("role") String role,
             @JsonProperty("content") String content,
             @JsonProperty("metadata") Map<String, Object> metadata,
-            @JsonProperty("embedding") List<Double> embedding,
+            @JsonProperty("embedding") List<Float> embedding,
             @JsonProperty("timestamp") Instant timestamp,
             @JsonProperty("relevanceScore") Double relevanceScore) {
         this.id = id != null ? id : UUID.randomUUID().toString();
@@ -42,7 +42,7 @@ public class ConversationMemory {
     public String getRole() { return role; }
     public String getContent() { return content; }
     public Map<String, Object> getMetadata() { return metadata; }
-    public List<Double> getEmbedding() { return embedding; }
+    public List<Float> getEmbedding() { return embedding; }
     public Instant getTimestamp() { return timestamp; }
     public Double getRelevanceScore() { return relevanceScore; }
 }

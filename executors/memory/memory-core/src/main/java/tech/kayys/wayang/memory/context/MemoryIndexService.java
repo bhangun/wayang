@@ -111,20 +111,20 @@ public class MemoryIndexService {
     /**
      * Fast approximate nearest neighbor search using LSH index
      */
-    public Uni<Set<String>> searchBySemantic(String sessionId, List<Double> queryEmbedding) {
+    public Uni<Set<String>> searchBySemantic(String sessionId, List<Float> queryEmbedding) {
         return Uni.createFrom().item(() -> {
             String[] queryHashes = computeLocalitySensitiveHash(queryEmbedding);
             Set<String> candidates = new HashSet<>();
-            
+
             for (String hash : queryHashes) {
                 String indexKey = sessionId + ":lsh:" + hash;
                 Set<String> memoryIds = semanticHashIndex.get(indexKey);
-                
+
                 if (memoryIds != null) {
                     candidates.addAll(memoryIds);
                 }
             }
-            
+
             return candidates;
         });
     }
@@ -141,29 +141,29 @@ public class MemoryIndexService {
     /**
      * Compute LSH using random hyperplanes
      */
-    private String[] computeLocalitySensitiveHash(List<Double> embedding) {
+    private String[] computeLocalitySensitiveHash(List<Float> embedding) {
         int numHashFunctions = 5;
         int numBits = 8;
         String[] hashes = new String[numHashFunctions];
-        
+
         Random random = new Random(42); // Fixed seed for reproducibility
-        
+
         for (int h = 0; h < numHashFunctions; h++) {
             StringBuilder hashBits = new StringBuilder();
-            
+
             for (int b = 0; b < numBits; b++) {
                 // Generate random hyperplane
-                List<Double> hyperplane = new ArrayList<>();
+                List<Float> hyperplane = new ArrayList<>();
                 for (int i = 0; i < embedding.size(); i++) {
-                    hyperplane.add(random.nextGaussian());
+                    hyperplane.add((float) random.nextGaussian());
                 }
-                
+
                 // Compute dot product
                 double dotProduct = 0.0;
                 for (int i = 0; i < embedding.size(); i++) {
                     dotProduct += embedding.get(i) * hyperplane.get(i);
                 }
-                
+
                 // Hash bit is 1 if dot product is positive
                 hashBits.append(dotProduct >= 0 ? "1" : "0");
             }

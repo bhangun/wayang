@@ -96,7 +96,7 @@ The runtime is configured via `application.properties`. Key configuration option
 
 ```properties
 # HTTP Port
-quarkus.http.port=8080
+quarkus.http.port=31713
 
 # Database (H2 embedded by default)
 quarkus.datasource.db-kind=h2
@@ -141,23 +141,42 @@ wayang.schema.validation.enabled=true
 
 ## API Endpoints
 
-### Control Plane APIs
-- `GET /api/projects` - List projects
-- `POST /api/projects` - Create project
-- `GET /api/workflows` - List workflows
-- `POST /api/workflows` - Create workflow
-- `GET /api/agents` - List agents
-- `POST /api/agents` - Create agent
+### Discovery and Docs
+- `GET /api-index` - Unified endpoint index
+- `GET /q/openapi` - OpenAPI spec
+- `GET /q/swagger-ui` - Swagger UI
 
 ### Orchestration APIs
 - `GET /api/orchestration/workflows` - List workflow definitions (Gamelan)
+- `GET /api/v1/workflow-definitions` - Workflow definitions API
+- `GET /api/v1/workflow-runs` - Workflow runtime API
 
 ### Inference APIs
 - `POST /api/inference` - Execute inference
 - `POST /api/inference/stream` - Streaming inference
+- `GET /v1/converter/gguf/health` - GGUF native converter health (`native` or `degraded`)
+
+### Executors APIs
+- `GET /api/v1/executors` - List registered executors
+- `GET /api/v1/executors?healthy=true` - List healthy executors only
+
+### Schema APIs (GUI/Designer)
+- `GET /api/v1/schema/catalog` - List available built-in schemas
+- `GET /api/v1/schema/catalog/{schemaId}` - Get schema JSON by id
+- `POST /api/v1/schema/catalog/{schemaId}/validate` - Validate payload with selected schema
 
 ### Runtime Integration APIs
 - `GET /api/runtime/status` - Unified readiness snapshot across Wayang, Gamelan, and Gollek
+- `POST /api/runtime/shutdown` - Graceful shutdown trigger for standalone runtime process
+- `GET /q/health` - Server health endpoint used by runtime monitor UI
+
+### Designer Runtime Monitor
+- `wayang-ui/wayang_designer` includes a **Runtime Monitor** dialog in the top toolbar (`heart monitor` icon).
+- It reads:
+  - `GET /q/health` for server health
+  - `GET /api/runtime/status` for component readiness
+- It can trigger shutdown via:
+  - `POST /api/runtime/shutdown`
 
 ## Configuration Options
 
@@ -212,7 +231,7 @@ cd wayang/runtime/wayang-runtime-standalone
 ```
 
 ```bash
-java -Dgamelan.tenant.default-id=community -Dgamelan.tenant.allow-default=true -jar /Users/bhangun/Workspace/workkayys/Products/Wayang/wayang-platform/wayang/runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner.jar
+java -Dgamelan.tenant.default-id=community -Dgamelan.tenant.allow-default=true -jar //wayang/runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner.jar
 ```
 
 ### Adding New Components
@@ -257,6 +276,36 @@ New components can be added by:
 - API keys should be properly secured
 - Network access should be restricted in production
 - Regular security updates are important
+
+## GGUF Converter Degraded Mode
+
+When `gguf_bridge` native library is not available, standalone runtime starts in degraded mode for GGUF converter only.
+
+- Runtime stays up (no crash).
+- `GET /v1/converter/gguf/health` returns:
+  - `nativeAvailable=false`
+  - `mode=degraded`
+  - `reason=<native load error>`
+- Native GGUF conversion operations (`/convert`, `/verify`, `/model-info`) will return controlled errors until library is available.
+
+### Enable Full GGUF Native Mode
+
+Provide `gguf_bridge` dynamic library path before launching runtime.
+
+macOS:
+```bash
+export DYLD_LIBRARY_PATH=/path/to/gguf-bridge:$DYLD_LIBRARY_PATH
+```
+
+Linux:
+```bash
+export LD_LIBRARY_PATH=/path/to/gguf-bridge:$LD_LIBRARY_PATH
+```
+
+Then restart runtime and verify:
+```bash
+curl http://localhost:31713/v1/converter/gguf/health
+```
 
 ## Troubleshooting
 

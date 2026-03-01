@@ -2,12 +2,50 @@ package tech.kayys.wayang.guardrails.detector;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
+import tech.kayys.wayang.guardrails.plugin.GuardrailDetectorPlugin;
+
 import java.util.*;
 
 @ApplicationScoped
-public class HallucinationDetector {
+public class HallucinationDetector implements GuardrailDetectorPlugin {
 
-    public Uni<HallucinationResult> detect(String text, Map<String, Object> metadata) {
+    @Override
+    public String id() {
+        return "hallucination-detector";
+    }
+
+    @Override
+    public String name() {
+        return "Hallucination Detector";
+    }
+
+    @Override
+    public String version() {
+        return "1.0.0";
+    }
+
+    @Override
+    public String description() {
+        return "Detects potential hallucinations in AI responses";
+    }
+
+    @Override
+    public CheckPhase[] applicablePhases() {
+        return new CheckPhase[] { CheckPhase.POST_EXECUTION };
+    }
+
+    @Override
+    public String getCategory() {
+        return "hallucination";
+    }
+
+    @Override
+    public DetectionSeverity getSeverity() {
+        return DetectionSeverity.BLOCK;
+    }
+
+    @Override
+    public Uni<DetectionResult> detect(String text, Map<String, Object> metadata) {
         return Uni.createFrom().item(() -> {
             List<String> unsupportedClaims = extractClaims(text);
             List<String> factualErrors = checkFactualConsistency(text, metadata);
@@ -17,17 +55,27 @@ public class HallucinationDetector {
                     !factualErrors.isEmpty() ||
                     contradictsSource;
 
+            if (!hallucinated) {
+                return DetectionResult.safe(getCategory());
+            }
+
             double confidence = calculateHallucinationConfidence(
                     unsupportedClaims.size(),
                     factualErrors.size(),
                     contradictsSource);
 
-            return new HallucinationResult(
-                    hallucinated,
-                    confidence,
-                    unsupportedClaims,
-                    factualErrors,
-                    contradictsSource);
+            List<Finding> findings = new ArrayList<>();
+            unsupportedClaims.forEach(c -> findings.add(new Finding("UNSUPPORTED_CLAIM", c, -1, -1, 1.0)));
+            factualErrors.forEach(e -> findings.add(new Finding("FACTUAL_ERROR", e, -1, -1, 1.0)));
+            if (contradictsSource) {
+                findings.add(new Finding("CONTRADICTION", "Statement contradicts source metadata", -1, -1, 1.0));
+            }
+
+            if (confidence > 0.8) {
+                return DetectionResult.blocked(getCategory(), "High hallucination likelihood detected");
+            }
+
+            return DetectionResult.warning(getCategory(), "Potential hallucination detected", findings);
         });
     }
 
@@ -64,9 +112,7 @@ public class HallucinationDetector {
     private List<String> checkFactualConsistency(String text, Map<String, Object> metadata) {
         List<String> errors = new ArrayList<>();
 
-        // This would integrate with fact-checking APIs or knowledge bases
-        // For now, implementing a simple placeholder
-        if (metadata.containsKey("sourceText")) {
+        if (metadata != null && metadata.containsKey("sourceText")) {
             String sourceText = (String) metadata.get("sourceText");
             errors.addAll(checkNumericalConsistency(text, sourceText));
         }
@@ -77,11 +123,9 @@ public class HallucinationDetector {
     private List<String> checkNumericalConsistency(String generated, String source) {
         List<String> errors = new ArrayList<>();
 
-        // Extract numbers from both texts
         List<String> genNumbers = extractNumbers(generated);
         List<String> srcNumbers = extractNumbers(source);
 
-        // Check if generated text introduces new numbers not in source
         for (String num : genNumbers) {
             if (!srcNumbers.contains(num)) {
                 errors.add("Introduced number: " + num);
@@ -98,12 +142,11 @@ public class HallucinationDetector {
     }
 
     private boolean checkContradiction(String text, Map<String, Object> metadata) {
-        if (!metadata.containsKey("sourceText"))
+        if (metadata == null || !metadata.containsKey("sourceText"))
             return false;
 
         String sourceText = (String) metadata.get("sourceText");
 
-        // Simple contradiction detection based on negation
         Map<String, String> keyTerms = extractKeyTerms(sourceText);
         Map<String, String> genKeyTerms = extractKeyTerms(text);
 
@@ -146,45 +189,5 @@ public class HallucinationDetector {
         score += contradicts ? 0.5 : 0.0;
 
         return Math.min(score, 1.0);
-    }
-
-    public static class HallucinationResult {
-        private final boolean hallucinated;
-        private final double confidence;
-        private final List<String> unsupportedClaims;
-        private final List<String> factualErrors;
-        private final boolean contradictsSource;
-
-        public HallucinationResult(boolean hallucinated, double confidence,
-                List<String> unsupportedClaims,
-                List<String> factualErrors,
-                boolean contradictsSource) {
-            this.hallucinated = hallucinated;
-            this.confidence = confidence;
-            this.unsupportedClaims = unsupportedClaims;
-            this.factualErrors = factualErrors;
-            this.contradictsSource = contradictsSource;
-        }
-
-        // Getters
-        public boolean isHallucinated() {
-            return hallucinated;
-        }
-
-        public double getConfidence() {
-            return confidence;
-        }
-
-        public List<String> getUnsupportedClaims() {
-            return unsupportedClaims;
-        }
-
-        public List<String> getFactualErrors() {
-            return factualErrors;
-        }
-
-        public boolean isContradictsSource() {
-            return contradictsSource;
-        }
     }
 }

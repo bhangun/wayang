@@ -41,7 +41,7 @@
     <module>wayang-orchestrator-core</module>
     <module>wayang-orchestrator-local</module>
     <module>wayang-orchestrator-remote</module>
-    <module>wayang-schema</module>
+    <module>wayang-schema-core</module>
     <module>wayang-schema-api</module>
     <module>wayang-schema-grpc</module>
     <module>wayang-control-api</module>

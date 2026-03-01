@@ -355,25 +355,98 @@ Fallback Allowed?
 ## 🧭 Current Implementation Mapping (Repo)
 
 * **Gollek Core / Engine** → `inference-gollek/core/`
-  - `gollek-spi` - Service Provider Interface with `ModelFormat` enum
-  - `gollek-engine` - Core inference orchestration
-  - `gollek-provider-core` - Provider abstraction layer
-* **Providers** → `inference-gollek/provider/`
-  - `gollek-ext-cloud-ollama` - Ollama integration
-  - `gollek-ext-cloud-gemini` - Google Gemini integration
-  - `gollek-ext-cloud-cerebras` - Cerebras integration
-* **Adapters** → `inference-gollek/inference/format/`
-  - `gollek-ext-format-gguf` - GGUF/llama.cpp adapter
-  - `gollek-gguf-converter` - Model format conversion service
+  - `gollek-spi` — Service Provider Interfaces: `ModelFormat`, `BatchScheduler`, `BatchStrategy`, `BatchConfig`
+  - `gollek-engine` — Core inference orchestration, `DefaultBatchScheduler`, `InferenceService`
+  - `gollek-provider-core` — Provider abstraction layer
+  - `gollek-kv-cache` — Paged KV-cache manager
+  - `gollek-ext-flash-attention` — Flash Attention 3 CPU/GPU kernel
+  - `gollek-ext-paged-attention` — Paged attention CPU fallback
+* **Kernel Extensions** → `inference-gollek/extension/kernel/`
+  - `gguf/gollek-ext-format-gguf` — GGUF / llama.cpp adapter (local inference)
+  - `libtorch/gollek-ext-format-libtorch` — LibTorch / TorchScript runner
+  - `tflite/gollek-ext-format-tflite` — LiteRT (.tflite) adapter
+  - `djl/` — Deep Java Library adapter
+  - `transformers/` — HuggingFace Transformers adapter
+* **Cloud Providers** → `inference-gollek/extension/cloud/`
+  - `gollek-ext-cloud-ollama` — Ollama integration
+  - `gollek-ext-cloud-gemini` — Google Gemini integration
+  - `gollek-ext-cloud-cerebras` — Cerebras integration
+  - `gollek-ext-cloud-mistral` — Mistral AI integration
 * **Runtime** → `inference-gollek/runtime/`
 * **Repositories** → `inference-gollek/repository/`
-  - `gollek-model-repo-local` - Local model storage & manifest management
-  - `gollek-model-repo-hf` - Hugging Face download client with progress tracking
+  - `gollek-model-repo-local` — Local model storage & manifest management
+  - `gollek-model-repo-hf` — Hugging Face download client with progress tracking
 * **SDK** → `inference-gollek/sdk/`
-  - `gollek-sdk-java-local` - Local SDK with model registration
-  - `gollek-sdk-core` - Core SDK interfaces
+  - `gollek-sdk-java-local` — Local SDK with model registration
+  - `gollek-sdk-core` — Core SDK interfaces
 * **CLI** → `inference-gollek/ui/gollek-cli`
   - Command-line interface with `--model-path` and `--offline` flags
+
+---
+
+## ⚡ Batching Scheduler
+
+The `DefaultBatchScheduler` in `gollek-engine` implements three request-scheduling strategies,
+configurable at runtime without code changes via `gollek.batching.*` properties.
+
+```
+gollek.batching.strategy=DYNAMIC   # STATIC | DYNAMIC | CONTINUOUS
+gollek.batching.max-batch-size=8
+gollek.batching.max-wait-ms=50
+```
+
+```mermaid
+flowchart TD
+    Q([Incoming Request Queue]) --> BS{Batching Strategy?}
+
+    BS -- STATIC --> ST[Collect exactly N requests]
+    ST --> STD[/Dispatch batch when full/]
+    STD --> NOTE_ST["⚠ Head-of-line blocking\nFirst request waits for Nth"]
+
+    BS -- DYNAMIC --> DY[Collect requests]
+    DY --> DYC{N reached or\ntimeout elapsed?}
+    DYC -- Yes --> DYD[/Dispatch partial or full batch/]
+    DYC -- No --> DY
+    DYD --> NOTE_DY["✅ Balances throughput\n& latency — like a scheduled bus"]
+
+    BS -- CONTINUOUS --> CT[Fill N active slots]
+    CT --> CTR[Run N inferences concurrently]
+    CTR --> CTC{Slot completed?}
+    CTC -- Yes --> CTN[Pull next request from queue]
+    CTN --> CTR
+    CTC -- No --> CTR
+    CTR --> NOTE_CT["🚀 Maximum GPU utilisation\nIteration-level scheduling\n(in-flight batching)"]
+
+    classDef note fill:#1a3a1a,stroke:#2d5a2d,color:#b8e6b8;
+    class NOTE_ST,NOTE_DY,NOTE_CT note;
+```
+
+| Strategy | Best For | Latency | Throughput | GPU Utilisation |
+|---|---|---|---|---|
+| **STATIC** | Offline / bulk jobs | ❌ High (blocking) | Medium | Medium |
+| **DYNAMIC** | General serving | ✅ Balanced | High | High |
+| **CONTINUOUS** | LLM token generation | ✅ Low per token | ✅ Maximum | ✅ Maximum |
+
+### How it connects
+
+```
+Client → InferenceService.batchInfer()
+              │
+              ▼
+      BatchScheduler.submitBatch()          ← configured by BatchSchedulerProducer
+              │
+    ┌─────────┴──────────┐
+    │   Dispatch Loop     │  (Virtual Thread)
+    │  STATIC/DYNAMIC/    │
+    │  CONTINUOUS         │
+    └─────────┬──────────┘
+              │ per-request
+              ▼
+   InferenceOrchestrator.executeAsync()    ← existing stage-aware routing
+              │
+              ▼
+   ModelRouterService → Kernel Provider
+```
 
 ---
 
@@ -493,3 +566,6 @@ sequenceDiagram
 * External provider rate limits handled
 * Prompt/context redaction + safety checks
 * Metrics + traces exported (OpenTelemetry)
+* **Batching strategy configured** (`gollek.batching.strategy`: STATIC | DYNAMIC | CONTINUOUS)
+* **Batch size tuned** to available GPU memory (`gollek.batching.max-batch-size`)
+* **Disaggregated prefill/decode** enabled for long-context workloads (`gollek.batching.enable-disaggregation`)

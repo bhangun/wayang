@@ -9,8 +9,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tech.kayys.gamelan.sdk.client.GamelanClient;
 import tech.kayys.gamelan.sdk.client.WorkflowRunOperations;
 import tech.kayys.gamelan.engine.run.RunResponse;
-import tech.kayys.gamelan.sdk.client.WorkflowRunOperations.CreateRunBuilder;
-import tech.kayys.gamelan.sdk.client.WorkflowRunOperations.ResumeRunBuilder;
+import tech.kayys.gamelan.sdk.client.CreateRunBuilder;
+import tech.kayys.gamelan.sdk.client.ResumeRunBuilder;
+import tech.kayys.gamelan.engine.run.RunResponse;
 
 import java.util.Map;
 
@@ -83,24 +84,25 @@ public class GamelanWorkflowRunManagerTest {
 
         when(runOperations.resume(runId)).thenReturn(resumeBuilder);
         when(resumeBuilder.humanTaskId(anyString())).thenReturn(resumeBuilder);
-        when(resumeBuilder.input(anyString(), any())).thenReturn(resumeBuilder);
+        when(resumeBuilder.data(anyString(), any())).thenReturn(resumeBuilder);
         when(resumeBuilder.execute()).thenReturn(Uni.createFrom().item(expectedResponse));
 
         RunResponse response = runManager.resumeRun(runId, humanTaskId, inputs).await().indefinitely();
 
         assertEquals(expectedResponse, response);
         verify(resumeBuilder).humanTaskId(humanTaskId);
-        verify(resumeBuilder).input("key", "value");
+        verify(resumeBuilder).data("key", "value");
         verify(resumeBuilder).execute();
     }
 
     @Test
     void testCancelRun() {
         String runId = "test-run";
-        when(runOperations.cancel(runId)).thenReturn(Uni.createFrom().voidItem());
+        String reason = "test-reason";
+        when(runOperations.cancel(runId, reason)).thenReturn(Uni.createFrom().voidItem());
 
-        runManager.cancelRun(runId, "test-reason").await().indefinitely();
+        runManager.cancelRun(runId, reason).await().indefinitely();
 
-        verify(runOperations).cancel(runId);
+        verify(runOperations).cancel(runId, reason);
     }
 }

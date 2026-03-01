@@ -1,4 +1,4 @@
-package tech.kayys.wayang.resources;
+package tech.kayys.wayang.control.api;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
@@ -12,7 +12,6 @@ import tech.kayys.wayang.control.dto.CreateAgentRequest;
 
 import java.util.Collections;
 import java.util.UUID;
-import java.util.List;
 
 @Path("/api/v1/agents")
 @Produces(MediaType.APPLICATION_JSON)

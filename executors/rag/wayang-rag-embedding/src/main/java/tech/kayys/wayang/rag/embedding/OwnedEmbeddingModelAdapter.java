@@ -8,28 +8,29 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Adapter to bridge Wayang EmbeddingService into rag-runtime owned embedding model.
+ * Adapter to bridge Wayang EmbeddingService into rag-runtime owned embedding
+ * model.
  */
 public class OwnedEmbeddingModelAdapter implements RagEmbeddingModel {
 
     private final EmbeddingService embeddingService;
     private final String tenantId;
     private final String modelName;
-    private final RagObservabilityMetrics metrics;
+    private final EmbeddingMetrics metrics;
 
     public OwnedEmbeddingModelAdapter(EmbeddingService embeddingService, String tenantId, String modelName) {
-        this(embeddingService, tenantId, modelName, null);
+        this(embeddingService, tenantId, modelName, EmbeddingMetrics.NOOP);
     }
 
     public OwnedEmbeddingModelAdapter(
             EmbeddingService embeddingService,
             String tenantId,
             String modelName,
-            RagObservabilityMetrics metrics) {
+            EmbeddingMetrics metrics) {
         this.embeddingService = Objects.requireNonNull(embeddingService, "embeddingService must not be null");
         this.tenantId = tenantId;
         this.modelName = Objects.requireNonNull(modelName, "modelName must not be null");
-        this.metrics = metrics;
+        this.metrics = metrics != null ? metrics : EmbeddingMetrics.NOOP;
     }
 
     @Override
@@ -39,14 +40,10 @@ public class OwnedEmbeddingModelAdapter implements RagEmbeddingModel {
         try {
             EmbeddingRequest request = new EmbeddingRequest(input, modelName, null, true);
             EmbeddingResponse response = embeddingService.embedForTenant(tenantId, request);
-            if (metrics != null) {
-                metrics.recordEmbeddingSuccess(modelName, input.size(), System.currentTimeMillis() - started);
-            }
+            metrics.recordEmbeddingSuccess(modelName, input.size(), System.currentTimeMillis() - started);
             return response.embeddings();
         } catch (RuntimeException ex) {
-            if (metrics != null) {
-                metrics.recordEmbeddingFailure(modelName);
-            }
+            metrics.recordEmbeddingFailure(modelName);
             throw ex;
         }
     }

@@ -3,8 +3,8 @@ package tech.kayys.wayang.rag;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import tech.kayys.wayang.rag.core.model.RagChunk;
-import tech.kayys.wayang.rag.core.model.RagScoredChunk;
+import tech.kayys.wayang.rag.core.RagChunk;
+import tech.kayys.wayang.rag.core.RagScoredChunk;
 
 import java.util.ArrayList;
 import java.util.HashMap;

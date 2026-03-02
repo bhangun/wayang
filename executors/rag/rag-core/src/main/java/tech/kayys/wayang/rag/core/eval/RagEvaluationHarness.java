@@ -1,7 +1,7 @@
 package tech.kayys.wayang.rag.core.eval;
 
-import tech.kayys.wayang.rag.RagQuery;
-import tech.kayys.wayang.rag.RagScoredChunk;
+import tech.kayys.wayang.rag.core.RagQuery;
+import tech.kayys.wayang.rag.core.RagScoredChunk;
 import tech.kayys.wayang.rag.core.spi.Retriever;
 
 import java.util.ArrayList;

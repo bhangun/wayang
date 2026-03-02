@@ -3,8 +3,8 @@ package tech.kayys.wayang.rag.config;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import tech.kayys.wayang.rag.RagPluginTenantStrategyResolver;
-import tech.kayys.wayang.rag.RagRuntimeConfig;
+import tech.kayys.wayang.rag.runtime.RagPluginTenantStrategyResolver;
+import tech.kayys.wayang.rag.runtime.RagRuntimeConfig;
 
 @ApplicationScoped
 public class RagPluginConfigStartupValidator {

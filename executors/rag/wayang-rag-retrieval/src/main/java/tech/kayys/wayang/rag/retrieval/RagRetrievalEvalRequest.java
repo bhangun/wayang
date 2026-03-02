@@ -1,7 +1,7 @@
 package tech.kayys.wayang.rag.retrieval;
 
 import java.util.Map;
-import tech.kayys.wayang.rag.RagEvalDataset;
+import tech.kayys.wayang.rag.core.RagEvalDataset;
 
 public record RagRetrievalEvalRequest(
                 String tenantId,

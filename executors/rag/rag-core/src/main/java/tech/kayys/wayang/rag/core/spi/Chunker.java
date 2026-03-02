@@ -1,7 +1,7 @@
 package tech.kayys.wayang.rag.core.spi;
 
-import tech.kayys.wayang.rag.RagChunk;
-import tech.kayys.wayang.rag.RagDocument;
+import tech.kayys.wayang.rag.core.RagChunk;
+import tech.kayys.wayang.rag.core.RagDocument;
 
 import java.util.List;
 

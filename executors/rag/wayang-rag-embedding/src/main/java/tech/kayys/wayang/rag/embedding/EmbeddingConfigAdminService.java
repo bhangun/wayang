@@ -9,6 +9,12 @@ import tech.kayys.wayang.embedding.TenantEmbeddingStrategyRegistry;
 import java.time.Instant;
 import java.util.Map;
 
+/**
+ * Service for managing embedding configuration at runtime.
+ * Provides capabilities to check current configuration status and trigger
+ * reloads
+ * of tenant-specific embedding strategies.
+ */
 @ApplicationScoped
 public class EmbeddingConfigAdminService {
 
@@ -25,11 +31,11 @@ public class EmbeddingConfigAdminService {
     }
 
     private EmbeddingConfigStatus toStatus(EmbeddingModuleConfig config) {
-        Map<String, EmbeddingConfigStatus.TenantEmbeddingStrategyStatus> tenantStrategies =
-                config.tenantStrategies().snapshot().entrySet().stream()
-                        .collect(java.util.stream.Collectors.toUnmodifiableMap(
-                                Map.Entry::getKey,
-                                entry -> toTenantStatus(entry.getValue())));
+        Map<String, EmbeddingConfigStatus.TenantEmbeddingStrategyStatus> tenantStrategies = config.tenantStrategies()
+                .snapshot().entrySet().stream()
+                .collect(java.util.stream.Collectors.toUnmodifiableMap(
+                        Map.Entry::getKey,
+                        entry -> toTenantStatus(entry.getValue())));
 
         return new EmbeddingConfigStatus(
                 config.getDefaultProvider(),

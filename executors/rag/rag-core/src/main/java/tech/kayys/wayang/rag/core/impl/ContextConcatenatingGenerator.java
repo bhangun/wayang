@@ -1,8 +1,8 @@
 package tech.kayys.wayang.rag.core.impl;
 
-import tech.kayys.wayang.rag.RagQuery;
-import tech.kayys.wayang.rag.RagResult;
-import tech.kayys.wayang.rag.RagScoredChunk;
+import tech.kayys.wayang.rag.core.RagQuery;
+import tech.kayys.wayang.rag.core.RagResult;
+import tech.kayys.wayang.rag.core.RagScoredChunk;
 import tech.kayys.wayang.rag.core.spi.Generator;
 
 import java.util.List;

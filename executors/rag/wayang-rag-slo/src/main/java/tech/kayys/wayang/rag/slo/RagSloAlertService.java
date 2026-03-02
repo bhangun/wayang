@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
-import tech.kayys.wayang.rag.RagRuntimeConfig;
+import tech.kayys.wayang.rag.runtime.RagRuntimeConfig;
 
 import java.io.IOException;
 import java.nio.file.Files;

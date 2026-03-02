@@ -1,7 +1,7 @@
 package tech.kayys.wayang.rag.core.impl;
 
-import tech.kayys.wayang.rag.RagQuery;
-import tech.kayys.wayang.rag.RagScoredChunk;
+import tech.kayys.wayang.rag.core.RagQuery;
+import tech.kayys.wayang.rag.core.RagScoredChunk;
 import tech.kayys.wayang.rag.core.spi.Reranker;
 
 import java.util.Comparator;

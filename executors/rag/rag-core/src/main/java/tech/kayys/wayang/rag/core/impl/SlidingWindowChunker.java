@@ -1,7 +1,7 @@
 package tech.kayys.wayang.rag.core.impl;
 
-import tech.kayys.wayang.rag.RagChunk;
-import tech.kayys.wayang.rag.RagDocument;
+import tech.kayys.wayang.rag.core.RagChunk;
+import tech.kayys.wayang.rag.core.RagDocument;
 import tech.kayys.wayang.rag.core.spi.Chunker;
 import tech.kayys.wayang.rag.core.spi.ChunkingOptions;
 
@@ -33,7 +33,8 @@ public class SlidingWindowChunker implements Chunker {
                         document.id(),
                         chunkIndex++,
                         fragment,
-                        Map.of("source", document.source(), "start", start, "end", end)));
+                        Map.of("source", document.metadata().getOrDefault("source", document.id()), "start", start,
+                                "end", end)));
             }
             if (end >= text.length()) {
                 break;

@@ -1,8 +1,9 @@
 package tech.kayys.wayang.rag.core.eval;
+import tech.kayys.wayang.rag.core.*;
 
 import org.junit.jupiter.api.Test;
-import tech.kayys.wayang.rag.core.model.RagChunk;
-import tech.kayys.wayang.rag.core.model.RagScoredChunk;
+import tech.kayys.wayang.rag.core.RagChunk;
+import tech.kayys.wayang.rag.core.RagScoredChunk;
 import tech.kayys.wayang.rag.core.spi.Retriever;
 
 import java.util.List;

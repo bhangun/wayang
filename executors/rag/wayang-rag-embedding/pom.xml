@@ -41,14 +41,6 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!-- Internal: RAG Runtime (RagObservabilityMetrics, RagVectorStoreProvider,
-        RagRuntimeConfig) -->
-        <dependency>
-            <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-rag-runtime</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
         <!-- Internal: Embedding SPI (EmbeddingService, EmbeddingModuleConfig, etc.) -->
         <dependency>
             <groupId>tech.kayys.wayang</groupId>

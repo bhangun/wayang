@@ -2,8 +2,10 @@ package tech.kayys.wayang.rag.slo;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import tech.kayys.wayang.rag.RagRuntimeConfig;
-import tech.kayys.wayang.rag.RagObservabilityMetrics;
+import tech.kayys.wayang.rag.runtime.RagRuntimeConfig;
+import tech.kayys.wayang.rag.runtime.RagObservabilityMetrics;
+import tech.kayys.wayang.rag.runtime.RagObservabilityMetrics.RagSloSnapshot;
+import tech.kayys.wayang.rag.runtime.AdminProtected;
 import tech.kayys.wayang.rag.embedding.EmbeddingSchemaHistoryCompactorJob;
 import tech.kayys.wayang.rag.embedding.EmbeddingSchemaHistoryCompactorStatus;
 import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalGuardrailService;

@@ -1,32 +1,44 @@
 package tech.kayys.wayang.rag.embedding;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import tech.kayys.wayang.rag.RagChunk;
-import tech.kayys.wayang.rag.RagVectorStoreProvider;
-import tech.kayys.wayang.rag.RetrievalConfig;
-import tech.kayys.wayang.rag.langchain.RagObservabilityMetrics;
-import tech.kayys.wayang.rag.langchain.RagRuntimeConfig;
+import tech.kayys.wayang.rag.core.RagChunk;
+import tech.kayys.wayang.rag.core.RetrievalConfig;
+import tech.kayys.wayang.rag.core.store.VectorStore;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Factory for creating and managing tenant-specific embedding stores.
+ * It handles the lifecycle of vector stores, provides migration capabilities
+ * for
+ * tenant embedding contracts, and maintains a cache of active store instances.
+ */
 @ApplicationScoped
 public class RagEmbeddingStoreFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(RagEmbeddingStoreFactory.class);
 
-    @Inject
-    RagRuntimeConfig config;
+    @ConfigProperty(name = "wayang.rag.embedding.model", defaultValue = "hash-1536")
+    String embeddingModel;
+
+    @ConfigProperty(name = "wayang.rag.embedding.dimension", defaultValue = "1536")
+    int embeddingDimension;
+
+    @ConfigProperty(name = "wayang.rag.embedding.version", defaultValue = "v1")
+    String embeddingVersion;
 
     @Inject
-    RagVectorStoreProvider ragVectorStoreProvider;
+    Instance<VectorStore<RagChunk>> vectorStoreInstance;
 
     @Inject
-    RagObservabilityMetrics metrics;
+    Instance<EmbeddingMetrics> metricsInstance;
 
     private final Map<String, RagEmbeddingStore> cache = new ConcurrentHashMap<>();
     private final Map<String, EmbeddingSchemaContract> contracts = new ConcurrentHashMap<>();
@@ -41,8 +53,8 @@ public class RagEmbeddingStoreFactory {
                         contract.model(),
                         contract.dimension(),
                         contract.version(),
-                        ragVectorStoreProvider.getStore(),
-                        metrics));
+                        resolveVectorStore(),
+                        resolveMetrics()));
     }
 
     public EmbeddingSchemaContract contractForTenant(String tenantId) {
@@ -66,12 +78,13 @@ public class RagEmbeddingStoreFactory {
             throw new IllegalArgumentException("clearNamespace must be true when embedding contract changes");
         }
 
+        VectorStore<RagChunk> store = resolveVectorStore();
         RagEmbeddingStore existing = cache.remove(tenantId);
         if (clearNamespace) {
             if (existing != null) {
                 existing.clear();
             } else {
-                ragVectorStoreProvider.getStore().clear(tenantId);
+                store.clear(tenantId);
             }
         }
 
@@ -81,19 +94,30 @@ public class RagEmbeddingStoreFactory {
                 target.model(),
                 target.dimension(),
                 target.version(),
-                ragVectorStoreProvider.getStore(),
-                metrics));
+                store,
+                resolveMetrics()));
         return previous;
     }
 
+    private VectorStore<RagChunk> resolveVectorStore() {
+        if (vectorStoreInstance.isResolvable()) {
+            return vectorStoreInstance.get();
+        }
+        throw new IllegalStateException("No VectorStore<RagChunk> bean available");
+    }
+
+    private EmbeddingMetrics resolveMetrics() {
+        return metricsInstance.isResolvable() ? metricsInstance.get() : EmbeddingMetrics.NOOP;
+    }
+
     private EmbeddingSchemaContract defaultContract() {
-        String version = config.getEmbeddingVersion();
+        String version = embeddingVersion;
         if (version == null || version.isBlank()) {
             version = "v1";
         }
         return new EmbeddingSchemaContract(
-                config.getEmbeddingModel(),
-                config.getEmbeddingDimension(),
+                embeddingModel,
+                embeddingDimension,
                 version);
     }
 }

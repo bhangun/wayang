@@ -20,6 +20,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * Administrative service for managing embedding schema versions and migrations.
+ * Handles tenant-specific embedding contracts, maintains migration history with
+ * persistence, and provides utilities for history compaction.
+ */
 @ApplicationScoped
 public class EmbeddingSchemaAdminService {
 
@@ -231,7 +236,8 @@ public class EmbeddingSchemaAdminService {
                 if (payload.isEmpty()) {
                     continue;
                 }
-                EmbeddingSchemaMigrationStatus status = mapper().readValue(payload, EmbeddingSchemaMigrationStatus.class);
+                EmbeddingSchemaMigrationStatus status = mapper().readValue(payload,
+                        EmbeddingSchemaMigrationStatus.class);
                 history.compute(status.tenantId(), (key, entries) -> appendHistory(entries, status));
             }
         } catch (IOException e) {

@@ -1,6 +1,6 @@
 package tech.kayys.wayang.rag.core.spi;
 
-import tech.kayys.wayang.rag.core.model.RagDocument;
+import tech.kayys.wayang.rag.core.RagDocument;
 
 import java.util.Map;
 

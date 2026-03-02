@@ -4,8 +4,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
-import tech.kayys.wayang.rag.RagPluginTenantStrategyResolver;
-import tech.kayys.wayang.rag.RagRuntimeConfig;
+import tech.kayys.wayang.rag.runtime.RagPluginTenantStrategyResolver;
+import tech.kayys.wayang.rag.runtime.RagRuntimeConfig;
 
 import java.time.Instant;
 

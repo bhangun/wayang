@@ -1,6 +1,6 @@
 package tech.kayys.wayang.rag.embedding;
 
-import tech.kayys.wayang.rag.RagChunk;
+import tech.kayys.wayang.rag.core.RagChunk;
 import tech.kayys.wayang.rag.core.store.VectorSearchHit;
 import tech.kayys.wayang.rag.core.store.VectorStore;
 
@@ -17,7 +17,7 @@ class OwnedRagEmbeddingStoreAdapter implements RagEmbeddingStore {
     private final int embeddingDimension;
     private final String embeddingVersion;
     private final VectorStore<RagChunk> vectorStore;
-    private final RagObservabilityMetrics metrics;
+    private final EmbeddingMetrics metrics;
     private final Map<String, float[]> embeddingCache = new ConcurrentHashMap<>();
 
     OwnedRagEmbeddingStoreAdapter(
@@ -25,7 +25,7 @@ class OwnedRagEmbeddingStoreAdapter implements RagEmbeddingStore {
             String embeddingModel,
             int embeddingDimension,
             VectorStore<RagChunk> vectorStore) {
-        this(namespace, embeddingModel, embeddingDimension, "v1", vectorStore, null);
+        this(namespace, embeddingModel, embeddingDimension, "v1", vectorStore, EmbeddingMetrics.NOOP);
     }
 
     OwnedRagEmbeddingStoreAdapter(
@@ -34,7 +34,7 @@ class OwnedRagEmbeddingStoreAdapter implements RagEmbeddingStore {
             int embeddingDimension,
             String embeddingVersion,
             VectorStore<RagChunk> vectorStore) {
-        this(namespace, embeddingModel, embeddingDimension, embeddingVersion, vectorStore, null);
+        this(namespace, embeddingModel, embeddingDimension, embeddingVersion, vectorStore, EmbeddingMetrics.NOOP);
     }
 
     OwnedRagEmbeddingStoreAdapter(
@@ -43,7 +43,7 @@ class OwnedRagEmbeddingStoreAdapter implements RagEmbeddingStore {
             int embeddingDimension,
             String embeddingVersion,
             VectorStore<RagChunk> vectorStore,
-            RagObservabilityMetrics metrics) {
+            EmbeddingMetrics metrics) {
         this.namespace = Objects.requireNonNull(namespace, "namespace must not be null");
         this.embeddingModel = Objects.requireNonNull(embeddingModel, "embeddingModel must not be null");
         if (embeddingDimension <= 0) {
@@ -52,7 +52,7 @@ class OwnedRagEmbeddingStoreAdapter implements RagEmbeddingStore {
         this.embeddingDimension = embeddingDimension;
         this.embeddingVersion = (embeddingVersion == null || embeddingVersion.isBlank()) ? "v1" : embeddingVersion;
         this.vectorStore = Objects.requireNonNull(vectorStore, "vectorStore must not be null");
-        this.metrics = metrics;
+        this.metrics = metrics != null ? metrics : EmbeddingMetrics.NOOP;
     }
 
     @Override
@@ -79,9 +79,7 @@ class OwnedRagEmbeddingStoreAdapter implements RagEmbeddingStore {
         RagChunk chunk = toRagChunk(id, text == null ? "" : text, enrichedMetadata);
         vectorStore.upsert(namespace, id, embedding, chunk, enrichedMetadata);
         embeddingCache.put(id, embedding);
-        if (metrics != null) {
-            metrics.recordIngestion(namespace, 1, 1, System.currentTimeMillis() - started);
-        }
+        metrics.recordIngestion(namespace, 1, 1, System.currentTimeMillis() - started);
     }
 
     @Override
@@ -108,14 +106,10 @@ class OwnedRagEmbeddingStoreAdapter implements RagEmbeddingStore {
             strictFilters.put("embeddingVersion", embeddingVersion);
             List<VectorSearchHit<RagChunk>> hits = vectorStore.search(namespace, queryEmbedding, topK, minScore,
                     strictFilters);
-            if (metrics != null) {
-                metrics.recordSearchSuccess(namespace, System.currentTimeMillis() - started, hits.size());
-            }
+            metrics.recordSearchSuccess(namespace, System.currentTimeMillis() - started, hits.size());
             return hits.stream().map(this::toMatch).toList();
         } catch (RuntimeException ex) {
-            if (metrics != null) {
-                metrics.recordSearchFailure(namespace);
-            }
+            metrics.recordSearchFailure(namespace);
             throw ex;
         }
     }

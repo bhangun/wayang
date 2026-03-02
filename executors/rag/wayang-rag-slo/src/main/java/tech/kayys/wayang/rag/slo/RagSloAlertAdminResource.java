@@ -8,6 +8,7 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import tech.kayys.wayang.rag.runtime.AdminProtected;
 
 @Path("/admin/observability/slo/alerts")
 @ApplicationScoped

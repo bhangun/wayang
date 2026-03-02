@@ -4,6 +4,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
+import tech.kayys.wayang.rag.runtime.RagValidationErrorResponse;
 
 @Provider
 public class RagPluginConfigValidationExceptionMapper implements ExceptionMapper<RagPluginConfigValidationException> {

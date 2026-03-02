@@ -5,8 +5,8 @@ import tech.kayys.wayang.embedding.EmbeddingModelSpec;
 import tech.kayys.wayang.embedding.EmbeddingRequest;
 import tech.kayys.wayang.embedding.EmbeddingResponse;
 import tech.kayys.wayang.embedding.EmbeddingService;
-import tech.kayys.wayang.rag.RagChunk;
-import tech.kayys.wayang.rag.RagDocument;
+import tech.kayys.wayang.rag.core.RagChunk;
+import tech.kayys.wayang.rag.core.RagDocument;
 import tech.kayys.wayang.rag.core.store.VectorStore;
 
 import java.util.List;

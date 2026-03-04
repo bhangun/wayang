@@ -12,9 +12,8 @@ import tech.kayys.gamelan.sdk.executor.core.AbstractWorkflowExecutor;
 import tech.kayys.gamelan.sdk.executor.core.Executor;
 import tech.kayys.gamelan.sdk.executor.core.SimpleNodeExecutionResult;
 import tech.kayys.wayang.guardrails.GuardrailsService;
-import tech.kayys.wayang.guardrails.detector.CheckPhase;
-import tech.kayys.wayang.guardrails.detector.DetectionResult;
-import tech.kayys.wayang.guardrails.detector.DetectionResults;
+import tech.kayys.wayang.guardrails.plugin.api.*;
+
 import tech.kayys.wayang.guardrails.node.GuardrailNodeTypes;
 import tech.kayys.wayang.guardrails.plugin.GuardrailPluginRegistry;
 

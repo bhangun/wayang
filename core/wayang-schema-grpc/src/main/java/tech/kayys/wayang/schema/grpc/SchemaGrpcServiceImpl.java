@@ -24,22 +24,24 @@ public class SchemaGrpcServiceImpl extends SchemaServiceGrpc.SchemaServiceImplBa
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public void validateSchema(SchemaValidationRequest request, StreamObserver<SchemaValidationResponse> responseObserver) {
+    public void validateSchema(SchemaValidationRequest request,
+            StreamObserver<SchemaValidationResponse> responseObserver) {
         try {
             // Convert JSON strings to Maps
             java.util.Map<String, Object> dataMap = objectMapper.readValue(request.getData(), java.util.Map.class);
-            
+
             // Perform validation
             ValidationResult result = schemaValidationService.validateSchema(request.getSchema(), dataMap);
-            
+
             // Build response
-            SchemaValidationResponse.Builder responseBuilder = SchemaValidationResponse.newBuilder()
+            SchemaValidationResponse.Builder responseBuilder = SchemaValidationResponse
+                    .newBuilder()
                     .setValid(result.isValid());
-            
+
             if (!result.isValid()) {
                 responseBuilder.setMessage(result.getMessage());
             }
-            
+
             responseObserver.onNext(responseBuilder.build());
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -48,22 +50,24 @@ public class SchemaGrpcServiceImpl extends SchemaServiceGrpc.SchemaServiceImplBa
     }
 
     @Override
-    public void validateAgentConfig(AgentConfigValidationRequest request, StreamObserver<ValidationResponse> responseObserver) {
+    public void validateAgentConfig(AgentConfigValidationRequest request,
+            StreamObserver<ValidationResponse> responseObserver) {
         try {
             // Convert JSON string to Map
-            java.util.Map<String, Object> configMap = objectMapper.readValue(request.getAgentConfig(), java.util.Map.class);
-            
+            java.util.Map<String, Object> configMap = objectMapper.readValue(request.getAgentConfig(),
+                    java.util.Map.class);
+
             // Perform validation
             ValidationResult result = agentConfigValidator.validateAgentConfig(configMap);
-            
+
             // Build response
             ValidationResponse.Builder responseBuilder = ValidationResponse.newBuilder()
                     .setValid(result.isValid());
-            
+
             if (!result.isValid()) {
                 responseBuilder.setMessage(result.getMessage());
             }
-            
+
             responseObserver.onNext(responseBuilder.build());
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -72,22 +76,24 @@ public class SchemaGrpcServiceImpl extends SchemaServiceGrpc.SchemaServiceImplBa
     }
 
     @Override
-    public void validateWorkflow(WorkflowValidationRequest request, StreamObserver<ValidationResponse> responseObserver) {
+    public void validateWorkflow(WorkflowValidationRequest request,
+            StreamObserver<ValidationResponse> responseObserver) {
         try {
             // Convert JSON string to Map
-            java.util.Map<String, Object> workflowMap = objectMapper.readValue(request.getWorkflow(), java.util.Map.class);
-            
+            java.util.Map<String, Object> workflowMap = objectMapper.readValue(request.getWorkflow(),
+                    java.util.Map.class);
+
             // Perform validation
             ValidationResult result = workflowValidator.validateWorkflow(workflowMap);
-            
+
             // Build response
             ValidationResponse.Builder responseBuilder = ValidationResponse.newBuilder()
                     .setValid(result.isValid());
-            
+
             if (!result.isValid()) {
                 responseBuilder.setMessage(result.getMessage());
             }
-            
+
             responseObserver.onNext(responseBuilder.build());
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -96,22 +102,24 @@ public class SchemaGrpcServiceImpl extends SchemaServiceGrpc.SchemaServiceImplBa
     }
 
     @Override
-    public void validatePluginConfig(PluginConfigValidationRequest request, StreamObserver<ValidationResponse> responseObserver) {
+    public void validatePluginConfig(PluginConfigValidationRequest request,
+            StreamObserver<ValidationResponse> responseObserver) {
         try {
             // Convert JSON string to Map
-            java.util.Map<String, Object> configMap = objectMapper.readValue(request.getPluginConfig(), java.util.Map.class);
-            
+            java.util.Map<String, Object> configMap = objectMapper.readValue(request.getPluginConfig(),
+                    java.util.Map.class);
+
             // Perform validation
             ValidationResult result = pluginConfigValidator.validatePluginConfig(configMap);
-            
+
             // Build response
             ValidationResponse.Builder responseBuilder = ValidationResponse.newBuilder()
                     .setValid(result.isValid());
-            
+
             if (!result.isValid()) {
                 responseBuilder.setMessage(result.getMessage());
             }
-            
+
             responseObserver.onNext(responseBuilder.build());
             responseObserver.onCompleted();
         } catch (Exception e) {
@@ -120,8 +128,10 @@ public class SchemaGrpcServiceImpl extends SchemaServiceGrpc.SchemaServiceImplBa
     }
 
     @Override
-    public void validateWithRules(SchemaValidationRequest request, StreamObserver<SchemaValidationResponse> responseObserver) {
-        // This would require a more complex implementation to handle rules passed as part of the request
+    public void validateWithRules(SchemaValidationRequest request,
+            StreamObserver<SchemaValidationResponse> responseObserver) {
+        // This would require a more complex implementation to handle rules passed as
+        // part of the request
         // For now, we'll implement basic schema validation
         validateSchema(request, responseObserver);
     }

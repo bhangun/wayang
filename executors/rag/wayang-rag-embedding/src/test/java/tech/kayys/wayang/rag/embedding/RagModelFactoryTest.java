@@ -1,4 +1,4 @@
-package tech.kayys.wayang.rag;
+package tech.kayys.wayang.rag.embedding;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -6,10 +6,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.kayys.wayang.embedding.EmbeddingService;
-import tech.kayys.wayang.rag.core.GenerationConfig;
-import tech.kayys.wayang.rag.core.RetrievalConfig;
-import tech.kayys.wayang.rag.embedding.RagEmbeddingModel;
-
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -25,7 +21,6 @@ class RagModelFactoryTest {
     void setUp() {
         modelFactory = new RagModelFactory();
         modelFactory.embeddingService = embeddingService;
-        modelFactory.config = new RagRuntimeConfig();
     }
 
     @Test

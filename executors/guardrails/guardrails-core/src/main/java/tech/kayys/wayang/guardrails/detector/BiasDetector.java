@@ -2,7 +2,7 @@ package tech.kayys.wayang.guardrails.detector;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import tech.kayys.wayang.guardrails.plugin.GuardrailDetectorPlugin;
+import tech.kayys.wayang.guardrails.plugin.api.*;
 
 import java.util.*;
 
@@ -53,6 +53,10 @@ public class BiasDetector implements GuardrailDetectorPlugin {
 
     @Override
     public Uni<DetectionResult> detect(String text, Map<String, Object> metadata) {
+        if (text == null || text.trim().isEmpty()) {
+            return Uni.createFrom().item(DetectionResult.safe("bias-local", "BIAS"));
+        }
+
         return Uni.createFrom().item(() -> {
             String lowerText = text.toLowerCase();
 
@@ -66,20 +70,20 @@ public class BiasDetector implements GuardrailDetectorPlugin {
             racialBiases.forEach(b -> findings
                     .add(new Finding("RACIAL_BIAS", b, lowerText.indexOf(b), lowerText.indexOf(b) + b.length(), 1.0)));
             if (hasAgeBias) {
-                findings.add(new Finding("AGE_BIAS", "Potential age-related stereotype", -1, -1, 1.0));
+                findings.add(new Finding("AGE_BIAS", "age-related term", 0, text.length(), 1.0));
             }
 
             if (findings.isEmpty()) {
-                return DetectionResult.safe(getCategory());
+                return DetectionResult.safe("bias-local", getCategory());
             }
 
             double biasScore = calculateBiasScore(genderBiases, racialBiases, hasAgeBias);
 
             if (biasScore > 0.7) {
-                return DetectionResult.blocked(getCategory(), "High bias likelihood detected");
+                return DetectionResult.blocked("bias-local", getCategory(), "Significant bias detected", findings);
             }
 
-            return DetectionResult.warning(getCategory(), "Potential bias detected", findings);
+            return DetectionResult.warning("bias-local", getCategory(), "Potential bias detected", findings);
         });
     }
 

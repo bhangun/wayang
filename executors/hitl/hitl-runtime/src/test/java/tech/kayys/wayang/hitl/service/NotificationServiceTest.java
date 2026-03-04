@@ -20,174 +20,178 @@ import java.util.List;
 
 class NotificationServiceTest {
 
-    @Mock
-    private UserDirectoryService userDirectoryService;
+        @Mock
+        private UserDirectoryService userDirectoryService;
 
-    @Mock
-    private HumanTaskRepository repository;
+        @Mock
+        private HumanTaskRepository repository;
 
-    private NotificationService notificationService;
+        private NotificationService notificationService;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-        notificationService = new NotificationService();
-        // Use reflection to inject the mock services
-        try {
-            java.lang.reflect.Field userDirField = NotificationService.class.getDeclaredField("userDirectory");
-            userDirField.setAccessible(true);
-            userDirField.set(notificationService, userDirectoryService);
+        @BeforeEach
+        void setUp() {
+                MockitoAnnotations.openMocks(this);
+                notificationService = new NotificationService();
+                // Use reflection to inject the mock services
+                try {
+                        java.lang.reflect.Field userDirField = NotificationService.class
+                                        .getDeclaredField("userDirectory");
+                        userDirField.setAccessible(true);
+                        userDirField.set(notificationService, userDirectoryService);
 
-            java.lang.reflect.Field repoField = NotificationService.class.getDeclaredField("repository");
-            repoField.setAccessible(true);
-            repoField.set(notificationService, repository);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to inject mock services", e);
+                        java.lang.reflect.Field repoField = NotificationService.class.getDeclaredField("repository");
+                        repoField.setAccessible(true);
+                        repoField.set(notificationService, repository);
+                } catch (Exception e) {
+                        throw new RuntimeException("Failed to inject mock services", e);
+                }
         }
-    }
 
-    @Test
-    void shouldSendTaskAssignedNotificationSuccessfully() {
-        // Given
-        TaskAssignment assignment = TaskAssignment.builder()
-                .assigneeType(AssigneeType.USER)
-                .assigneeIdentifier("user1")
-                .assignedBy("system")
-                .build();
+        @Test
+        void shouldSendTaskAssignedNotificationSuccessfully() {
+                // Given
+                TaskAssignment assignment = TaskAssignment.builder()
+                                .assigneeType(AssigneeType.USER)
+                                .assigneeIdentifier("user1")
+                                .assignedBy("system")
+                                .build();
 
-        HumanTask task = HumanTask.builder()
-                .workflowRunId("workflow-123")
-                .nodeId("node-456")
-                .tenantId("tenant-789")
-                .taskType("approval")
-                .title("Test Task")
-                .assignTo(assignment)
-                .build();
+                HumanTask task = HumanTask.builder()
+                                .workflowRunId("workflow-123")
+                                .nodeId("node-456")
+                                .tenantId("tenant-789")
+                                .taskType("approval")
+                                .title("Test Task")
+                                .assignTo(assignment)
+                                .build();
 
-        when(userDirectoryService.getUserEmail(eq("user1"))).thenReturn(Uni.createFrom().item("user1@company.com"));
+                when(userDirectoryService.getUserEmail(eq("user1")))
+                                .thenReturn(Uni.createFrom().item("user1@company.com"));
 
-        // When
-        Uni<Void> result = notificationService.sendTaskAssignedNotification(task);
+                // When
+                Uni<Void> result = notificationService.sendTaskAssignedNotification(task);
 
-        // Then
-        // Just verify that the method completes without exception
-        result.await().indefinitely();
-        verify(userDirectoryService, times(1)).getUserEmail(eq("user1"));
-    }
+                // Then
+                // Just verify that the method completes without exception
+                result.await().indefinitely();
+                verify(userDirectoryService, times(1)).getUserEmail(eq("user1"));
+        }
 
-    @Test
-    void shouldHandleNullEmailInTaskAssignedNotification() {
-        // Given
-        TaskAssignment assignment = TaskAssignment.builder()
-                .assigneeType(AssigneeType.USER)
-                .assigneeIdentifier("unknown-user")
-                .assignedBy("system")
-                .build();
+        @Test
+        void shouldHandleNullEmailInTaskAssignedNotification() {
+                // Given
+                TaskAssignment assignment = TaskAssignment.builder()
+                                .assigneeType(AssigneeType.USER)
+                                .assigneeIdentifier("unknown-user")
+                                .assignedBy("system")
+                                .build();
 
-        HumanTask task = HumanTask.builder()
-                .workflowRunId("workflow-123")
-                .nodeId("node-456")
-                .tenantId("tenant-789")
-                .taskType("approval")
-                .title("Test Task")
-                .assignTo(assignment)
-                .build();
+                HumanTask task = HumanTask.builder()
+                                .workflowRunId("workflow-123")
+                                .nodeId("node-456")
+                                .tenantId("tenant-789")
+                                .taskType("approval")
+                                .title("Test Task")
+                                .assignTo(assignment)
+                                .build();
 
-        when(userDirectoryService.getUserEmail(eq("unknown-user"))).thenReturn(Uni.createFrom().nullItem());
+                when(userDirectoryService.getUserEmail(eq("unknown-user"))).thenReturn(Uni.createFrom().nullItem());
 
-        // When
-        Uni<Void> result = notificationService.sendTaskAssignedNotification(task);
+                // When
+                Uni<Void> result = notificationService.sendTaskAssignedNotification(task);
 
-        // Then
-        result.await().indefinitely();
-        verify(userDirectoryService, times(1)).getUserEmail(eq("unknown-user"));
-    }
+                // Then
+                result.await().indefinitely();
+                verify(userDirectoryService, times(1)).getUserEmail(eq("unknown-user"));
+        }
 
-    @Test
-    void shouldSendTaskRemindersSuccessfully() {
-        // Given
-        HumanTaskEntity taskEntity = new HumanTaskEntity();
-        taskEntity.taskId = "TASK-123";
-        taskEntity.title = "Test Task";
-        taskEntity.assigneeIdentifier = "user1";
-        taskEntity.dueDate = Instant.now().plusSeconds(100);
-        taskEntity.priority = 3;
-        
-        when(repository.find(any(String.class), any(Instant.class), any(Instant.class), any(List.class)))
-                .thenReturn(mock(io.quarkus.hibernate.reactive.panache.common.runtime.PanacheQuery.class));
-        
-        io.quarkus.hibernate.reactive.panache.common.runtime.PanacheQuery<HumanTaskEntity> mockQuery = 
-                mock(io.quarkus.hibernate.reactive.panache.common.runtime.PanacheQuery.class);
-        when(mockQuery.list()).thenReturn(Uni.createFrom().item(List.of(taskEntity)));
-        
-        when(repository.find(any(String.class), any(Instant.class), any(Instant.class), any(List.class)))
-                .thenReturn(mockQuery);
-        
-        when(userDirectoryService.getUserEmail(eq("user1"))).thenReturn(Uni.createFrom().item("user1@company.com"));
+        @Test
+        void shouldSendTaskRemindersSuccessfully() {
+                // Given
+                HumanTaskEntity taskEntity = new HumanTaskEntity();
+                taskEntity.taskId = "TASK-123";
+                taskEntity.title = "Test Task";
+                taskEntity.assigneeIdentifier = "user1";
+                taskEntity.dueDate = Instant.now().plusSeconds(100);
+                taskEntity.priority = 3;
 
-        // When
-        Uni<Integer> result = notificationService.sendTaskReminders();
+                when(repository.find(any(String.class), any(Instant.class), any(Instant.class), any(List.class)))
+                                .thenReturn(mock(io.quarkus.hibernate.reactive.panache.PanacheQuery.class));
 
-        // Then
-        Integer count = result.await().indefinitely();
-        assertNotNull(count);
-    }
+                io.quarkus.hibernate.reactive.panache.PanacheQuery<HumanTaskEntity> mockQuery = mock(
+                                io.quarkus.hibernate.reactive.panache.PanacheQuery.class);
+                when(mockQuery.list()).thenReturn(Uni.createFrom().item(List.of(taskEntity)));
 
-    @Test
-    void shouldSendOverdueNotificationSuccessfully() {
-        // Given
-        TaskAssignment assignment = TaskAssignment.builder()
-                .assigneeType(AssigneeType.USER)
-                .assigneeIdentifier("user1")
-                .assignedBy("system")
-                .build();
+                when(repository.find(any(String.class), any(Instant.class), any(Instant.class), any(List.class)))
+                                .thenReturn(mockQuery);
 
-        HumanTask task = HumanTask.builder()
-                .workflowRunId("workflow-123")
-                .nodeId("node-456")
-                .tenantId("tenant-789")
-                .taskType("approval")
-                .title("Test Task")
-                .dueDate(Instant.now().minusSeconds(100)) // Past due
-                .assignTo(assignment)
-                .build();
+                when(userDirectoryService.getUserEmail(eq("user1")))
+                                .thenReturn(Uni.createFrom().item("user1@company.com"));
 
-        when(userDirectoryService.getUserEmail(eq("user1"))).thenReturn(Uni.createFrom().item("user1@company.com"));
+                // When
+                Uni<Integer> result = notificationService.sendTaskReminders();
 
-        // When
-        Uni<Void> result = notificationService.sendOverdueNotification(task);
+                // Then
+                Integer count = result.await().indefinitely();
+                assertNotNull(count);
+        }
 
-        // Then
-        result.await().indefinitely();
-        verify(userDirectoryService, times(1)).getUserEmail(eq("user1"));
-    }
+        @Test
+        void shouldSendOverdueNotificationSuccessfully() {
+                // Given
+                TaskAssignment assignment = TaskAssignment.builder()
+                                .assigneeType(AssigneeType.USER)
+                                .assigneeIdentifier("user1")
+                                .assignedBy("system")
+                                .build();
 
-    @Test
-    void shouldHandleNullEmailInOverdueNotification() {
-        // Given
-        TaskAssignment assignment = TaskAssignment.builder()
-                .assigneeType(AssigneeType.USER)
-                .assigneeIdentifier("unknown-user")
-                .assignedBy("system")
-                .build();
+                HumanTask task = HumanTask.builder()
+                                .workflowRunId("workflow-123")
+                                .nodeId("node-456")
+                                .tenantId("tenant-789")
+                                .taskType("approval")
+                                .title("Test Task")
+                                .dueDate(Instant.now().minusSeconds(100)) // Past due
+                                .assignTo(assignment)
+                                .build();
 
-        HumanTask task = HumanTask.builder()
-                .workflowRunId("workflow-123")
-                .nodeId("node-456")
-                .tenantId("tenant-789")
-                .taskType("approval")
-                .title("Test Task")
-                .dueDate(Instant.now().minusSeconds(100)) // Past due
-                .assignTo(assignment)
-                .build();
+                when(userDirectoryService.getUserEmail(eq("user1")))
+                                .thenReturn(Uni.createFrom().item("user1@company.com"));
 
-        when(userDirectoryService.getUserEmail(eq("unknown-user"))).thenReturn(Uni.createFrom().nullItem());
+                // When
+                Uni<Void> result = notificationService.sendOverdueNotification(task);
 
-        // When
-        Uni<Void> result = notificationService.sendOverdueNotification(task);
+                // Then
+                result.await().indefinitely();
+                verify(userDirectoryService, times(1)).getUserEmail(eq("user1"));
+        }
 
-        // Then
-        result.await().indefinitely();
-        verify(userDirectoryService, times(1)).getUserEmail(eq("unknown-user"));
-    }
+        @Test
+        void shouldHandleNullEmailInOverdueNotification() {
+                // Given
+                TaskAssignment assignment = TaskAssignment.builder()
+                                .assigneeType(AssigneeType.USER)
+                                .assigneeIdentifier("unknown-user")
+                                .assignedBy("system")
+                                .build();
+
+                HumanTask task = HumanTask.builder()
+                                .workflowRunId("workflow-123")
+                                .nodeId("node-456")
+                                .tenantId("tenant-789")
+                                .taskType("approval")
+                                .title("Test Task")
+                                .dueDate(Instant.now().minusSeconds(100)) // Past due
+                                .assignTo(assignment)
+                                .build();
+
+                when(userDirectoryService.getUserEmail(eq("unknown-user"))).thenReturn(Uni.createFrom().nullItem());
+
+                // When
+                Uni<Void> result = notificationService.sendOverdueNotification(task);
+
+                // Then
+                result.await().indefinitely();
+                verify(userDirectoryService, times(1)).getUserEmail(eq("unknown-user"));
+        }
 }

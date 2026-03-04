@@ -1,6 +1,4 @@
 package tech.kayys.wayang.rag.runtime;
-import tech.kayys.wayang.rag.plugin.api.*;
-import tech.kayys.wayang.rag.core.*;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -9,9 +7,6 @@ import org.slf4j.LoggerFactory;
 
 import tech.kayys.wayang.rag.plugin.api.RagPipelinePlugin;
 import tech.kayys.wayang.rag.plugin.api.RagPluginExecutionContext;
-import tech.kayys.wayang.rag.core.GenerationConfig;
-import tech.kayys.wayang.rag.core.RagResponse;
-import tech.kayys.wayang.rag.core.RetrievalConfig;
 import tech.kayys.wayang.rag.core.RagResult;
 import tech.kayys.wayang.rag.core.RagScoredChunk;
 
@@ -42,7 +37,7 @@ public class RagPluginManager {
         this.strategyResolver = Objects.requireNonNull(strategyResolver, "strategyResolver");
     }
 
-    RagPluginManager(RagRuntimeConfig config, List<RagPipelinePlugin> testPlugins) {
+    public RagPluginManager(RagRuntimeConfig config, List<RagPipelinePlugin> testPlugins) {
         Objects.requireNonNull(config, "config");
         this.pluginCatalog = new RagPluginCatalog(testPlugins);
         this.strategyResolver = new RagPluginTenantStrategyResolver(config);

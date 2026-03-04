@@ -122,7 +122,7 @@ public class EmbeddingSchemaHistoryCompactorJob {
                 .collect(Collectors.toUnmodifiableSet());
     }
 
-    EmbeddingSchemaHistoryCompactorStatus status() {
+    public EmbeddingSchemaHistoryCompactorStatus status() {
         CompactionPolicy policy = loadPolicy(ConfigProvider.getConfig());
         return new EmbeddingSchemaHistoryCompactorStatus(
                 policy.enabled(),

@@ -2,6 +2,7 @@ package tech.kayys.wayang.rag.retrieval;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import tech.kayys.wayang.rag.runtime.AdminProtected;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;

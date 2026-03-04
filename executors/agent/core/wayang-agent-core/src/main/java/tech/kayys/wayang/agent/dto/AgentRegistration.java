@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 
-import tech.kayys.wayang.agent.type.AgentType;
+import tech.kayys.wayang.agent.AgentType;
 
 /**
  * Agent Registration

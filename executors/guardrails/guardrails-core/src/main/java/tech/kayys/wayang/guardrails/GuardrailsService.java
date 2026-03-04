@@ -4,7 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
-import tech.kayys.wayang.guardrails.detector.*;
+import tech.kayys.wayang.guardrails.plugin.api.*;
 import tech.kayys.wayang.guardrails.plugin.GuardrailPluginRegistry;
 
 import java.util.*;
@@ -29,10 +29,10 @@ public class GuardrailsService {
                 .map(results -> {
                     DetectionResults detectionResults = new DetectionResults(results);
 
-                    if (detectionResults.hasBlockingIssues()) {
+                    if (!detectionResults.isSafe()) {
                         return GuardrailResult.failure(
-                                detectionResults.summary(),
-                                detectionResults.detectorIds(),
+                                "Guardrail checks failed",
+                                results.stream().filter(r -> !r.safe()).map(DetectionResult::category).toList(),
                                 results.stream().flatMap(r -> r.findings().stream()).toList());
                     }
 
@@ -51,10 +51,10 @@ public class GuardrailsService {
                 .map(results -> {
                     DetectionResults detectionResults = new DetectionResults(results);
 
-                    if (detectionResults.hasBlockingIssues()) {
+                    if (!detectionResults.isSafe()) {
                         return GuardrailResult.failure(
-                                detectionResults.summary(),
-                                detectionResults.detectorIds(),
+                                "Guardrail checks failed",
+                                results.stream().filter(r -> !r.safe()).map(DetectionResult::category).toList(),
                                 results.stream().flatMap(r -> r.findings().stream()).toList());
                     }
 

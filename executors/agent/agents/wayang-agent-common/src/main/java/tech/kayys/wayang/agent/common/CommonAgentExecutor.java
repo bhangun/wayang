@@ -3,16 +3,20 @@ package tech.kayys.wayang.agent.common;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import lombok.extern.slf4j.Slf4j;
+import org.jboss.logging.Logger;
 import tech.kayys.gamelan.sdk.executor.core.WorkflowExecutor;
-import tech.kayys.gamelan.sdk.executor.core.annotation.Executor;
-import tech.kayys.gamelan.sdk.executor.core.model.CommunicationType;
-import tech.kayys.gamelan.sdk.executor.core.model.NodeExecutionResult;
-import tech.kayys.gamelan.sdk.executor.core.model.NodeExecutionTask;
+import tech.kayys.gamelan.sdk.executor.core.Executor;
+import tech.kayys.gamelan.engine.protocol.CommunicationType;
+import tech.kayys.gamelan.engine.node.DefaultNodeExecutionResult;
+import tech.kayys.gamelan.engine.node.NodeExecutionResult;
+import tech.kayys.gamelan.engine.node.NodeExecutionTask;
+import tech.kayys.gamelan.engine.node.NodeExecutionStatus;
+import tech.kayys.gamelan.engine.error.ErrorInfo;
 import tech.kayys.wayang.agent.core.inference.AgentInferenceRequest;
 import tech.kayys.wayang.agent.core.inference.AgentInferenceResponse;
 import tech.kayys.wayang.agent.core.inference.GollekInferenceService;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -28,10 +32,11 @@ import java.util.Map;
  * <li>Question answering</li>
  * </ul>
  */
-@Slf4j
 @Executor(executorType = "common-agent", communicationType = CommunicationType.GRPC, maxConcurrentTasks = 10)
 @ApplicationScoped
 public class CommonAgentExecutor implements WorkflowExecutor {
+
+    private static final Logger log = Logger.getLogger(CommonAgentExecutor.class);
 
     @Inject
     GollekInferenceService inferenceService;
@@ -43,10 +48,10 @@ public class CommonAgentExecutor implements WorkflowExecutor {
     public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
         return Uni.createFrom().item(() -> {
             try {
-                log.info("Executing common agent task: {}", task.getNodeId());
+                log.info("Executing common agent task: " + task.nodeId());
 
                 // Extract task parameters
-                Map<String, Object> context = task.getContext();
+                Map<String, Object> context = task.context();
                 String taskType = (String) context.getOrDefault("taskType", "general");
                 String instruction = (String) context.get("instruction");
                 String preferredProvider = (String) context.get("preferredProvider");
@@ -61,9 +66,14 @@ public class CommonAgentExecutor implements WorkflowExecutor {
                 }
 
                 if (instruction == null || instruction.isBlank()) {
-                    return NodeExecutionResult.failure(
-                            task.getNodeId(),
-                            "Instruction is required for common agent task");
+                    return new DefaultNodeExecutionResult(
+                            task.runId(),
+                            task.nodeId(),
+                            task.attempt(),
+                            NodeExecutionStatus.FAILED,
+                            null,
+                            new ErrorInfo("common-agent-error", "Instruction is required", null, null),
+                            task.token());
                 }
 
                 String agentId = (String) context.getOrDefault("agentId", "default-agent");
@@ -73,9 +83,14 @@ public class CommonAgentExecutor implements WorkflowExecutor {
                         agentId);
 
                 if (response.isError()) {
-                    return NodeExecutionResult.failure(
-                            task.getNodeId(),
-                            "Task execution failed: " + response.getError());
+                    return new DefaultNodeExecutionResult(
+                            task.runId(),
+                            task.nodeId(),
+                            task.attempt(),
+                            NodeExecutionStatus.FAILED,
+                            null,
+                            new ErrorInfo("inference-error", response.getError(), null, null),
+                            task.token());
                 }
 
                 // Return successful result
@@ -87,13 +102,19 @@ public class CommonAgentExecutor implements WorkflowExecutor {
                         "tokens", response.getTotalTokens() != null ? response.getTotalTokens() : 0,
                         "latency_ms", response.getLatency().toMillis());
 
-                return NodeExecutionResult.success(task.getNodeId(), result);
+                return new DefaultNodeExecutionResult(task.runId(), task.nodeId(), task.attempt(),
+                        NodeExecutionStatus.COMPLETED, result, null, task.token());
 
             } catch (Exception e) {
                 log.error("Common agent execution failed", e);
-                return NodeExecutionResult.failure(
-                        task.getNodeId(),
-                        "Execution error: " + e.getMessage());
+                return new DefaultNodeExecutionResult(
+                        task.runId(),
+                        task.nodeId(),
+                        task.attempt(),
+                        NodeExecutionStatus.FAILED,
+                        null,
+                        new ErrorInfo("system-error", e.getMessage(), null, null),
+                        task.token());
             }
         });
     }
@@ -116,16 +137,22 @@ public class CommonAgentExecutor implements WorkflowExecutor {
         String userPrompt = buildUserPrompt(instruction, context);
 
         // Build inference request
-        AgentInferenceRequest request = AgentInferenceRequest.builder()
+        var builder = AgentInferenceRequest.builder()
                 .systemPrompt(systemPrompt)
                 .userPrompt(userPrompt)
                 .preferredProvider(preferredProvider != null ? preferredProvider : "tech.kayys/ollama-provider")
                 .temperature(0.5) // Lower temperature for more deterministic results
                 .maxTokens(2048)
-                .tools(tools) // Pass allowed tools
                 .useMemory(true) // Enable memory by default for common agent
-                .agentId(agentId) // Needs to be passed or derived
-                .build();
+                .agentId(agentId); // Needs to be passed or derived
+
+        // Temporary workaround: pass tools via additionalParams if tools method is
+        // missing
+        if (tools != null && !tools.isEmpty()) {
+            builder.additionalParams(Map.of("tools", tools));
+        }
+
+        AgentInferenceRequest request = builder.build();
 
         // Execute with fallback
         String fallbackProvider = determineFallbackProvider(preferredProvider);
@@ -200,18 +227,26 @@ public class CommonAgentExecutor implements WorkflowExecutor {
     }
 
     @Override
-    public void onStart() {
+    public String getExecutorType() {
+        return "common-agent";
+    }
+
+    @Override
+    public Uni<Void> initialize() {
         log.info("Common agent executor started");
-        log.info("Available providers: {}", inferenceService.listAvailableProviders());
+        log.info("Available providers: " + inferenceService.listAvailableProviders());
+        return Uni.createFrom().voidItem();
     }
 
     @Override
-    public void onStop() {
+    public Uni<Void> cleanup() {
         log.info("Common agent executor stopped");
+        return Uni.createFrom().voidItem();
     }
 
     @Override
-    public void onError(Throwable error) {
-        log.error("Common agent executor error", error);
+    public Uni<Void> onError(NodeExecutionTask task, Throwable error) {
+        log.error("Common agent executor error for task: " + task.nodeId(), error);
+        return Uni.createFrom().voidItem();
     }
 }

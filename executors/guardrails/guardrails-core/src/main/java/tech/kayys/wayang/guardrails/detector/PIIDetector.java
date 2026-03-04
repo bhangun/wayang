@@ -2,7 +2,7 @@ package tech.kayys.wayang.guardrails.detector;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import tech.kayys.wayang.guardrails.plugin.GuardrailDetectorPlugin;
+import tech.kayys.wayang.guardrails.plugin.api.*;
 
 import java.util.*;
 import java.util.regex.*;
@@ -71,18 +71,17 @@ public class PIIDetector implements GuardrailDetectorPlugin {
             }
 
             if (findings.isEmpty()) {
-                return DetectionResult.safe(getCategory());
+                return DetectionResult.safe("pii-local", "PII");
             }
 
             boolean hasHighRiskPII = findings.stream()
                     .anyMatch(f -> f.type().equals("SSN") || f.type().equals("CREDIT_CARD"));
 
             if (hasHighRiskPII) {
-                return DetectionResult.blocked(getCategory(),
-                        "High-risk PII detected: " + findings.size() + " findings");
+                return DetectionResult.blocked("pii-local", "PII", "High-risk PII detected", findings);
             }
 
-            return DetectionResult.warning(getCategory(), "PII detected", findings);
+            return DetectionResult.warning("pii-local", "PII", "Potential PII detected", findings);
         });
     }
 

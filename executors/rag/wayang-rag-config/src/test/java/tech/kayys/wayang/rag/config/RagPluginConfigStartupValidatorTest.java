@@ -1,10 +1,9 @@
-package tech.kayys.wayang.rag;
+package tech.kayys.wayang.rag.config;
 
 import org.junit.jupiter.api.Test;
 
 import tech.kayys.wayang.rag.runtime.RagPluginTenantStrategyResolver;
 import tech.kayys.wayang.rag.runtime.RagRuntimeConfig;
-import tech.kayys.wayang.rag.config.RagPluginConfigStartupValidator;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;

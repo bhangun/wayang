@@ -20,5 +20,6 @@
         <module>wayang-agent-coder</module>
         <module>wayang-agent-evaluator</module>
         <module>wayang-agent-orchestrator</module>
+        <module>wayang-agent-planner</module>
     </modules>
 </project>

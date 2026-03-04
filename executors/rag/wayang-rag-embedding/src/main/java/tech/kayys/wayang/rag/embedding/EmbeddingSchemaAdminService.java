@@ -1,5 +1,7 @@
 package tech.kayys.wayang.rag.embedding;
 
+import tech.kayys.wayang.rag.runtime.RagRuntimeConfig;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;

@@ -16,6 +16,9 @@ import tech.kayys.wayang.control.dto.EIPPatternType;
 import tech.kayys.wayang.control.dto.PatternCatalogEntry;
 import tech.kayys.wayang.control.dto.TemplateType;
 import tech.kayys.wayang.schema.DefinitionType;
+import tech.kayys.wayang.schema.canvas.CanvasData;
+import tech.kayys.wayang.schema.canvas.CanvasNode;
+import tech.kayys.wayang.schema.layout.Position;
 
 /**
  * Template and pattern catalog service
@@ -179,11 +182,11 @@ public class TemplateCatalogService {
         }
 
         // Canvas creation helpers
-        private tech.kayys.wayang.schema.canvas.CanvasData createCustomerSupportCanvas() {
-                tech.kayys.wayang.schema.canvas.CanvasData canvasData = new tech.kayys.wayang.schema.canvas.CanvasData();
+        private CanvasData createCustomerSupportCanvas() {
+                CanvasData canvasData = new CanvasData();
 
                 // Add nodes
-                tech.kayys.wayang.schema.canvas.CanvasNode startNode = new tech.kayys.wayang.schema.canvas.CanvasNode();
+                CanvasNode startNode = new CanvasNode();
                 startNode.id = "start-1";
                 startNode.type = "AI_AGENT";
                 startNode.label = "Support Agent";
@@ -191,26 +194,26 @@ public class TemplateCatalogService {
                                 "llmProvider", "openai",
                                 "model", "gpt-4",
                                 "systemPrompt", "You are a helpful customer support agent.");
-                startNode.position = new tech.kayys.wayang.schema.common.Position(100, 100);
+                startNode.position = new Position(100, 100);
 
                 canvasData.nodes.add(startNode);
 
                 return canvasData;
         }
 
-        private tech.kayys.wayang.schema.canvas.CanvasData createDataAnalystCanvas() {
-                return new tech.kayys.wayang.schema.canvas.CanvasData();
+        private CanvasData createDataAnalystCanvas() {
+                return new CanvasData();
         }
 
-        private tech.kayys.wayang.schema.canvas.CanvasData createApiToDatabaseCanvas() {
-                return new tech.kayys.wayang.schema.canvas.CanvasData();
+        private CanvasData createApiToDatabaseCanvas() {
+                return new CanvasData();
         }
 
-        private tech.kayys.wayang.schema.canvas.CanvasData createETLCanvas() {
-                return new tech.kayys.wayang.schema.canvas.CanvasData();
+        private CanvasData createETLCanvas() {
+                return new CanvasData();
         }
 
-        private tech.kayys.wayang.schema.canvas.CanvasData createApprovalCanvas() {
-                return new tech.kayys.wayang.schema.canvas.CanvasData();
+        private CanvasData createApprovalCanvas() {
+                return new CanvasData();
         }
 }

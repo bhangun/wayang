@@ -1,31 +1,25 @@
 package tech.kayys.wayang.engine;
 
+import io.quarkus.test.InjectMock;
+import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
+import tech.kayys.wayang.gamelan.GamelanEngineConfig;
+import tech.kayys.wayang.gamelan.GamelanWorkflowEngine;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.time.Duration;
-
+@QuarkusTest
 public class GamelanWorkflowEngineTest {
 
-    private GamelanEngineConfig config;
+    @Inject
+    GamelanWorkflowEngine engine;
 
-    @BeforeEach
-    void setUp() {
-        config = GamelanEngineConfig.builder()
-                .endpoint("http://localhost:8080")
-                .tenantId("test-tenant")
-                .apiKey("test-key")
-                .timeout(Duration.ofSeconds(5))
-                .build();
-    }
+    @InjectMock
+    GamelanEngineConfig config;
 
     @Test
     void testEngineInitialization() {
-        try (GamelanWorkflowEngine engine = new GamelanWorkflowEngine(config)) {
-            assertNotNull(engine);
-        } catch (Exception e) {
-            fail("Engine initialization failed: " + e.getMessage());
-        }
+        assertNotNull(engine);
     }
 }

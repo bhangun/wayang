@@ -11,7 +11,7 @@ import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.RestResponse;
 import tech.kayys.wayang.plugin.execution.ExecutionContract;
 import tech.kayys.wayang.plugin.execution.ExecutionContext;
-import tech.kayys.wayang.plugin.execution.ExecutionContractBuilder;
+import tech.kayys.wayang.plugin.registry.execution.ExecutionContractBuilder;
 
 import java.util.Map;
 
@@ -24,48 +24,48 @@ import java.util.Map;
 @Tag(name = "Control Plane - Execution", description = "Execution contract management")
 public class ExecutionContractResource {
 
-    private static final Logger LOG = Logger.getLogger(ExecutionContractResource.class);
+        private static final Logger LOG = Logger.getLogger(ExecutionContractResource.class);
 
-    @Inject
-    ExecutionContractBuilder contractBuilder;
+        @Inject
+        ExecutionContractBuilder contractBuilder;
 
-    /**
-     * Create execution contract.
-     * Called by Workflow Engine when it needs to execute a node.
-     */
-    @POST
-    @Path("/create-contract")
-    @Operation(summary = "Create execution contract", description = "Workflow Engine calls this to get execution contract for a node")
-    public Uni<RestResponse<ExecutionContract>> createContract(
-            @Valid ContractCreationRequest request) {
+        /**
+         * Create execution contract.
+         * Called by Workflow Engine when it needs to execute a node.
+         */
+        @POST
+        @Path("/create-contract")
+        @Operation(summary = "Create execution contract", description = "Workflow Engine calls this to get execution contract for a node")
+        public Uni<RestResponse<ExecutionContract>> createContract(
+                        @Valid ContractCreationRequest request) {
 
-        LOG.infof("Creating execution contract for node %s in workflow %s",
-                request.nodeType(), request.workflowRunId());
+                LOG.infof("Creating execution contract for node %s in workflow %s",
+                                request.nodeType(), request.workflowRunId());
 
-        return contractBuilder.build(
-                request.workflowRunId(),
-                request.nodeType(),
-                request.nodeInstanceId(),
-                request.inputs(),
-                request.config(),
-                request.context())
-                .map(RestResponse::ok)
-                .onFailure().recoverWithItem(error -> {
-                    LOG.errorf(error, "Failed to create execution contract");
-                    return RestResponse.status(
-                            RestResponse.Status.INTERNAL_SERVER_ERROR);
-                });
-    }
+                return contractBuilder.build(
+                                request.workflowRunId(),
+                                request.nodeType(),
+                                request.nodeInstanceId(),
+                                request.inputs(),
+                                request.config(),
+                                request.context())
+                                .map(RestResponse::ok)
+                                .onFailure().recoverWithItem(error -> {
+                                        LOG.errorf(error, "Failed to create execution contract");
+                                        return RestResponse.status(
+                                                        RestResponse.Status.INTERNAL_SERVER_ERROR);
+                                });
+        }
 }
 
 /**
  * Contract creation request
  */
 record ContractCreationRequest(
-        String workflowRunId,
-        String nodeType,
-        String nodeInstanceId,
-        Map<String, Object> inputs,
-        Map<String, Object> config,
-        ExecutionContext context) {
+                String workflowRunId,
+                String nodeType,
+                String nodeInstanceId,
+                Map<String, Object> inputs,
+                Map<String, Object> config,
+                ExecutionContext context) {
 }

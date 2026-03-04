@@ -2,8 +2,13 @@ package tech.kayys.wayang.guardrails.policy;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import tech.kayys.wayang.guardrails.*;
-import tech.kayys.wayang.guardrails.detector.PIIDetector;
+import tech.kayys.wayang.guardrails.plugin.api.*;
+import tech.kayys.wayang.guardrails.detector.*;
+import tech.kayys.wayang.guardrails.GuardrailsEngine;
+import tech.kayys.wayang.guardrails.GuardrailResult;
+import tech.kayys.wayang.guardrails.GuardrailPolicy;
+import tech.kayys.wayang.guardrails.ExecuteNodeTask;
+import tech.kayys.wayang.guardrails.ExecutionResult;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,14 +30,14 @@ public class PolicyBasedGuardrailsEngine implements GuardrailsEngine {
         List<String> violations = new ArrayList<>();
 
         // Check policies
-        tech.kayys.wayang.guardrails.NodeContext context = new tech.kayys.wayang.guardrails.NodeContext(
+        NodeContext context = new NodeContext(
                 task.tenantId(),
                 task.inputs(),
-                new tech.kayys.wayang.guardrails.NodeContext.NodeMetadata("system"));
+                new NodeContext.NodeMetadata("system", Map.of()));
 
         PolicyEvaluationResult policyEvaluationResult = policyEngine.evaluatePolicies(
                 context,
-                tech.kayys.wayang.guardrails.detector.CheckPhase.PRE_EXECUTION).await().indefinitely();
+                CheckPhase.PRE_EXECUTION).await().indefinitely();
 
         if (!policyEvaluationResult.allowed()) {
             violations.add(policyEvaluationResult.policyId());

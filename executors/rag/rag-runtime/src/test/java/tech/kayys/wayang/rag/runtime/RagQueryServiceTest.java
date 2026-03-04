@@ -11,7 +11,6 @@ import tech.kayys.wayang.rag.core.RetrievalConfig;
 import tech.kayys.wayang.rag.core.GenerationConfig;
 import tech.kayys.wayang.rag.core.RagMode;
 import tech.kayys.wayang.rag.core.SearchStrategy;
-import tech.kayys.wayang.rag.core.SourceDocument;
 import tech.kayys.wayang.rag.core.RagChunk;
 import tech.kayys.wayang.rag.core.RagQuery;
 import tech.kayys.wayang.rag.core.RagResult;

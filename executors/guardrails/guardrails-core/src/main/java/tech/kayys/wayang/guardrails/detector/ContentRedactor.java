@@ -3,8 +3,9 @@ package tech.kayys.wayang.guardrails.detector;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import tech.kayys.wayang.guardrails.ExecutionResult;
-import tech.kayys.wayang.guardrails.detector.DetectionResults;
-import tech.kayys.wayang.guardrails.detector.Finding;
+import tech.kayys.wayang.guardrails.plugin.api.DetectionResult;
+import tech.kayys.wayang.guardrails.plugin.api.DetectionResults;
+import tech.kayys.wayang.guardrails.plugin.api.Finding;
 import java.util.*;
 
 @ApplicationScoped
@@ -31,7 +32,7 @@ public class ContentRedactor {
         // Sort findings by offset (descending) to maintain string positions
         List<Finding> sortedFindings = detections.results().stream()
                 .flatMap(r -> r.findings().stream())
-                .sorted(Comparator.comparing(Finding::startOffset).reversed())
+                .sorted(Comparator.comparing(Finding::start).reversed())
                 .toList();
 
         for (Finding finding : sortedFindings) {
@@ -43,9 +44,9 @@ public class ContentRedactor {
                 default -> "[REDACTED]";
             };
 
-            redacted = redacted.substring(0, finding.startOffset()) +
+            redacted = redacted.substring(0, finding.start()) +
                     replacement +
-                    redacted.substring(finding.endOffset());
+                    redacted.substring(finding.end());
         }
 
         return redacted;

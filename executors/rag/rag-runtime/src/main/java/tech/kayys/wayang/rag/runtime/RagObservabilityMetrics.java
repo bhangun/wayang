@@ -1,6 +1,4 @@
 package tech.kayys.wayang.rag.runtime;
-import tech.kayys.wayang.rag.plugin.api.*;
-import tech.kayys.wayang.rag.core.*;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
@@ -38,7 +36,7 @@ public class RagObservabilityMetrics {
     }
 
     @PostConstruct
-    void initGauge() {
+    public void initGauge() {
         if (meterRegistry == null) {
             return;
         }

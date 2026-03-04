@@ -2,6 +2,7 @@ package tech.kayys.wayang.rag.retrieval;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import tech.kayys.wayang.rag.runtime.RagRuntimeConfig;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 

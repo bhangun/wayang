@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import tech.kayys.wayang.plugin.CommunicationProtocol;
-import tech.kayys.wayang.plugin.registry.execution.ExecutionMode;
+import tech.kayys.wayang.plugin.execution.ExecutionMode;
 
 /**
  * Executor Binding - Indirect reference to executor

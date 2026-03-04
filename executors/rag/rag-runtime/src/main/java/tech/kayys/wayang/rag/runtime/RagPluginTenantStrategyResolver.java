@@ -1,6 +1,4 @@
 package tech.kayys.wayang.rag.runtime;
-import tech.kayys.wayang.rag.plugin.api.*;
-import tech.kayys.wayang.rag.core.*;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
@@ -34,7 +32,7 @@ public class RagPluginTenantStrategyResolver {
         this.strategiesById = indexStrategies(strategyInstances, defaultStrategy);
     }
 
-    RagPluginTenantStrategyResolver(RagRuntimeConfig config) {
+    public RagPluginTenantStrategyResolver(RagRuntimeConfig config) {
         this.config = config;
         this.defaultStrategy = new ConfigRagPluginSelectionStrategy();
         this.strategiesById = indexStrategies(null, defaultStrategy);
@@ -69,11 +67,11 @@ public class RagPluginTenantStrategyResolver {
         return List.copyOf(active);
     }
 
-    static Map<String, String> parseTenantOverrides(String raw) {
+    public static Map<String, String> parseTenantOverrides(String raw) {
         return ConfigRagPluginSelectionStrategy.parseTenantOverrides(raw);
     }
 
-    static java.util.Set<String> parseEnabledPluginIds(String raw) {
+    public static java.util.Set<String> parseEnabledPluginIds(String raw) {
         return ConfigRagPluginSelectionStrategy.parseEnabledPluginIds(raw);
     }
 

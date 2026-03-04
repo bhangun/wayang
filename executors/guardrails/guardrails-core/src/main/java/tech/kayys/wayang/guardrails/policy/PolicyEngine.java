@@ -12,10 +12,8 @@ import dev.cel.compiler.CelCompilerFactory;
 import dev.cel.runtime.CelRuntime;
 import dev.cel.runtime.CelRuntimeFactory;
 import dev.cel.runtime.CelEvaluationException;
-import tech.kayys.wayang.guardrails.detector.CheckPhase;
-import tech.kayys.wayang.guardrails.plugin.GuardrailDetectorPlugin;
-import tech.kayys.wayang.guardrails.plugin.GuardrailPolicyPlugin;
-import tech.kayys.wayang.guardrails.NodeContext;
+import tech.kayys.wayang.guardrails.plugin.api.*;
+import tech.kayys.wayang.guardrails.plugin.api.CheckPhase;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -112,8 +110,8 @@ public class PolicyEngine {
     private Uni<PolicyCheckResult> evaluatePolicy(GuardrailPolicyPlugin plugin, NodeContext context, CheckPhase phase) {
         return plugin.evaluate(context)
                 .map(result -> {
-                    boolean allowed = result.violations().isEmpty();
-                    String denyMessage = allowed ? null : result.violations().get(0).message();
+                    boolean allowed = result.allowed();
+                    String denyMessage = allowed ? null : result.denyMessage();
                     return new PolicyCheckResult(
                             plugin.id(),
                             plugin.id(), // Using ID as name if not available

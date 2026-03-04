@@ -5,7 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
-import tech.kayys.wayang.guardrails.detector.CheckPhase;
+import tech.kayys.wayang.guardrails.plugin.api.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -20,19 +20,19 @@ public class GuardrailPluginRegistry {
     private static final Logger LOG = Logger.getLogger(GuardrailPluginRegistry.class);
 
     @Inject
-    Instance<GuardrailDetectorPlugin> detectorPlugins;
+    Instance<tech.kayys.wayang.guardrails.plugin.api.GuardrailDetectorPlugin> detectorPlugins;
 
-    private volatile List<GuardrailDetectorPlugin> cachedPreExecutionDetectors;
-    private volatile List<GuardrailDetectorPlugin> cachedPostExecutionDetectors;
+    private volatile List<tech.kayys.wayang.guardrails.plugin.api.GuardrailDetectorPlugin> cachedPreExecutionDetectors;
+    private volatile List<tech.kayys.wayang.guardrails.plugin.api.GuardrailDetectorPlugin> cachedPostExecutionDetectors;
 
     /**
      * Get all registered guardrail detector plugins.
      */
-    public List<GuardrailDetectorPlugin> getAllDetectorPlugins() {
-        List<GuardrailDetectorPlugin> plugins = new ArrayList<>();
+    public List<tech.kayys.wayang.guardrails.plugin.api.GuardrailDetectorPlugin> getAllDetectorPlugins() {
+        List<tech.kayys.wayang.guardrails.plugin.api.GuardrailDetectorPlugin> plugins = new ArrayList<>();
 
         if (detectorPlugins.isResolvable()) {
-            for (GuardrailDetectorPlugin plugin : detectorPlugins) {
+            for (tech.kayys.wayang.guardrails.plugin.api.GuardrailDetectorPlugin plugin : detectorPlugins) {
                 plugins.add(plugin);
             }
         }
@@ -43,7 +43,7 @@ public class GuardrailPluginRegistry {
     /**
      * Get all guardrail detector plugins applicable for pre-execution phase.
      */
-    public List<GuardrailDetectorPlugin> getPreExecutionDetectors() {
+    public List<tech.kayys.wayang.guardrails.plugin.api.GuardrailDetectorPlugin> getPreExecutionDetectors() {
         if (cachedPreExecutionDetectors == null) {
             synchronized (this) {
                 if (cachedPreExecutionDetectors == null) {
@@ -63,7 +63,7 @@ public class GuardrailPluginRegistry {
     /**
      * Get all guardrail detector plugins applicable for post-execution phase.
      */
-    public List<GuardrailDetectorPlugin> getPostExecutionDetectors() {
+    public List<tech.kayys.wayang.guardrails.plugin.api.GuardrailDetectorPlugin> getPostExecutionDetectors() {
         if (cachedPostExecutionDetectors == null) {
             synchronized (this) {
                 if (cachedPostExecutionDetectors == null) {
@@ -83,7 +83,7 @@ public class GuardrailPluginRegistry {
     /**
      * Get a specific guardrail detector by its ID.
      */
-    public Optional<GuardrailDetectorPlugin> getDetectorById(String id) {
+    public Optional<tech.kayys.wayang.guardrails.plugin.api.GuardrailDetectorPlugin> getDetectorById(String id) {
         return getAllDetectorPlugins().stream()
                 .filter(plugin -> plugin.id().equals(id))
                 .findFirst();
@@ -92,7 +92,8 @@ public class GuardrailPluginRegistry {
     /**
      * Get all guardrail detectors by category.
      */
-    public List<GuardrailDetectorPlugin> getDetectorsByCategory(String category) {
+    public List<tech.kayys.wayang.guardrails.plugin.api.GuardrailDetectorPlugin> getDetectorsByCategory(
+            String category) {
         return getAllDetectorPlugins().stream()
                 .filter(plugin -> plugin.getCategory().equals(category))
                 .collect(Collectors.toList());
@@ -101,7 +102,7 @@ public class GuardrailPluginRegistry {
     /**
      * Run all applicable detectors on the provided text for the given phase.
      */
-    public Uni<List<tech.kayys.wayang.guardrails.detector.DetectionResult>> runDetectorsForPhase(
+    public Uni<List<DetectionResult>> runDetectorsForPhase(
             String text,
             CheckPhase phase) {
         return runDetectorsForPhase(text, phase, Map.of());
@@ -110,12 +111,12 @@ public class GuardrailPluginRegistry {
     /**
      * Run all applicable detectors with metadata.
      */
-    public Uni<List<tech.kayys.wayang.guardrails.detector.DetectionResult>> runDetectorsForPhase(
+    public Uni<List<DetectionResult>> runDetectorsForPhase(
             String text,
             CheckPhase phase,
             Map<String, Object> metadata) {
 
-        List<GuardrailDetectorPlugin> detectors = switch (phase) {
+        List<tech.kayys.wayang.guardrails.plugin.api.GuardrailDetectorPlugin> detectors = switch (phase) {
             case PRE_EXECUTION -> getPreExecutionDetectors();
             case POST_EXECUTION -> getPostExecutionDetectors();
         };
@@ -124,13 +125,13 @@ public class GuardrailPluginRegistry {
             return Uni.createFrom().item(new ArrayList<>());
         }
 
-        List<Uni<tech.kayys.wayang.guardrails.detector.DetectionResult>> detectorUnis = detectors.stream()
+        List<Uni<DetectionResult>> detectorUnis = detectors.stream()
                 .map(detector -> detector.detect(text, metadata))
                 .collect(Collectors.toList());
 
         return Uni.combine().all().unis(detectorUnis)
                 .with(results -> results.stream()
-                        .map(r -> (tech.kayys.wayang.guardrails.detector.DetectionResult) r)
+                        .map(r -> (DetectionResult) r)
                         .collect(Collectors.toList()));
     }
 }

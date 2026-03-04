@@ -20,7 +20,7 @@ import tech.kayys.wayang.plugin.registry.PluginRegistration;
 import tech.kayys.wayang.plugin.registry.PluginResourceLoader;
 import tech.kayys.wayang.plugin.registry.SharedResources;
 import tech.kayys.wayang.plugin.registry.UIReference;
-import tech.kayys.wayang.plugin.registry.execution.ExecutionMode;
+import tech.kayys.wayang.plugin.execution.ExecutionMode;
 import tech.kayys.wayang.plugin.registry.executor.ExecutorBinding;
 import tech.kayys.wayang.plugin.registry.executor.ExecutorManifest;
 import tech.kayys.wayang.plugin.registry.executor.ExecutorRegistration;

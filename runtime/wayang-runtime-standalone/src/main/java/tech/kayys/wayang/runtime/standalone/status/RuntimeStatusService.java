@@ -6,11 +6,10 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import tech.kayys.gamelan.engine.tenant.TenantId;
 import tech.kayys.gamelan.engine.workflow.WorkflowDefinitionService;
-import tech.kayys.wayang.control.service.AgentManager;
 import tech.kayys.wayang.control.service.PluginManagerService;
 import tech.kayys.wayang.control.service.ProjectManager;
 import tech.kayys.wayang.control.service.SchemaRegistryService;
-import tech.kayys.wayang.control.service.WorkflowManager;
+import tech.kayys.wayang.control.service.WayangDefinitionService;
 import tech.kayys.wayang.inference.gollek.GollekInferenceService;
 import tech.kayys.wayang.schema.validator.SchemaValidationService;
 
@@ -26,8 +25,7 @@ public class RuntimeStatusService {
     private static final TenantId DEFAULT_TENANT = TenantId.of("default-tenant");
 
     @Inject Instance<ProjectManager> projectManager;
-    @Inject Instance<WorkflowManager> workflowManager;
-    @Inject Instance<AgentManager> agentManager;
+    @Inject Instance<WayangDefinitionService> wayangDefinitionService;
     @Inject Instance<SchemaRegistryService> schemaRegistryService;
     @Inject Instance<SchemaValidationService> schemaValidationService;
     @Inject Instance<PluginManagerService> pluginManagerService;
@@ -41,8 +39,7 @@ public class RuntimeStatusService {
             Map<String, RuntimeComponentStatus> components = new LinkedHashMap<>();
 
             boolean controlAvailable = isAvailable(projectManager)
-                    && isAvailable(workflowManager)
-                    && isAvailable(agentManager);
+                    && isAvailable(wayangDefinitionService);
             components.put(
                     "wayang.control",
                     new RuntimeComponentStatus(controlAvailable, controlAvailable,

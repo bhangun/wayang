@@ -1,10 +1,10 @@
 package tech.kayys.wayang.guardrails.policy.impl;
 
 import io.smallrye.mutiny.Uni;
-import tech.kayys.wayang.guardrails.NodeContext;
-import tech.kayys.wayang.guardrails.detector.CheckPhase;
-import tech.kayys.wayang.guardrails.plugin.GuardrailPolicyPlugin;
-import tech.kayys.wayang.guardrails.policy.PolicyCheckResult;
+import tech.kayys.wayang.guardrails.plugin.api.NodeContext;
+import tech.kayys.wayang.guardrails.plugin.api.CheckPhase;
+import tech.kayys.wayang.guardrails.plugin.api.GuardrailPolicyPlugin;
+import tech.kayys.wayang.guardrails.plugin.api.PolicyCheckResult;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Instant;
@@ -18,7 +18,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @ApplicationScoped
 public class RateLimitPolicyPlugin implements GuardrailPolicyPlugin {
 
-    // In-memory storage for rate limiting - in production, this would use Redis or similar
+    // In-memory storage for rate limiting - in production, this would use Redis or
+    // similar
     private final Map<String, RequestCount> requestCounts = new ConcurrentHashMap<>();
 
     // Default rate limits (requests per minute)
@@ -49,50 +50,47 @@ public class RateLimitPolicyPlugin implements GuardrailPolicyPlugin {
     public Uni<PolicyCheckResult> evaluate(NodeContext context) {
         String tenantId = context.tenantId();
         String userId = context.metadata().userId();
-        
+
         // Check tenant-level rate limit
         boolean tenantAllowed = checkTenantRateLimit(tenantId);
         if (!tenantAllowed) {
             return Uni.createFrom().item(new PolicyCheckResult(
-                id(),
-                name(),
-                false,
-                "Tenant rate limit exceeded"
-            ));
+                    id(),
+                    name(),
+                    false,
+                    "Tenant rate limit exceeded"));
         }
-        
+
         // Check user-level rate limit
         boolean userAllowed = checkUserRateLimit(tenantId, userId);
         if (!userAllowed) {
             return Uni.createFrom().item(new PolicyCheckResult(
-                id(),
-                name(),
-                false,
-                "User rate limit exceeded"
-            ));
+                    id(),
+                    name(),
+                    false,
+                    "User rate limit exceeded"));
         }
-        
+
         // Update counters
         incrementRequestCount(tenantId, userId);
-        
+
         return Uni.createFrom().item(new PolicyCheckResult(
-            id(),
-            name(),
-            true,
-            null
-        ));
+                id(),
+                name(),
+                true,
+                null));
     }
 
     private boolean checkTenantRateLimit(String tenantId) {
         String key = "tenant:" + tenantId;
         RequestCount count = requestCounts.computeIfAbsent(key, k -> new RequestCount());
-        
+
         // Reset counter if it's a new minute
         long currentMinute = Instant.now().getEpochSecond() / 60;
         if (count.minute != currentMinute) {
             count.reset(currentMinute);
         }
-        
+
         int limit = getTenantLimit(tenantId);
         return count.count < limit;
     }
@@ -100,13 +98,13 @@ public class RateLimitPolicyPlugin implements GuardrailPolicyPlugin {
     private boolean checkUserRateLimit(String tenantId, String userId) {
         String key = "user:" + tenantId + ":" + userId;
         RequestCount count = requestCounts.computeIfAbsent(key, k -> new RequestCount());
-        
+
         // Reset counter if it's a new minute
         long currentMinute = Instant.now().getEpochSecond() / 60;
         if (count.minute != currentMinute) {
             count.reset(currentMinute);
         }
-        
+
         int limit = getUserLimit(userId);
         return count.count < limit;
     }
@@ -116,7 +114,7 @@ public class RateLimitPolicyPlugin implements GuardrailPolicyPlugin {
         String tenantKey = "tenant:" + tenantId;
         RequestCount tenantCount = requestCounts.computeIfAbsent(tenantKey, k -> new RequestCount());
         tenantCount.increment();
-        
+
         // Increment user counter
         String userKey = "user:" + tenantId + ":" + userId;
         RequestCount userCount = requestCounts.computeIfAbsent(userKey, k -> new RequestCount());
@@ -142,7 +140,7 @@ public class RateLimitPolicyPlugin implements GuardrailPolicyPlugin {
 
     @Override
     public CheckPhase[] applicablePhases() {
-        return new CheckPhase[]{CheckPhase.PRE_EXECUTION};
+        return new CheckPhase[] { CheckPhase.PRE_EXECUTION };
     }
 
     // Inner class to track request counts

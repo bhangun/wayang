@@ -1,7 +1,7 @@
 package tech.kayys.wayang.rag.runtime.langchain;
 
 import org.junit.jupiter.api.Test;
-import tech.kayys.wayang.rag.domain.GenerationConfig;
+import tech.kayys.wayang.rag.core.GenerationConfig;
 import tech.kayys.wayang.rag.plugin.api.RagPipelinePlugin;
 import tech.kayys.wayang.rag.plugin.api.RagPluginExecutionContext;
 import tech.kayys.wayang.rag.runtime.RagPluginManager;

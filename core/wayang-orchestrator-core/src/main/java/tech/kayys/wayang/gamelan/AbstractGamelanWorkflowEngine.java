@@ -36,7 +36,14 @@ import java.util.Map;
 public abstract class AbstractGamelanWorkflowEngine implements WayangOrchestratorSpi, AutoCloseable {
 
     protected GamelanClient client;
-    protected final GamelanEngineConfig config;
+    protected GamelanEngineConfig config;
+
+    /**
+     * Required for CDI proxying
+     */
+    protected AbstractGamelanWorkflowEngine() {
+        this.config = null;
+    }
 
     protected AbstractGamelanWorkflowEngine(GamelanEngineConfig config) {
         this.config = config;

@@ -19,7 +19,8 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>3.31.2</quarkus.platform.version>
+        <protoc.arch>${os.detected.arch}</protoc.arch>
+        <protoc.os>${os.detected.name}</protoc.os>
         <quarkus.package.main-class>tech.kayys.wayang.runtime.standalone.StandaloneLauncher</quarkus.package.main-class>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.4</surefire-plugin.version>
@@ -96,11 +97,11 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <dependency>
+        <!--  <dependency>
             <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-schema-grpc</artifactId>
             <version>${project.version}</version>
-        </dependency>
+        </dependency> -->
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-control-api</artifactId>
@@ -214,7 +215,7 @@
         <!-- Testing -->
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-junit</artifactId>
+            <artifactId>quarkus-junit5</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -225,6 +226,13 @@
     </dependencies>
 
     <build>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.7.1</version>
+            </extension>
+        </extensions>
         <plugins>
             <plugin>
                 <groupId>${quarkus.platform.group-id}</groupId>

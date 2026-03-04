@@ -1,14 +1,14 @@
 package tech.kayys.wayang.guardrails.detector.impl;
 
 import io.smallrye.mutiny.Uni;
-import tech.kayys.wayang.guardrails.detector.DetectionResult;
-import tech.kayys.wayang.guardrails.detector.DetectionSeverity;
-import tech.kayys.wayang.guardrails.plugin.GuardrailDetectorPlugin;
-import tech.kayys.wayang.guardrails.detector.CheckPhase;
+import tech.kayys.wayang.guardrails.plugin.api.DetectionResult;
+import tech.kayys.wayang.guardrails.plugin.api.DetectionSeverity;
+import tech.kayys.wayang.guardrails.plugin.api.Finding;
+import tech.kayys.wayang.guardrails.plugin.api.GuardrailDetectorPlugin;
+import tech.kayys.wayang.guardrails.plugin.api.CheckPhase;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.*;
-import java.util.regex.Pattern;
 
 /**
  * Toxicity Detector Plugin implementation.
@@ -18,16 +18,14 @@ import java.util.regex.Pattern;
 public class ToxicityDetectorPlugin implements GuardrailDetectorPlugin {
 
     private static final Set<String> TOXIC_WORDS = Set.of(
-        "hate", "kill", "murder", "attack", "violence", "abuse", "threat", "dangerous",
-        "harmful", "destructive", "aggressive", "hostile", "offensive", "disgusting",
-        "terrible", "awful", "horrible", "evil", "devil", "bastard", "bitch", "damn",
-        "shit", "fuck", "asshole", "dick", "cunt", "slut", "whore", "rape", "rapist"
-    );
+            "hate", "kill", "murder", "attack", "violence", "abuse", "threat", "dangerous",
+            "harmful", "destructive", "aggressive", "hostile", "offensive", "disgusting",
+            "terrible", "awful", "horrible", "evil", "devil", "bastard", "bitch", "damn",
+            "shit", "fuck", "asshole", "dick", "cunt", "slut", "whore", "rape", "rapist");
 
     private static final Set<String> HATE_SPEECH_PATTERNS = Set.of(
-        "racist", "discriminat", "bigot", "prejudice", "scapegoat", "oppress", "suppress",
-        "inferior", "superior", "supremacist", "nazi", "fascist", "extremist"
-    );
+            "racist", "discriminat", "bigot", "prejudice", "scapegoat", "oppress", "suppress",
+            "inferior", "superior", "supremacist", "nazi", "fascist", "extremist");
 
     @Override
     public String id() {
@@ -51,33 +49,39 @@ public class ToxicityDetectorPlugin implements GuardrailDetectorPlugin {
 
     @Override
     public CheckPhase[] applicablePhases() {
-        return new CheckPhase[]{CheckPhase.PRE_EXECUTION, CheckPhase.POST_EXECUTION};
+        return new CheckPhase[] { CheckPhase.PRE_EXECUTION, CheckPhase.POST_EXECUTION };
     }
 
     @Override
-    public Uni<DetectionResult> detect(String text) {
+    public Uni<DetectionResult> detect(String text, Map<String, Object> metadata) {
         if (text == null || text.trim().isEmpty()) {
-            return Uni.createFrom().item(DetectionResult.safe(getCategory()));
+            return Uni.createFrom().item(DetectionResult.safe("toxicity-detector", "TOXICITY"));
         }
 
         String lowerText = text.toLowerCase();
         int toxicityScore = calculateToxicityScore(lowerText);
 
+        List<Finding> findings = new ArrayList<>();
         if (toxicityScore >= 8) {
+            findings.add(new Finding("TOXICITY", "High toxicity", 0, text.length(), (double) toxicityScore));
             return Uni.createFrom().item(
-                DetectionResult.blocked(getCategory(), "High toxicity content detected")
-            );
+                    DetectionResult.blocked("toxicity-detector", "TOXICITY", "High toxicity content detected",
+                            findings));
         } else if (toxicityScore >= 5) {
+            findings.add(new Finding("TOXICITY", "Moderate toxicity", 0, text.length(), (double) toxicityScore));
             return Uni.createFrom().item(
-                DetectionResult.warning(getCategory(), "Moderate toxicity detected")
-            );
+                    DetectionResult.warning("toxicity-detector", "TOXICITY", "Moderate toxicity detected", findings));
         } else if (toxicityScore > 0) {
-            return Uni.createFrom().item(
-                DetectionResult.low(getCategory(), "Low toxicity detected")
-            );
+            findings.add(new Finding("TOXICITY", "Low toxicity", 0, text.length(), (double) toxicityScore));
+            return Uni.createFrom().item(new DetectionResult(
+                    "toxicity-detector",
+                    "TOXICITY",
+                    false, // Not safe
+                    "Low toxicity detected",
+                    findings));
         }
 
-        return Uni.createFrom().item(DetectionResult.safe(getCategory()));
+        return Uni.createFrom().item(DetectionResult.safe("toxicity-detector", "TOXICITY"));
     }
 
     private int calculateToxicityScore(String text) {
@@ -97,7 +101,8 @@ public class ToxicityDetectorPlugin implements GuardrailDetectorPlugin {
             }
         }
 
-        // Check for repeated exclamation marks or question marks which might indicate aggression
+        // Check for repeated exclamation marks or question marks which might indicate
+        // aggression
         if (text.contains("!!!") || text.contains("???")) {
             score += 1;
         }

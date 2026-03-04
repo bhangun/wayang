@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import tech.kayys.wayang.plugin.registry.execution.ExecutionMode;
+import tech.kayys.wayang.plugin.execution.ExecutionMode;
 
 /**
  * Executor manifest

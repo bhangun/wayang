@@ -1,16 +1,11 @@
 package tech.kayys.wayang.hitl.repository;
 
-import io.smallrye.mutiny.Uni;
-import io.vertx.mutiny.pgclient.PgPool;
-import io.smallrye.mutiny.vertx.core.runtime.VertxCore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
+
 import org.mockito.MockitoAnnotations;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 import tech.kayys.wayang.hitl.domain.*;
 
@@ -18,9 +13,6 @@ import java.time.Instant;
 import java.util.List;
 
 class HumanTaskRepositoryTest {
-
-    @Mock
-    private PgPool pgPool;
 
     private HumanTaskRepository repository;
 
@@ -38,7 +30,7 @@ class HumanTaskRepositoryTest {
                 .assigneeIdentifier("user1")
                 .assignedBy("admin")
                 .build();
-        
+
         HumanTask task = HumanTask.builder()
                 .workflowRunId("workflow-123")
                 .nodeId("node-456")
@@ -53,9 +45,11 @@ class HumanTaskRepositoryTest {
         // Note: Since this is a Panache repository, we're testing the save method
         // which involves database operations. For unit testing, we'd typically use
         // an in-memory database or mock the underlying persistence mechanism.
-        // For now, we'll just verify the method can be called without throwing exceptions.
-        
-        // Since we can't easily test the actual persistence without a real DB connection,
+        // For now, we'll just verify the method can be called without throwing
+        // exceptions.
+
+        // Since we can't easily test the actual persistence without a real DB
+        // connection,
         // we'll focus on testing the logic within the save method
         assertDoesNotThrow(() -> {
             // The actual save would require a real database connection
@@ -70,7 +64,8 @@ class HumanTaskRepositoryTest {
         String tenantId = "tenant-001";
 
         // When & Then
-        // Since we can't easily test the actual database query without a real connection,
+        // Since we can't easily test the actual database query without a real
+        // connection,
         // we'll just verify that the method can be called
         assertDoesNotThrow(() -> {
             repository.findByTaskId(taskId, tenantId);

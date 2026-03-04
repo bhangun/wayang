@@ -2,7 +2,7 @@ package tech.kayys.wayang.guardrails.detector;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import tech.kayys.wayang.guardrails.plugin.GuardrailDetectorPlugin;
+import tech.kayys.wayang.guardrails.plugin.api.*;
 
 import java.util.*;
 
@@ -46,6 +46,9 @@ public class HallucinationDetector implements GuardrailDetectorPlugin {
 
     @Override
     public Uni<DetectionResult> detect(String text, Map<String, Object> metadata) {
+        if (text == null || text.trim().isEmpty()) {
+            return Uni.createFrom().item(DetectionResult.safe("hallucination-local", "HALLUCINATION"));
+        }
         return Uni.createFrom().item(() -> {
             List<String> unsupportedClaims = extractClaims(text);
             List<String> factualErrors = checkFactualConsistency(text, metadata);
@@ -56,7 +59,20 @@ public class HallucinationDetector implements GuardrailDetectorPlugin {
                     contradictsSource;
 
             if (!hallucinated) {
-                return DetectionResult.safe(getCategory());
+                return DetectionResult.safe("hallucination-local", getCategory());
+            }
+
+            List<Finding> findings = new ArrayList<>();
+            factualErrors.forEach(err -> findings.add(new Finding("FACTUAL_ERROR", err, 0, text.length(), 1.0)));
+            unsupportedClaims
+                    .forEach(claim -> findings.add(new Finding("UNSUPPORTED_CLAIM", claim, 0, text.length(), 0.8)));
+            if (contradictsSource) {
+                findings.add(
+                        new Finding("CONTRADICTION", "Statement contradicts source metadata", 0, text.length(), 1.0));
+            }
+
+            if (findings.isEmpty()) {
+                return DetectionResult.safe("hallucination-local", getCategory());
             }
 
             double confidence = calculateHallucinationConfidence(
@@ -64,18 +80,13 @@ public class HallucinationDetector implements GuardrailDetectorPlugin {
                     factualErrors.size(),
                     contradictsSource);
 
-            List<Finding> findings = new ArrayList<>();
-            unsupportedClaims.forEach(c -> findings.add(new Finding("UNSUPPORTED_CLAIM", c, -1, -1, 1.0)));
-            factualErrors.forEach(e -> findings.add(new Finding("FACTUAL_ERROR", e, -1, -1, 1.0)));
-            if (contradictsSource) {
-                findings.add(new Finding("CONTRADICTION", "Statement contradicts source metadata", -1, -1, 1.0));
-            }
-
             if (confidence > 0.8) {
-                return DetectionResult.blocked(getCategory(), "High hallucination likelihood detected");
+                return DetectionResult.blocked("hallucination-local", getCategory(), "Factual hallucination detected",
+                        findings);
             }
 
-            return DetectionResult.warning(getCategory(), "Potential hallucination detected", findings);
+            return DetectionResult.warning("hallucination-local", getCategory(), "Potential hallucination detected",
+                    findings);
         });
     }
 

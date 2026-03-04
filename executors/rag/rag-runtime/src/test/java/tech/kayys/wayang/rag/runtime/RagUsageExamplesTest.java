@@ -1,13 +1,12 @@
 package tech.kayys.wayang.rag.runtime;
-import tech.kayys.wayang.rag.core.*;
 
 import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.kayys.wayang.rag.domain.RagMetrics;
-import tech.kayys.wayang.rag.domain.RagResponse;
+import tech.kayys.wayang.rag.core.RagMetrics;
+import tech.kayys.wayang.rag.core.RagResponse;
 
 import java.time.Instant;
 import java.util.List;

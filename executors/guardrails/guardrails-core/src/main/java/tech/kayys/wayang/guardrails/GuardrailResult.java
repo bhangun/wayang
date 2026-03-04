@@ -1,6 +1,6 @@
 package tech.kayys.wayang.guardrails;
 
-import tech.kayys.wayang.guardrails.detector.Finding;
+import tech.kayys.wayang.guardrails.plugin.api.Finding;
 import java.util.List;
 import java.util.Map;
 

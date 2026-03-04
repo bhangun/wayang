@@ -39,7 +39,7 @@ public class OwnedEmbeddingModelAdapter implements RagEmbeddingModel {
         long started = System.currentTimeMillis();
         try {
             EmbeddingRequest request = new EmbeddingRequest(input, modelName, null, true);
-            EmbeddingResponse response = embeddingService.embedForTenant(tenantId, request);
+            EmbeddingResponse response = embeddingService.embedForTenant(tenantId, request).await().indefinitely();
             metrics.recordEmbeddingSuccess(modelName, input.size(), System.currentTimeMillis() - started);
             return response.embeddings();
         } catch (RuntimeException ex) {
@@ -52,7 +52,8 @@ public class OwnedEmbeddingModelAdapter implements RagEmbeddingModel {
     public int dimension() {
         EmbeddingResponse probe = embeddingService.embedForTenant(
                 tenantId,
-                new EmbeddingRequest(List.of("dimension-probe"), modelName, null, true));
+                new EmbeddingRequest(List.of("dimension-probe"), modelName, null, true))
+                .await().indefinitely();
         return probe.dimension();
     }
 

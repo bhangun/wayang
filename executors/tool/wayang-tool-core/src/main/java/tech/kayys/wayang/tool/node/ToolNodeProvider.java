@@ -12,6 +12,26 @@ import java.util.Map;
 public class ToolNodeProvider implements NodeProvider {
 
     @Override
+    public String id() {
+        return "tech.kayys.wayang.tool.core";
+    }
+
+    @Override
+    public String name() {
+        return "Wayang Tool Core";
+    }
+
+    @Override
+    public String version() {
+        return "1.0.0-SNAPSHOT";
+    }
+
+    @Override
+    public String description() {
+        return "Provides core tool nodes like HTTP, Sandbox, MCP, UTCP, and REST.";
+    }
+
+    @Override
     public List<NodeDefinition> nodes() {
         return List.of(
                 // HTTP Tool Node

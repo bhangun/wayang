@@ -1,10 +1,10 @@
 package tech.kayys.wayang.rag.runtime;
+
 import tech.kayys.wayang.rag.core.*;
 
 import org.junit.jupiter.api.Test;
-import tech.kayys.wayang.rag.domain.GenerationConfig;
+import tech.kayys.wayang.rag.core.GenerationConfig;
 import tech.kayys.wayang.rag.core.RagQuery;
-import tech.kayys.wayang.rag.core.RagResult;
 import tech.kayys.wayang.rag.core.RagScoredChunk;
 
 import java.util.List;
@@ -42,7 +42,7 @@ class NativeGenerationServiceTest {
                 null,
                 true,
                 true,
-                tech.kayys.wayang.rag.domain.CitationStyle.INLINE_NUMBERED,
+                tech.kayys.wayang.rag.core.CitationStyle.INLINE_NUMBERED,
                 false,
                 false,
                 Map.of());

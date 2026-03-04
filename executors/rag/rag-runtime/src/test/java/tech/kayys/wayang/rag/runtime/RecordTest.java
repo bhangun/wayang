@@ -1,15 +1,10 @@
 package tech.kayys.wayang.rag.runtime;
+
 import tech.kayys.wayang.rag.core.*;
 
 import org.junit.jupiter.api.Test;
 import tech.kayys.wayang.rag.core.RagMode;
 import tech.kayys.wayang.rag.core.SearchStrategy;
-import tech.kayys.wayang.rag.core.RagChunk;
-import tech.kayys.wayang.rag.core.RagQuery;
-import tech.kayys.wayang.rag.core.RagResult;
-import tech.kayys.wayang.rag.core.RagScoredChunk;
-import tech.kayys.wayang.rag.core.RagDocument;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -95,8 +90,8 @@ class RecordTest {
         ConversationTurn turn = new ConversationTurn(userMessage, assistantMessage, timestamp);
 
         // Then
-        assertEquals(userMessage, turn.userMessage());
-        assertEquals(assistantMessage, turn.assistantMessage());
+        assertEquals(userMessage, turn.role());
+        assertEquals(assistantMessage, turn.content());
         assertEquals(timestamp, turn.timestamp());
     }
 }

@@ -1,5 +1,9 @@
 package tech.kayys.wayang.rag;
 
+import tech.kayys.wayang.rag.plugin.api.RagPipelinePlugin;
+import tech.kayys.wayang.rag.plugin.api.RagPluginTuningConfig;
+import tech.kayys.wayang.rag.plugin.api.RagPluginExecutionContext;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 

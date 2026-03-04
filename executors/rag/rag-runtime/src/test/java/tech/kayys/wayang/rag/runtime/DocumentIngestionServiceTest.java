@@ -1,5 +1,4 @@
 package tech.kayys.wayang.rag.runtime;
-import tech.kayys.wayang.rag.core.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -7,10 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.kayys.wayang.rag.core.ChunkingConfig;
-import tech.kayys.wayang.rag.core.RagMetrics;
 import tech.kayys.wayang.rag.core.RagChunk;
-import tech.kayys.wayang.rag.core.RagDocument;
-
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;

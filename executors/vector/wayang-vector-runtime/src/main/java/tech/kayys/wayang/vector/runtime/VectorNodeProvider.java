@@ -15,6 +15,26 @@ import java.util.Map;
 public class VectorNodeProvider implements NodeProvider {
 
     @Override
+    public String id() {
+        return "wayang-vector-runtime";
+    }
+
+    @Override
+    public String name() {
+        return "Vector Runtime Plugin";
+    }
+
+    @Override
+    public String version() {
+        return "1.0.0";
+    }
+
+    @Override
+    public String description() {
+        return "Provides Vector Search and Upsert node capabilities.";
+    }
+
+    @Override
     public List<NodeDefinition> nodes() {
         return List.of(
             // Vector Search Node

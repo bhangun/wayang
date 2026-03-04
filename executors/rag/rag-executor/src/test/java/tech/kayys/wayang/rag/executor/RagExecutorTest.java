@@ -9,11 +9,11 @@ import tech.kayys.gamelan.engine.node.NodeExecutionTask;
 import tech.kayys.gamelan.engine.node.NodeId;
 import tech.kayys.gamelan.engine.run.RetryPolicy;
 import tech.kayys.gamelan.engine.workflow.WorkflowRunId;
-import tech.kayys.wayang.rag.domain.RagMetrics;
-import tech.kayys.wayang.rag.domain.RagResponse;
+import tech.kayys.wayang.rag.core.RagMetrics;
+import tech.kayys.wayang.rag.core.RagResponse;
 import tech.kayys.wayang.rag.runtime.RagQueryService;
-import tech.kayys.wayang.rag.domain.GenerationConfig;
-import tech.kayys.wayang.rag.domain.RetrievalConfig;
+import tech.kayys.wayang.rag.core.GenerationConfig;
+import tech.kayys.wayang.rag.core.RetrievalConfig;
 
 import java.time.Duration;
 import java.time.Instant;

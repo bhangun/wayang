@@ -13,7 +13,7 @@
     <artifactId>wayang-agent-core-executor</artifactId>
 
     <properties>
-        <lombok.version>1.18.30</lombok.version>
+        <lombok.version>1.18.42</lombok.version>
         <quarkus.platform.version>3.15.1</quarkus.platform.version>
     </properties>
 
@@ -169,7 +169,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <release>25</release>
+                    <release>21</release>
                 </configuration>
             </plugin>
             <plugin>

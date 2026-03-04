@@ -6,8 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.kayys.wayang.agent.plugin.AgentPlugin;
 import tech.kayys.wayang.plugin.executor.ExecutorPlugin;
-import tech.kayys.wayang.plugin.executor.ExecutorRegistration;
-import tech.kayys.wayang.plugin.executor.ExecutorStatus;
+import tech.kayys.wayang.plugin.registry.executor.ExecutorRegistration;
+import tech.kayys.wayang.plugin.registry.executor.ExecutorStatus;
 import tech.kayys.wayang.registry.ControlPlaneAgentRegistry;
 import tech.kayys.wayang.plugin.WayangPlugin;
 

@@ -1,7 +1,7 @@
 package tech.kayys.wayang.guardrails.policy;
 
 import io.smallrye.mutiny.Uni;
-import tech.kayys.wayang.guardrails.detector.CheckPhase;
+import tech.kayys.wayang.guardrails.plugin.api.CheckPhase;
 import java.util.List;
 
 public interface PolicyRepository {

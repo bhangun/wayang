@@ -12,10 +12,10 @@ import org.jboss.logging.Logger;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import tech.kayys.wayang.plugin.CommunicationProtocol;
+import tech.kayys.wayang.plugin.execution.ExecutionMode;
+import tech.kayys.wayang.plugin.multi.MultiNodePlugin;
 import tech.kayys.wayang.plugin.registry.UIReference;
-import tech.kayys.wayang.plugin.registry.execution.ExecutionMode;
 import tech.kayys.wayang.plugin.registry.executor.ExecutorBinding;
-import tech.kayys.wayang.plugin.registry.multi.MultiNodePlugin;
 import tech.kayys.wayang.schema.validator.SchemaValidator;
 
 /**

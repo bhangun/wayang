@@ -1,7 +1,7 @@
 package tech.kayys.wayang.rag.runtime;
+
 import tech.kayys.wayang.rag.core.*;
 
-import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -16,7 +16,6 @@ import tech.kayys.wayang.rag.core.RagChunk;
 import tech.kayys.wayang.rag.core.RagQuery;
 import tech.kayys.wayang.rag.core.RagResult;
 import tech.kayys.wayang.rag.core.RagScoredChunk;
-import tech.kayys.wayang.rag.core.RagDocument;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -106,8 +105,8 @@ class IntegrationTest {
                                 Instant.now());
 
                 // Then - Verify conversation turn structure
-                assertEquals(query, turn.userMessage());
-                assertFalse(turn.assistantMessage().isEmpty());
+                assertEquals(query, turn.role());
+                assertFalse(turn.content().isEmpty());
                 assertNotNull(turn.timestamp());
         }
 

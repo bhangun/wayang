@@ -229,7 +229,7 @@ public class NodeCatalogResource {
     @Operation(summary = "Validate node configuration against schema")
     public Uni<ValidationResultDTO> validateConfig(
             @PathParam("nodeType") String nodeType,
-            @Valid Map<String, Object> config) {
+            Map<String, @Valid Object> config) {
 
         return Uni.createFrom().item(() -> {
             ValidationResult result = nodeRegistry.validateConfig(nodeType, config);
@@ -245,7 +245,7 @@ public class NodeCatalogResource {
     @Operation(summary = "Validate node inputs against schema")
     public Uni<ValidationResultDTO> validateInputs(
             @PathParam("nodeType") String nodeType,
-            @Valid Map<String, Object> inputs) {
+            Map<String, @Valid Object> inputs) {
 
         return Uni.createFrom().item(() -> {
             ValidationResult result = nodeRegistry.validateInputs(nodeType, inputs);

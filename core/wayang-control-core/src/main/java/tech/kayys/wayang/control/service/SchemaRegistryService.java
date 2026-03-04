@@ -2,14 +2,17 @@ package tech.kayys.wayang.control.service;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.kayys.wayang.control.dto.realtime.ControlPlaneRealtimeEvent;
 import tech.kayys.wayang.control.spi.SchemaRegistrySpi;
 import tech.kayys.wayang.schema.validator.SchemaValidationService;
 import tech.kayys.wayang.schema.validator.ValidationResult;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -23,6 +26,9 @@ public class SchemaRegistryService implements SchemaRegistrySpi {
     @Inject
     SchemaValidationService schemaValidationService;
 
+    @Inject
+    Event<ControlPlaneRealtimeEvent> realtimeEvents;
+
     // In-memory storage for schemas - in production, this would use a persistent store
     private final Map<String, String> schemaStore = new ConcurrentHashMap<>();
 
@@ -34,7 +40,19 @@ public class SchemaRegistryService implements SchemaRegistrySpi {
             schemaStore.put(schemaId, schema);
             LOG.info("Schema {} registered successfully", schemaId);
             return null;
-        }).onItem().invoke(() -> LOG.debug("Schema registered with metadata: {}", metadata))
+        }).onItem().invoke(() -> {
+            LOG.debug("Schema registered with metadata: {}", metadata);
+            realtimeEvents.fire(new ControlPlaneRealtimeEvent(
+                    "schema.registered",
+                    "node",
+                    schemaId,
+                    Map.of(
+                            "schemaId", schemaId,
+                            "schemaType", schemaType,
+                            "metadata", metadata == null ? Map.of() : metadata),
+                    Map.of("source", "schema-registry-service"),
+                    Set.of("tenant:community", "schema:catalog")));
+        })
          .replaceWithVoid();
     }
 
@@ -77,6 +95,13 @@ public class SchemaRegistryService implements SchemaRegistrySpi {
             schemaStore.remove(schemaId);
             LOG.info("Schema {} removed successfully", schemaId);
             return null;
-        }).replaceWithVoid();
+        }).onItem().invoke(() -> realtimeEvents.fire(new ControlPlaneRealtimeEvent(
+                "schema.removed",
+                "node",
+                schemaId,
+                Map.of("schemaId", schemaId),
+                Map.of("source", "schema-registry-service"),
+                Set.of("tenant:community", "schema:catalog"))))
+         .replaceWithVoid();
     }
 }

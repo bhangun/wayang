@@ -1,15 +1,17 @@
 package tech.kayys.wayang.memory.interceptor;
 
-import jakarta.interceptor.Interceptor;
+import jakarta.interceptor.InterceptorBinding;
 
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+@InterceptorBinding
+@Inherited
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-@Interceptor
 public @interface Monitored {
     String value() default "";
 }

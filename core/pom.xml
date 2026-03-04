@@ -47,6 +47,7 @@
     <module>wayang-control-spi</module>
     <module>wayang-control-core-local</module>
     <module>wayang-control-core-remote</module>
+    <module>wayang-control-websocket</module>
   </modules>
 
 

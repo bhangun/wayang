@@ -2,7 +2,6 @@ package tech.kayys.wayang;
 
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
-import io.quarkus.runtime.annotations.QuarkusMain;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
@@ -13,7 +12,6 @@ import tech.kayys.wayang.vector.runtime.VectorStoreProvider;
 /**
  * Main entry point for the Vector Store Runtime module.
  */
-@QuarkusMain
 public class VectorRuntimeMain {
     public static void main(String... args) {
         Quarkus.run(VectorRuntimeApp.class, args);

@@ -4,7 +4,6 @@ import tech.kayys.wayang.memory.executor.AbstractMemoryExecutor;
 import tech.kayys.wayang.memory.executor.MemoryOperationType;
 
 import io.smallrye.mutiny.Uni;
-import io.smallrye.mutiny.tuples.Tuple2;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -12,10 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.kayys.gamelan.engine.node.NodeExecutionResult;
 import tech.kayys.gamelan.engine.node.NodeExecutionTask;
-import tech.kayys.gamelan.engine.node.NodeExecutionStatus;
 import tech.kayys.gamelan.engine.protocol.CommunicationType;
 import tech.kayys.gamelan.sdk.executor.core.Executor;
-import tech.kayys.gamelan.sdk.executor.core.SimpleNodeExecutionResult;
 import tech.kayys.wayang.memory.spi.AgentMemory;
 import tech.kayys.wayang.memory.spi.MemoryEntry;
 

@@ -1,500 +1,185 @@
-name: Release
+name: Release Wayang
 
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Release version (e.g., v1.0.0)'
+      tag:
+        description: "Release tag to publish (example: v1.0.0)"
         required: true
         type: string
-      dry_run:
-        description: 'Dry run (no publish)'
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: write
-  packages: write
-  issues: write
-
-env:
-  MAVEN_OPTS: "-Xmx4g -XX:MaxMetaspaceSize=1g"
 
 jobs:
-  # Build JAR (portable)
-  build-jar:
-    name: Build JAR
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+  build-native:
+    name: Native ${{ matrix.asset_name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            asset_name: wayang-standalone-linux-x86_64
+            shell: bash
+          - runner: macos-13
+            asset_name: wayang-standalone-osx-x86_64
+            shell: bash
+          - runner: macos-14
+            asset_name: wayang-standalone-osx-aarch_64
+            shell: bash
+          - runner: windows-latest
+            asset_name: wayang-standalone-windows-x86_64.exe
+            shell: pwsh
 
-      - name: Resolve Wayang root
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup GraalVM
+        uses: actions/setup-java@v4
+        with:
+          distribution: graalvm
+          java-version: "25"
+          cache: maven
+
+      - name: Install native-image
         shell: bash
         run: |
-          if [ -f wayang/pom.xml ]; then
-            echo "WAYANG_ROOT=wayang" >> "$GITHUB_ENV"
-          else
-            echo "WAYANG_ROOT=." >> "$GITHUB_ENV"
-          fi
+          gu install native-image || true
+
+      - name: Build native image (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: wayang
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -f pom.xml -pl runtime/wayang-runtime-standalone -am clean package -Dnative -DskipTests
+          mkdir -p artifacts
+          cp runtime/wayang-runtime-standalone/target/*-runner "artifacts/${{ matrix.asset_name }}"
+          chmod +x "artifacts/${{ matrix.asset_name }}"
+
+      - name: Build native image (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: wayang
+        run: |
+          mvn -B -ntp -f pom.xml -pl runtime/wayang-runtime-standalone -am clean package -Dnative -DskipTests
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          $runner = Get-ChildItem -Path runtime/wayang-runtime-standalone/target -Filter "*-runner.exe" | Select-Object -First 1
+          if (-not $runner) { throw "Native executable not found." }
+          Copy-Item $runner.FullName "artifacts/${{ matrix.asset_name }}"
+
+      - name: Upload native artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: wayang/artifacts/${{ matrix.asset_name }}
+          if-no-files-found: error
+
+  build-jar-and-service-assets:
+    name: Build jar and service assets
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          java-version: '25'
-          distribution: 'temurin'
-          cache: 'maven'
+          distribution: temurin
+          java-version: "25"
+          cache: maven
 
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
-
-      - name: Build JAR
-        run: |
-          mvn -f "${WAYANG_ROOT}/pom.xml" clean package -DskipTests -pl runtime/wayang-runtime-standalone -am
-
-      - name: Rename JAR
-        run: |
-          VERSION="${{ github.event.inputs.version || github.ref_name }}"
-          VERSION="${VERSION#v}"  # Remove 'v' prefix
-          mkdir -p "${WAYANG_ROOT}/artifacts"
-          cp "${WAYANG_ROOT}/runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner.jar" \
-             "${WAYANG_ROOT}/artifacts/wayang-runtime-standalone-${VERSION}.jar"
+      - name: Build runnable jar
         shell: bash
+        working-directory: wayang
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -f pom.xml -pl runtime/wayang-runtime-standalone -am clean package -DskipTests
+          release_version="${RELEASE_TAG#v}"
+          mkdir -p artifacts
+          cp runtime/wayang-runtime-standalone/target/*-runner.jar "artifacts/wayang-runtime-standalone-${release_version}.jar"
 
-      - name: Upload JAR Artifact
+      - name: Package service assets
+        shell: bash
+        working-directory: wayang
+        run: |
+          set -euo pipefail
+          release_version="${RELEASE_TAG#v}"
+          mkdir -p artifacts/service-assets/scripts/service
+          cp -R scripts/service/linux artifacts/service-assets/scripts/service/
+          cp -R scripts/service/macos artifacts/service-assets/scripts/service/
+          cp -R scripts/service/windows artifacts/service-assets/scripts/service/
+          cp scripts/INSTALL.md artifacts/service-assets/INSTALL.md
+          (
+            cd artifacts/service-assets
+            zip -r "../wayang-service-assets-${release_version}.zip" .
+          )
+
+      - name: Upload jar artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wayang-jar
-          path: ${{ env.WAYANG_ROOT }}/artifacts/wayang-runtime-standalone-*.jar
-          retention-days: 7
+          name: wayang-runtime-standalone-jar
+          path: wayang/artifacts/wayang-runtime-standalone-*.jar
+          if-no-files-found: error
 
-  # Build native images for all platforms
-  package-service-assets:
-    name: Package Service Assets
-    runs-on: ubuntu-latest
-    needs:
-      - build-native-linux-x86
-      - build-native-linux-arm
-      - build-native-macos-x86
-      - build-native-macos-arm
-      - build-native-windows
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Resolve Wayang root
-        shell: bash
-        run: |
-          if [ -f wayang/pom.xml ]; then
-            echo "WAYANG_ROOT=wayang" >> "$GITHUB_ENV"
-          else
-            echo "WAYANG_ROOT=." >> "$GITHUB_ENV"
-          fi
-
-      - name: Download native artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ${{ env.WAYANG_ROOT }}/artifacts
-          merge-multiple: true
-
-      - name: Package service bundle
-        shell: bash
-        run: |
-          VERSION="${{ github.event.inputs.version || github.ref_name }}"
-          VERSION="${VERSION#v}"
-          mkdir -p "${WAYANG_ROOT}/artifacts"
-          mkdir -p "${WAYANG_ROOT}/service-bundle/bin"
-          mkdir -p "${WAYANG_ROOT}/service-bundle/default-home/.wayang/bin"
-          mkdir -p "${WAYANG_ROOT}/service-bundle/default-home/.wayang/config"
-          mkdir -p "${WAYANG_ROOT}/service-bundle/default-home/.wayang/logs"
-          mkdir -p "${WAYANG_ROOT}/service-bundle/default-home/.wayang/plugins"
-          mkdir -p "${WAYANG_ROOT}/service-bundle/default-home/.wayang/secrets"
-          mkdir -p "${WAYANG_ROOT}/service-bundle/default-home/.wayang/gollek/models"
-          mkdir -p "${WAYANG_ROOT}/service-bundle/default-home/.wayang/gollek/storage"
-
-          cp "${WAYANG_ROOT}"/artifacts/wayang-standalone-* "${WAYANG_ROOT}/service-bundle/bin/" 2>/dev/null || true
-          cp "${WAYANG_ROOT}"/artifacts/wayang-standalone-*.exe "${WAYANG_ROOT}/service-bundle/bin/" 2>/dev/null || true
-          cp "${WAYANG_ROOT}"/artifacts/wayang-standalone-* "${WAYANG_ROOT}/service-bundle/default-home/.wayang/bin/" 2>/dev/null || true
-          cp "${WAYANG_ROOT}"/artifacts/wayang-standalone-*.exe "${WAYANG_ROOT}/service-bundle/default-home/.wayang/bin/" 2>/dev/null || true
-          cp -R "${WAYANG_ROOT}/scripts/service" "${WAYANG_ROOT}/service-bundle/"
-          cp "${WAYANG_ROOT}/scripts/INSTALL.md" "${WAYANG_ROOT}/service-bundle/INSTALL.md"
-          cp "${WAYANG_ROOT}/runtime/wayang-runtime-standalone/src/main/resources/application.properties" \
-             "${WAYANG_ROOT}/service-bundle/default-home/.wayang/config/application.properties"
-
-          cat > "${WAYANG_ROOT}/service-bundle/README.md" << 'README'
-          # Wayang Service Bundle
-
-          This bundle includes:
-          - Native Wayang executables in `bin/`
-          - Native Wayang executables staged in `default-home/.wayang/bin/`
-          - Service helpers under `service/`
-          - Default home directory layout under `default-home/.wayang/`
-
-          All state defaults to `~/.wayang/*`. Gollek data defaults to
-          `~/.wayang/gollek/*` and falls back to `~/.gollek/*` only when
-          `~/.wayang/gollek/*` cannot be created, or when you explicitly
-          set `GOLLEK_HOME`.
-          README
-
-          cat > "${WAYANG_ROOT}/service-bundle/default-home/.wayang/config/env.example" << 'ENV'
-          # Wayang home defaults
-          WAYANG_HOME=$HOME/.wayang
-          WAYANG_GOLLEK_HOME=$HOME/.wayang/gollek
-
-          # Optional legacy fallback (set only if you explicitly want ~/.gollek/*)
-          # GOLLEK_HOME=$HOME/.gollek
-          ENV
-
-          touch "${WAYANG_ROOT}/service-bundle/default-home/.wayang/config/.keep"
-          touch "${WAYANG_ROOT}/service-bundle/default-home/.wayang/logs/.keep"
-          touch "${WAYANG_ROOT}/service-bundle/default-home/.wayang/plugins/.keep"
-          touch "${WAYANG_ROOT}/service-bundle/default-home/.wayang/secrets/.keep"
-          touch "${WAYANG_ROOT}/service-bundle/default-home/.wayang/gollek/models/.keep"
-          touch "${WAYANG_ROOT}/service-bundle/default-home/.wayang/gollek/storage/.keep"
-
-          cd "${WAYANG_ROOT}"
-          zip -r "artifacts/wayang-service-assets-${VERSION}.zip" service-bundle
-
-      - name: Upload service assets
+      - name: Upload service assets artifact
         uses: actions/upload-artifact@v4
         with:
           name: wayang-service-assets
-          path: ${{ env.WAYANG_ROOT }}/artifacts/wayang-service-assets-*.zip
-          retention-days: 7
+          path: wayang/artifacts/wayang-service-assets-*.zip
+          if-no-files-found: error
 
-  build-native-linux-x86:
-    name: Build Native Linux x86_64
+  publish-release:
+    name: Publish GitHub Release
     runs-on: ubuntu-latest
-    needs: []
-    container:
-      image: ghcr.io/graalvm/native-image-community:25
-      options: --privileged
+    needs:
+      - build-native
+      - build-jar-and-service-assets
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Resolve Wayang root
-        shell: bash
-        run: |
-          if [ -f wayang/pom.xml ]; then
-            echo "WAYANG_ROOT=wayang" >> "$GITHUB_ENV"
-          else
-            echo "WAYANG_ROOT=." >> "$GITHUB_ENV"
-          fi
-
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: /root/.m2
-          key: linux-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: linux-m2
-
-      - name: Build Native Image
-        run: |
-          mvn -f "${WAYANG_ROOT}/pom.xml" clean package -Pnative -DskipTests -pl runtime/wayang-runtime-standalone -am
-
-      - name: Prepare Artifact
-        run: |
-          mkdir -p "${WAYANG_ROOT}/artifacts"
-          mv "${WAYANG_ROOT}/runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner" \
-             "${WAYANG_ROOT}/artifacts/wayang-standalone-linux-x86_64"
-          chmod +x "${WAYANG_ROOT}/artifacts/wayang-standalone-linux-x86_64"
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: wayang-standalone-linux-x86_64
-          path: ${{ env.WAYANG_ROOT }}/artifacts/wayang-standalone-linux-x86_64
-          retention-days: 7
-
-  build-native-linux-arm:
-    name: Build Native Linux ARM64
-    runs-on: ubuntu-latest
-    needs: []
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Resolve Wayang root
-        shell: bash
-        run: |
-          if [ -f wayang/pom.xml ]; then
-            echo "WAYANG_ROOT=wayang" >> "$GITHUB_ENV"
-          else
-            echo "WAYANG_ROOT=." >> "$GITHUB_ENV"
-          fi
-
-      - name: Setup QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
-      - name: Setup GraalVM
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: '25'
-          distribution: 'graalvm'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          native-image-job-reports: 'true'
-
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: linux-arm-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: linux-arm-m2
-
-      - name: Build Native Image (cross-compile)
-        run: |
-          mvn -f "${WAYANG_ROOT}/pom.xml" clean package -Pnative -DskipTests -pl runtime/wayang-runtime-standalone -am \
-            -Dquarkus.native.container-build=true \
-            -Dquarkus.native.container-runtime=docker \
-            -Dquarkus.native.native-image-xbuild-image-args=--platform=linux/arm64
-
-      - name: Prepare Artifact
-        run: |
-          mkdir -p "${WAYANG_ROOT}/artifacts"
-          mv "${WAYANG_ROOT}/runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner" \
-             "${WAYANG_ROOT}/artifacts/wayang-standalone-linux-aarch_64"
-          chmod +x "${WAYANG_ROOT}/artifacts/wayang-standalone-linux-aarch_64"
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: wayang-standalone-linux-aarch_64
-          path: ${{ env.WAYANG_ROOT }}/artifacts/wayang-standalone-linux-aarch_64
-          retention-days: 7
-
-  build-native-macos-x86:
-    name: Build Native macOS x86_64
-    runs-on: macos-13
-    needs: []
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Resolve Wayang root
-        shell: bash
-        run: |
-          if [ -f wayang/pom.xml ]; then
-            echo "WAYANG_ROOT=wayang" >> "$GITHUB_ENV"
-          else
-            echo "WAYANG_ROOT=." >> "$GITHUB_ENV"
-          fi
-
-      - name: Setup GraalVM
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: '25'
-          distribution: 'graalvm'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          native-image-job-reports: 'true'
-
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: macos-x86-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: macos-x86-m2
-
-      - name: Build Native Image
-        run: |
-          mvn -f "${WAYANG_ROOT}/pom.xml" clean package -Pnative -DskipTests -pl runtime/wayang-runtime-standalone -am
-
-      - name: Prepare Artifact
-        run: |
-          mkdir -p "${WAYANG_ROOT}/artifacts"
-          mv "${WAYANG_ROOT}/runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner" \
-             "${WAYANG_ROOT}/artifacts/wayang-standalone-osx-x86_64"
-          chmod +x "${WAYANG_ROOT}/artifacts/wayang-standalone-osx-x86_64"
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: wayang-standalone-osx-x86_64
-          path: ${{ env.WAYANG_ROOT }}/artifacts/wayang-standalone-osx-x86_64
-          retention-days: 7
-
-  build-native-macos-arm:
-    name: Build Native macOS ARM64
-    runs-on: macos-latest
-    needs: []
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Resolve Wayang root
-        shell: bash
-        run: |
-          if [ -f wayang/pom.xml ]; then
-            echo "WAYANG_ROOT=wayang" >> "$GITHUB_ENV"
-          else
-            echo "WAYANG_ROOT=." >> "$GITHUB_ENV"
-          fi
-
-      - name: Setup GraalVM
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: '25'
-          distribution: 'graalvm'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          native-image-job-reports: 'true'
-
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: macos-arm-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: macos-arm-m2
-
-      - name: Build Native Image
-        run: |
-          mvn -f "${WAYANG_ROOT}/pom.xml" clean package -Pnative -DskipTests -pl runtime/wayang-runtime-standalone -am
-
-      - name: Prepare Artifact
-        run: |
-          mkdir -p "${WAYANG_ROOT}/artifacts"
-          mv "${WAYANG_ROOT}/runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner" \
-             "${WAYANG_ROOT}/artifacts/wayang-standalone-osx-aarch_64"
-          chmod +x "${WAYANG_ROOT}/artifacts/wayang-standalone-osx-aarch_64"
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: wayang-standalone-osx-aarch_64
-          path: ${{ env.WAYANG_ROOT }}/artifacts/wayang-standalone-osx-aarch_64
-          retention-days: 7
-
-  build-native-windows:
-    name: Build Native Windows x86_64
-    runs-on: windows-latest
-    needs: []
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Resolve Wayang root
-        shell: bash
-        run: |
-          if [ -f wayang/pom.xml ]; then
-            echo "WAYANG_ROOT=wayang" >> "$GITHUB_ENV"
-          else
-            echo "WAYANG_ROOT=." >> "$GITHUB_ENV"
-          fi
-
-      - name: Setup GraalVM
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: '25'
-          distribution: 'graalvm'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          native-image-job-reports: 'true'
-
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: ~\AppData\Local\npm-cache
-          key: windows-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: windows-m2
-
-      - name: Build Native Image
-        run: |
-          mvn -f "${WAYANG_ROOT}/pom.xml" clean package -Pnative -DskipTests -pl runtime/wayang-runtime-standalone -am
-        shell: bash
-
-      - name: Prepare Artifact
-        run: |
-          mkdir -p "${WAYANG_ROOT}/artifacts"
-          mv "${WAYANG_ROOT}/runtime/wayang-runtime-standalone/target/wayang-runtime-standalone-1.0.0-SNAPSHOT-runner.exe" \
-             "${WAYANG_ROOT}/artifacts/wayang-standalone-windows-x86_64.exe"
-        shell: bash
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: wayang-standalone-windows-x86_64
-          path: ${{ env.WAYANG_ROOT }}/artifacts/wayang-standalone-windows-x86_64.exe
-          retention-days: 7
-
-  # Release and publish
-  release:
-    name: Release with JReleaser
-    needs: [build-jar, package-service-assets, build-native-linux-x86, build-native-linux-arm, build-native-macos-x86, build-native-macos-arm, build-native-windows]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Resolve Wayang root
-        shell: bash
-        run: |
-          if [ -f wayang/pom.xml ]; then
-            echo "WAYANG_ROOT=wayang" >> "$GITHUB_ENV"
-          else
-            echo "WAYANG_ROOT=." >> "$GITHUB_ENV"
-          fi
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '25'
-          distribution: 'temurin'
-
-      - name: Download all artifacts
+      - name: Download all assets
         uses: actions/download-artifact@v4
         with:
-          path: ${{ env.WAYANG_ROOT }}/artifacts
+          path: release-assets
           merge-multiple: true
 
-      - name: List artifacts
-        run: ls -la "${WAYANG_ROOT}/artifacts"
-        shell: bash
-
-      - name: Run JReleaser (Dry Run)
-        if: ${{ github.event.inputs.dry_run == 'true' }}
+      - name: Verify assets
         shell: bash
         run: |
-          mvn -f "${WAYANG_ROOT}/pom.xml" jreleaser:dry-run -Djreleaser.git.root.search=true -Djreleaser.config.file="${WAYANG_ROOT}/jreleaser.yml"
-        env:
-          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          JRELEASER_DOCKER_DOCKER_IO_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          JRELEASER_DOCKER_DOCKER_IO_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          JRELEASER_CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
-          JRELEASER_SDKMAN_CONSUMER_KEY: ${{ secrets.SDKMAN_CONSUMER_KEY }}
-          JRELEASER_SDKMAN_CONSUMER_TOKEN: ${{ secrets.SDKMAN_CONSUMER_TOKEN }}
+          set -euo pipefail
+          ls -lah release-assets
 
-      - name: Run JReleaser (Full Release)
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        shell: bash
-        run: |
-          mvn -f "${WAYANG_ROOT}/pom.xml" jreleaser:full-release -Djreleaser.git.root.search=true -Djreleaser.config.file="${WAYANG_ROOT}/jreleaser.yml"
-        env:
-          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          JRELEASER_DOCKER_DOCKER_IO_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          JRELEASER_DOCKER_DOCKER_IO_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          JRELEASER_CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
-          JRELEASER_SDKMAN_CONSUMER_KEY: ${{ secrets.SDKMAN_CONSUMER_KEY }}
-          JRELEASER_SDKMAN_CONSUMER_TOKEN: ${{ secrets.SDKMAN_CONSUMER_TOKEN }}
-
-      - name: Upload service assets to GitHub Release
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        shell: bash
-        run: |
-          VERSION="${{ github.event.inputs.version || github.ref_name }}"
-          VERSION="${VERSION#v}"
-          TAG="${{ github.event.inputs.version || github.ref_name }}"
-          gh release upload "${TAG}" "${WAYANG_ROOT}/artifacts/wayang-service-assets-${VERSION}.zip" --clobber
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload JReleaser output
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Create/Update GitHub release
+        uses: softprops/action-gh-release@v2
         with:
-          name: jreleaser-output
-          path: |
-            ${{ env.WAYANG_ROOT }}/target/jreleaser/
-            ${{ env.WAYANG_ROOT }}/target/jreleaser/logs/
-          retention-days: 7
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: |
+            release-assets/wayang-standalone-linux-x86_64
+            release-assets/wayang-standalone-osx-x86_64
+            release-assets/wayang-standalone-osx-aarch_64
+            release-assets/wayang-standalone-windows-x86_64.exe
+            release-assets/wayang-runtime-standalone-*.jar
+            release-assets/wayang-service-assets-*.zip
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          overwrite_files: true
+          body: |
+            Wayang standalone release assets:
+            - Native executables
+            - Runnable standalone jar
+            - Service helper scripts archive
+            
+            Service/runtime default paths:
+            - `WAYANG_HOME` => `~/.wayang`
+            - `WAYANG_GOLLEK_HOME` => `~/.wayang/gollek`
+            - fallback => `~/.gollek`

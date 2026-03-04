@@ -24,8 +24,8 @@ public class ConversationMemoryEntity extends PanacheEntityBase {
     
     @ElementCollection
     @CollectionTable(name = "memory_metadata", joinColumns = @JoinColumn(name = "memory_id"))
-    @MapKeyColumn(name = "key")
-    @Column(name = "value")
+    @MapKeyColumn(name = "metadata_key")
+    @Column(name = "metadata_value")
     public Map<String, String> metadata;
     
     @ElementCollection

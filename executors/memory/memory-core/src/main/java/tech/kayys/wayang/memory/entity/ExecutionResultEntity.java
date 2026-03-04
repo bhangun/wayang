@@ -34,8 +34,8 @@ public class ExecutionResultEntity extends PanacheEntityBase {
     
     @ElementCollection
     @CollectionTable(name = "execution_metadata", joinColumns = @JoinColumn(name = "execution_id"))
-    @MapKeyColumn(name = "key")
-    @Column(name = "value")
+    @MapKeyColumn(name = "metadata_key")
+    @Column(name = "metadata_value")
     public Map<String, String> metadata;
     
     @ElementCollection

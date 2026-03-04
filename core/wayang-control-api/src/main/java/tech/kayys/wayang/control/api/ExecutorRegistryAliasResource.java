@@ -10,7 +10,6 @@ import jakarta.ws.rs.core.MediaType;
 import java.util.List;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
-import tech.kayys.wayang.plugin.registry.executor.ExecutorStatus;
 
 /**
  * Backward-compatible executor listing endpoint for UI clients.
@@ -26,7 +25,7 @@ public class ExecutorRegistryAliasResource {
     @GET
     @Operation(summary = "List all registered executors")
     public Uni<List<ExecutorSummary>> listExecutors(
-            @QueryParam("status") ExecutorStatus status,
+            @QueryParam("status") String status,
             @QueryParam("capability") String capability) {
         return delegate.listExecutors(status, capability);
     }

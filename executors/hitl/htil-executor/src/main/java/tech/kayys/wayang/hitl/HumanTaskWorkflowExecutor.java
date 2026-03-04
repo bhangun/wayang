@@ -1,4 +1,4 @@
-package tech.kayys.wayang.hitl.runtime;
+package tech.kayys.wayang.hitl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.smallrye.mutiny.Uni;

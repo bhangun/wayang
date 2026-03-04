@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Executor registry and management API.
@@ -102,8 +103,19 @@ public class ExecutorRegistryResource {
     @GET
     @Operation(summary = "List all registered executors")
     public Uni<List<ExecutorSummary>> listExecutors(
-            @QueryParam("status") ExecutorStatus status,
+            @QueryParam("status") String status,
             @QueryParam("capability") String capability) {
+
+        final ExecutorStatus parsedStatus;
+        if (status == null || status.isBlank()) {
+            parsedStatus = null;
+        } else {
+            try {
+                parsedStatus = ExecutorStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ignored) {
+                return Uni.createFrom().item(List.of());
+            }
+        }
 
         return Uni.createFrom().item(() -> {
             List<ExecutorRegistration> executors;
@@ -115,7 +127,7 @@ public class ExecutorRegistryResource {
             }
 
             return executors.stream()
-                    .filter(e -> status == null || e.status == status)
+                    .filter(e -> parsedStatus == null || e.status == parsedStatus)
                     .map(e -> new ExecutorSummary(
                             e.executorId,
                             e.executorType,

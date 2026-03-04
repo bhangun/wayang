@@ -14,7 +14,8 @@ import org.eclipse.microprofile.config.spi.ConfigSource;
 public class StandaloneDefaultsConfigSource implements ConfigSource {
 
     private static final String H2_JDBC_URL =
-            "jdbc:h2:mem:wayangdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE";
+            "jdbc:h2:mem:wayangdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
+                    + ";INIT=CREATE SCHEMA IF NOT EXISTS WAYANG\\;SET SCHEMA WAYANG";
 
     private static final Map<String, String> PROPERTIES = new LinkedHashMap<>();
 
@@ -52,6 +53,28 @@ public class StandaloneDefaultsConfigSource implements ConfigSource {
         PROPERTIES.put("gamelan.tenant.default-id", "community");
         PROPERTIES.put("gamelan.tenant.allow-default", "true");
         PROPERTIES.put("mp.jwt.verify.publickey.location", "classpath:jwt/public-key.pem");
+        PROPERTIES.put("mp.messaging.incoming.planning-requests.enabled", "false");
+        PROPERTIES.put("mp.messaging.incoming.execution-results.enabled", "false");
+        PROPERTIES.put("mp.messaging.outgoing.memory-updated.enabled", "false");
+        PROPERTIES.put("mp.messaging.outgoing.execution-stored.enabled", "false");
+        PROPERTIES.put("mp.messaging.outgoing.backup-scheduled.enabled", "false");
+        PROPERTIES.put("mp.messaging.outgoing.backup-events.enabled", "false");
+        PROPERTIES.put("mp.messaging.outgoing.memory-updated.connector", "smallrye-kafka");
+        PROPERTIES.put("mp.messaging.outgoing.memory-updated.topic", "memory-updated");
+        PROPERTIES.put("mp.messaging.outgoing.memory-updated.value.serializer",
+                "io.quarkus.kafka.client.serialization.ObjectMapperSerializer");
+        PROPERTIES.put("mp.messaging.outgoing.execution-stored.connector", "smallrye-kafka");
+        PROPERTIES.put("mp.messaging.outgoing.execution-stored.topic", "execution-stored");
+        PROPERTIES.put("mp.messaging.outgoing.execution-stored.value.serializer",
+                "io.quarkus.kafka.client.serialization.ObjectMapperSerializer");
+        PROPERTIES.put("mp.messaging.outgoing.backup-scheduled.connector", "smallrye-kafka");
+        PROPERTIES.put("mp.messaging.outgoing.backup-scheduled.topic", "backup-scheduled");
+        PROPERTIES.put("mp.messaging.outgoing.backup-scheduled.value.serializer",
+                "io.quarkus.kafka.client.serialization.ObjectMapperSerializer");
+        PROPERTIES.put("mp.messaging.outgoing.backup-events.connector", "smallrye-kafka");
+        PROPERTIES.put("mp.messaging.outgoing.backup-events.topic", "backup-events");
+        PROPERTIES.put("mp.messaging.outgoing.backup-events.value.serializer",
+                "io.quarkus.kafka.client.serialization.ObjectMapperSerializer");
     }
 
     @Override

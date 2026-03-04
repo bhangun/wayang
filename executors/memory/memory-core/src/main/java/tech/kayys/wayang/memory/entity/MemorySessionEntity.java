@@ -19,8 +19,8 @@ public class MemorySessionEntity extends PanacheEntityBase {
     
     @ElementCollection
     @CollectionTable(name = "session_metadata", joinColumns = @JoinColumn(name = "session_id"))
-    @MapKeyColumn(name = "key")
-    @Column(name = "value")
+    @MapKeyColumn(name = "metadata_key")
+    @Column(name = "metadata_value")
     public Map<String, String> metadata;
     
     @Column(name = "created_at", nullable = false)

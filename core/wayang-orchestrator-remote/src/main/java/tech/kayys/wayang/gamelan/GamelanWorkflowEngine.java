@@ -27,6 +27,10 @@ import tech.kayys.gamelan.sdk.client.GamelanClient;
 @ApplicationScoped
 public class GamelanWorkflowEngine extends AbstractGamelanWorkflowEngine {
 
+    protected GamelanWorkflowEngine() {
+        super();
+    }
+
     @Inject
     public GamelanWorkflowEngine(GamelanEngineConfig config) {
         super(config);

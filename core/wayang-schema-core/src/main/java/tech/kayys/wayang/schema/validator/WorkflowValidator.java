@@ -26,7 +26,7 @@ public class WorkflowValidator {
             new ValidationRule("nodes", "required", null, "Workflow must have at least one node", "ERROR", true)
         };
         
-        String schema = BuiltinSchemaCatalog.get(BuiltinSchemaCatalog.WORKFLOW);
+        String schema = BuiltinSchemaCatalog.get(BuiltinSchemaCatalog.WORKFLOW_SPEC);
         
         return validationService.validateComprehensive(schema, rules, workflow);
     }

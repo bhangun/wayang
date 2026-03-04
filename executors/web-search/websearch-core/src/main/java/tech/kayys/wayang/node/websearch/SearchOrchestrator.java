@@ -10,6 +10,8 @@ import tech.kayys.wayang.node.websearch.api.*;
 import tech.kayys.wayang.node.websearch.spi.*;
 
 import java.time.Duration;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.List;
 import java.util.Set;
@@ -37,9 +39,9 @@ public class SearchOrchestrator {
         List<SearchProvider> available = selectProviders(request);
         
         if (available.isEmpty()) {
-            return Uni.createFrom().failure(
-                new IllegalStateException("No providers for: " + request.searchType())
-            );
+            LOG.warnf("No search providers available for type=%s providers=%s",
+                request.searchType(), request.providers());
+            return Uni.createFrom().item(fallbackResponse(request.query()));
         }
 
         return executeWithFallback(request, available, 0);
@@ -47,9 +49,8 @@ public class SearchOrchestrator {
 
     private Uni<SearchResponse> executeWithFallback(SearchRequest request, List<SearchProvider> provs, int idx) {
         if (idx >= provs.size()) {
-            return Uni.createFrom().failure(
-                new IllegalStateException("All providers failed for query: " + request.query())
-            );
+            LOG.warnf("All providers failed for query='%s', returning empty results", request.query());
+            return Uni.createFrom().item(fallbackResponse(request.query()));
         }
 
         SearchProvider provider = provs.get(idx);
@@ -146,5 +147,32 @@ public class SearchOrchestrator {
             cursor = cursor.getCause();
         }
         return null;
+    }
+
+    private SearchResponse fallbackResponse(String query) {
+        if (query == null || query.isBlank()) {
+            return SearchResponse.builder()
+                .results(List.of())
+                .totalResults(0)
+                .providerUsed("none")
+                .durationMs(0L)
+                .build();
+        }
+
+        String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8);
+        SearchResult fallback = SearchResult.builder()
+            .title("Search web for '" + query + "'")
+            .url("https://duckduckgo.com/?q=" + encodedQuery)
+            .snippet("Live providers are unavailable. Open this URL to view web results directly.")
+            .source("fallback")
+            .score(50.0)
+            .build();
+
+        return SearchResponse.builder()
+            .results(List.of(fallback))
+            .totalResults(1)
+            .providerUsed("fallback")
+            .durationMs(0L)
+            .build();
     }
 }

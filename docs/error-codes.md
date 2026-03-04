@@ -119,6 +119,12 @@ Generated from `ErrorCode` at build time.
 | INTEGRATION_001 | 504 | true | Integration timed out |
 | INTEGRATION_002 | 502 | true | Integration failed |
 
+## SEARCH
+
+| Code | HTTP | Retryable | Message |
+| --- | --- | --- | --- |
+| SEARCH_001 | 503 | true | Search provider unavailable |
+
 ## SEC
 
 | Code | HTTP | Retryable | Message |
@@ -201,4 +207,3 @@ Generated from `ErrorCode` at build time.
 | Code | HTTP | Retryable | Message |
 | --- | --- | --- | --- |
 | INTERNAL_001 | 500 | true | Internal server error |
-

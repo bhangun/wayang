@@ -1,6 +1,7 @@
 package tech.kayys.wayang.schema.api;
 
 import jakarta.inject.Inject;
+import jakarta.annotation.security.PermitAll;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -12,6 +13,7 @@ import tech.kayys.wayang.schema.api.dto.*;
 import tech.kayys.wayang.schema.validator.*;
 
 @Path("/v1/schema")
+@PermitAll
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class SchemaApi {

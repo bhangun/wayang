@@ -104,6 +104,9 @@ public enum ErrorCode {
     INTEGRATION_TIMEOUT(ErrorCategory.INTEGRATION, 504, "INTEGRATION_001", "Integration timed out", true),
     INTEGRATION_FAILED(ErrorCategory.INTEGRATION, 502, "INTEGRATION_002", "Integration failed", true),
 
+    // ===== Search Errors =====
+    SEARCH_PROVIDER_UNAVAILABLE(ErrorCategory.SEARCH, 503, "SEARCH_001", "Search provider unavailable", true),
+
     // ===== Security Errors =====
     SECURITY_UNAUTHORIZED(ErrorCategory.SECURITY, 401, "SEC_001", "Unauthorized", false),
     SECURITY_FORBIDDEN(ErrorCategory.SECURITY, 403, "SEC_002", "Forbidden", false),
@@ -168,6 +171,7 @@ public enum ErrorCode {
         HITL("HITL"),
         EIP("EIP"),
         INTEGRATION("INTEGRATION"),
+        SEARCH("SEARCH"),
         SECURITY("SEC"),
         TENANT("TENANT"),
         CONFIG("CONFIG"),

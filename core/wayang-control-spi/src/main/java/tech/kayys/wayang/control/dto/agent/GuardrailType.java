@@ -1,4 +1,4 @@
-package tech.kayys.wayang.control.dto;
+package tech.kayys.wayang.control.dto.agent;
 
 public enum GuardrailType {
     CONTENT_FILTER,

@@ -18,19 +18,20 @@
 package tech.kayys.wayang.control.api;
 
 import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import tech.kayys.wayang.control.dto.AgentTask;
+import tech.kayys.wayang.control.dto.agent.CreateAgentRequest;
+import tech.kayys.wayang.control.dto.realtime.ControlPlaneRealtimeEvent;
 import tech.kayys.wayang.control.service.WayangDefinitionService;
-import tech.kayys.wayang.control.domain.WayangDefinition;
-import tech.kayys.wayang.control.dto.CreateAgentRequest;
 import tech.kayys.wayang.schema.DefinitionType;
 import tech.kayys.wayang.schema.WayangSpec;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -43,6 +44,9 @@ public class AgentResource {
 
         @Inject
         WayangDefinitionService definitionService;
+
+        @Inject
+        Event<ControlPlaneRealtimeEvent> realtimeEvents;
 
         @POST
         public Uni<Response> createAgent(@QueryParam("projectId") UUID projectId,
@@ -61,7 +65,15 @@ public class AgentResource {
 
                 return definitionService.create(tenantId, projectId, request.agentName(),
                                 request.description(), DefinitionType.AI_AGENT, spec, "system")
-                                .map(def -> Response.status(Response.Status.CREATED).entity(def).build());
+                                .map(def -> {
+                                        emitAgentEvent(
+                                                        "agent.created",
+                                                        tenantId,
+                                                        projectId,
+                                                        def.definitionId.toString(),
+                                                        Map.of("agent", def));
+                                        return Response.status(Response.Status.CREATED).entity(def).build();
+                                });
         }
 
         @POST
@@ -76,6 +88,31 @@ public class AgentResource {
                                 "context", taskRequest.context());
 
                 return definitionService.run(agentId, inputs)
-                                .map(executionId -> Response.ok(Map.of("executionId", executionId)).build());
+                                .map(executionId -> {
+                                        emitAgentEvent(
+                                                        "agent.execution.started",
+                                                        tenantId,
+                                                        null,
+                                                        agentId.toString(),
+                                                        Map.of(
+                                                                        "agentId", agentId.toString(),
+                                                                        "executionId", executionId,
+                                                                        "taskId", taskRequest.taskId()));
+                                        return Response.ok(Map.of("executionId", executionId)).build();
+                                });
+        }
+
+        private void emitAgentEvent(String type, String tenantId, UUID projectId, String agentId, Map<String, Object> payload) {
+                Set<String> workspaces = projectId == null
+                                ? Set.of("tenant:" + tenantId, "agent:" + agentId)
+                                : Set.of("tenant:" + tenantId, "project:" + projectId, "agent:" + agentId);
+
+                realtimeEvents.fire(new ControlPlaneRealtimeEvent(
+                                type,
+                                "agent",
+                                "agent-config",
+                                payload,
+                                Map.of("source", "agent-resource"),
+                                workspaces));
         }
 }

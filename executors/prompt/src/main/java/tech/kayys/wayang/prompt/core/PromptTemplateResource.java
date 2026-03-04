@@ -39,7 +39,7 @@ import java.util.Map;
  * {@code details} fields, compatible with the platform's
  * {@code ErrorPayload} envelope.
  */
-@Path("/api/v1/prompts")
+@Path("/api/v1/prompt-templates")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class PromptTemplateResource {

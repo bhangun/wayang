@@ -9,7 +9,7 @@ import org.jboss.logging.Logger;
 import tech.kayys.wayang.runtime.standalone.status.RuntimeStatusSnapshot;
 import tech.kayys.wayang.runtime.standalone.status.RuntimeStatusService;
 
-@QuarkusMain
+@QuarkusMain(name = "standalone-runtime")
 public class StandaloneRuntime implements QuarkusApplication {
 
     private static final Logger LOG = Logger.getLogger(StandaloneRuntime.class);

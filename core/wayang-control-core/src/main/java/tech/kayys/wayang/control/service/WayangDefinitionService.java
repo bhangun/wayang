@@ -135,6 +135,22 @@ public class WayangDefinitionService {
     }
 
     /**
+     * Get current runtime status for an execution ID.
+     */
+    public Uni<String> getExecutionStatus(String executionId) {
+        LOG.debug("Getting execution status for {}", executionId);
+        return orchestrator.getStatus(executionId);
+    }
+
+    /**
+     * Stop a running execution.
+     */
+    public Uni<Boolean> stopExecution(String executionId) {
+        LOG.info("Stopping execution {}", executionId);
+        return orchestrator.stop(executionId);
+    }
+
+    /**
      * Activate a definition (e.g. for AI Agents).
      */
     public Uni<WayangDefinition> activate(UUID definitionId) {

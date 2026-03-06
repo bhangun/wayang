@@ -1,4 +1,4 @@
-package tech.kayys.wayang.tool.api;
+package tech.kayys.wayang.tool.mcp;
 
 import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Uni;

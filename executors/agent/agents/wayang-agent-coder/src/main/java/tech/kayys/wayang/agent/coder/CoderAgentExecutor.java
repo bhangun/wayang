@@ -17,6 +17,7 @@ import tech.kayys.wayang.error.ErrorCode;
 import tech.kayys.wayang.error.WayangException;
 import tech.kayys.wayang.agent.schema.CoderAgentConfig;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -104,6 +105,8 @@ public class CoderAgentExecutor extends AbstractAgentExecutor {
         String provider = preferredProvider != null ? preferredProvider : getDefaultProviderForTask(taskType);
         double temperature = getTemperatureForTask(taskType);
         int maxTokens = getMaxTokensForTask(taskType);
+        Map<String, Object> additionalParams = new LinkedHashMap<>();
+        additionalParams.put("context", context);
 
         AgentInferenceRequest request = AgentInferenceRequest.builder()
                 .systemPrompt(systemPrompt)
@@ -111,6 +114,7 @@ public class CoderAgentExecutor extends AbstractAgentExecutor {
                 .preferredProvider(provider)
                 .temperature(temperature)
                 .maxTokens(maxTokens)
+                .additionalParams(additionalParams)
                 .build();
 
         String fallbackProvider = determineFallbackProvider(provider);

@@ -99,6 +99,36 @@ class RagExecutorTest {
     }
 
     @Test
+    void executeUsesQuestionFallbackAndDefaultTenantCollection() {
+        RagQueryService ragQueryService = Mockito.mock(RagQueryService.class);
+        RagExecutor executor = new RagExecutor();
+        executor.ragQueryService = ragQueryService;
+
+        RagResponse response = new RagResponse(
+                "How does fallback work?",
+                "Fallback uses default tenant and collection.",
+                List.of(),
+                List.of(),
+                new RagMetrics(42L, 2, 33, 0.91f, 1, 1, false),
+                "ctx",
+                Instant.parse("2026-03-05T00:00:00Z"),
+                Map.of(),
+                List.of(),
+                Optional.empty());
+        when(ragQueryService.query("default-tenant", "How does fallback work?", "default"))
+                .thenReturn(Uni.createFrom().item(response));
+
+        NodeExecutionTask task = createTask(Map.of("question", "How does fallback work?"));
+        NodeExecutionResult result = executor.execute(task).await().atMost(Duration.ofSeconds(2));
+
+        assertTrue((Boolean) result.output().get("success"));
+        assertEquals("default-tenant", result.output().get("tenantId"));
+        assertEquals("How does fallback work?", result.output().get("query"));
+        assertEquals("Fallback uses default tenant and collection.", result.output().get("answer"));
+        verify(ragQueryService).query("default-tenant", "How does fallback work?", "default");
+    }
+
+    @Test
     void canHandleByNodeTypeAndPayload() {
         RagExecutor executor = new RagExecutor();
 

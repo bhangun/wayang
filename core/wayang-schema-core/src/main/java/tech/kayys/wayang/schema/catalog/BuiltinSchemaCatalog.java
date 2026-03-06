@@ -55,6 +55,18 @@ public final class BuiltinSchemaCatalog {
   public static final String EIP_THROTTLER = "eip-throttler";
   public static final String DEAD_LETTER_CHANNEL = "dead-letter-channel";
 
+  // Trigger Source Nodes
+  public static final String TRIGGER_START = "start";
+  public static final String TRIGGER_MANUAL = "trigger-manual";
+  public static final String TRIGGER_SCHEDULE = "trigger-schedule";
+  public static final String TRIGGER_EMAIL = "trigger-email";
+  public static final String TRIGGER_TELEGRAM = "trigger-telegram";
+  public static final String TRIGGER_WEBSOCKET = "trigger-websocket";
+  public static final String TRIGGER_WEBHOOK = "trigger-webhook";
+  public static final String TRIGGER_EVENT = "trigger-event";
+  public static final String TRIGGER_KAFKA = "trigger-kafka";
+  public static final String TRIGGER_FILE = "trigger-file";
+
   private static final String PLUGIN_CONFIG_SCHEMA = """
       {
         "type": "object",
@@ -84,10 +96,62 @@ public final class BuiltinSchemaCatalog {
           "maxIterations": { "type": "integer", "minimum": 1 },
           "temperature": { "type": "number", "minimum": 0, "maximum": 2 },
           "model": { "type": "string" },
+          "providerMode": { "type": "string", "enum": ["auto", "local", "cloud"] },
+          "provider": { "type": "string" },
+          "preferredProvider": { "type": "string" },
+          "fallbackProvider": { "type": "string" },
+          "localProvider": {
+            "type": "object",
+            "properties": {
+              "providerId": { "type": "string" },
+              "model": { "type": "string" },
+              "endpoint": { "type": "string" },
+              "runtime": { "type": "string" }
+            },
+            "additionalProperties": true
+          },
+          "cloudProvider": {
+            "type": "object",
+            "properties": {
+              "providerId": { "type": "string" },
+              "model": { "type": "string" },
+              "endpoint": { "type": "string" },
+              "region": { "type": "string" }
+            },
+            "additionalProperties": true
+          },
+          "credentialRefs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "backend": { "type": "string", "enum": ["local", "vault", "aws", "azure"] },
+                "path": { "type": "string" },
+                "key": { "type": "string" },
+                "version": { "type": "integer", "minimum": 1 }
+              },
+              "required": ["name", "path"],
+              "additionalProperties": true
+            }
+          },
+          "vault": {
+            "type": "object",
+            "properties": {
+              "backend": { "type": "string", "enum": ["local", "vault", "aws", "azure"] },
+              "tenantId": { "type": "string" },
+              "pathPrefix": { "type": "string" }
+            },
+            "additionalProperties": true
+          },
           "tools": {
             "type": "array",
             "items": { "type": "string" }
           },
+          "goal": { "type": "string" },
+          "strategy": { "type": "string" },
+          "candidateOutput": { "type": "string" },
+          "criteria": { "type": "string" },
           "memory": {
             "type": "object",
             "additionalProperties": true
@@ -158,6 +222,114 @@ public final class BuiltinSchemaCatalog {
       }
       """;
 
+  private static final String TRIGGER_BASE_SCHEMA = """
+      {
+        "type": "object",
+        "properties": {
+          "triggerType": { "type": "string" },
+          "enabled": { "type": "boolean" },
+          "metadata": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": true
+      }
+      """;
+
+  private static final String TRIGGER_SCHEDULE_SCHEMA = """
+      {
+        "type": "object",
+        "properties": {
+          "mode": { "type": "string", "enum": ["interval", "cron"] },
+          "intervalSeconds": { "type": "integer", "minimum": 1 },
+          "cron": { "type": "string" },
+          "timezone": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+      """;
+
+  private static final String TRIGGER_EMAIL_SCHEMA = """
+      {
+        "type": "object",
+        "properties": {
+          "imapHost": { "type": "string" },
+          "imapPort": { "type": "integer", "minimum": 1 },
+          "folder": { "type": "string" },
+          "subjectFilter": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+      """;
+
+  private static final String TRIGGER_TELEGRAM_SCHEMA = """
+      {
+        "type": "object",
+        "properties": {
+          "botToken": { "type": "string" },
+          "chatId": { "type": "string" },
+          "allowedUserId": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+      """;
+
+  private static final String TRIGGER_WEBSOCKET_SCHEMA = """
+      {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "channel": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+      """;
+
+  private static final String TRIGGER_WEBHOOK_SCHEMA = """
+      {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "method": { "type": "string", "enum": ["POST", "PUT", "PATCH"] },
+          "secret": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+      """;
+
+  private static final String TRIGGER_EVENT_SCHEMA = """
+      {
+        "type": "object",
+        "properties": {
+          "eventName": { "type": "string" },
+          "eventSource": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+      """;
+
+  private static final String TRIGGER_KAFKA_SCHEMA = """
+      {
+        "type": "object",
+        "properties": {
+          "brokers": { "type": "string" },
+          "topic": { "type": "string" },
+          "groupId": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+      """;
+
+  private static final String TRIGGER_FILE_SCHEMA = """
+      {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "pattern": { "type": "string" },
+          "pollSeconds": { "type": "integer", "minimum": 1 }
+        },
+        "additionalProperties": true
+      }
+      """;
+
   private static final Map<String, String> SCHEMAS = new LinkedHashMap<>();
 
   static {
@@ -188,6 +360,16 @@ public final class BuiltinSchemaCatalog {
     SCHEMAS.put(EIP_RETRY, EIP_GENERIC_SCHEMA);
     SCHEMAS.put(EIP_THROTTLER, EIP_GENERIC_SCHEMA);
     SCHEMAS.put(DEAD_LETTER_CHANNEL, DEAD_LETTER_CHANNEL_SCHEMA);
+    SCHEMAS.put(TRIGGER_START, TRIGGER_BASE_SCHEMA);
+    SCHEMAS.put(TRIGGER_MANUAL, TRIGGER_BASE_SCHEMA);
+    SCHEMAS.put(TRIGGER_SCHEDULE, TRIGGER_SCHEDULE_SCHEMA);
+    SCHEMAS.put(TRIGGER_EMAIL, TRIGGER_EMAIL_SCHEMA);
+    SCHEMAS.put(TRIGGER_TELEGRAM, TRIGGER_TELEGRAM_SCHEMA);
+    SCHEMAS.put(TRIGGER_WEBSOCKET, TRIGGER_WEBSOCKET_SCHEMA);
+    SCHEMAS.put(TRIGGER_WEBHOOK, TRIGGER_WEBHOOK_SCHEMA);
+    SCHEMAS.put(TRIGGER_EVENT, TRIGGER_EVENT_SCHEMA);
+    SCHEMAS.put(TRIGGER_KAFKA, TRIGGER_KAFKA_SCHEMA);
+    SCHEMAS.put(TRIGGER_FILE, TRIGGER_FILE_SCHEMA);
 
     // Discover node-provided schemas via NodeProvider SPI
     for (NodeProvider provider : ServiceLoader.load(NodeProvider.class)) {

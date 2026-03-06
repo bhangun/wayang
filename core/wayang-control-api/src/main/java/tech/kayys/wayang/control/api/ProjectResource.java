@@ -17,18 +17,31 @@
 
 package tech.kayys.wayang.control.api;
 
+import io.quarkus.arc.properties.IfBuildProperty;
 import io.smallrye.mutiny.Uni;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import tech.kayys.wayang.control.service.ProjectManager;
+import tech.kayys.wayang.control.service.WayangDefinitionService;
 import tech.kayys.wayang.control.dto.CreateProjectRequest;
 import tech.kayys.wayang.control.dto.ProjectType;
 import tech.kayys.wayang.control.dto.realtime.ControlPlaneRealtimeEvent;
+import tech.kayys.wayang.schema.DefinitionType;
+import tech.kayys.wayang.schema.WayangSpec;
+import tech.kayys.wayang.schema.catalog.BuiltinSchemaCatalog;
+import tech.kayys.wayang.schema.validator.SchemaValidationService;
+import tech.kayys.wayang.schema.validator.ValidationResult;
 
 import java.util.List;
 import java.util.Map;
@@ -41,6 +54,8 @@ import java.util.UUID;
 @Path("/api/v1/projects")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(name = "Projects", description = "Project/workspace management and project-scoped executions")
+@IfBuildProperty(name = "wayang.runtime.standalone.projects-resource.enabled", stringValue = "false", enableIfMissing = true)
 public class ProjectResource {
 
     private static final Logger LOG = Logger.getLogger(ProjectResource.class);
@@ -48,6 +63,15 @@ public class ProjectResource {
 
     @Inject
     ProjectManager projectManager;
+
+    @Inject
+    WayangDefinitionService definitionService;
+
+    @Inject
+    SchemaValidationService schemaValidationService;
+
+    @Inject
+    ObjectMapper objectMapper;
 
     @Inject
     Event<ControlPlaneRealtimeEvent> realtimeEvents;
@@ -106,6 +130,127 @@ public class ProjectResource {
                 });
     }
 
+    /**
+     * Execute a project-scoped WayangSpec payload directly.
+     * Flow: validate -> create definition -> publish -> run.
+     */
+    @POST
+    @Path("/{projectId}/execute-spec")
+    @Operation(summary = "Execute WayangSpec payload in a project",
+            description = "Validates a WayangSpec payload, creates a project definition, publishes it, and starts execution")
+    public Uni<Response> executeProjectSpec(
+            @PathParam("projectId") UUID projectId,
+            @HeaderParam("X-Tenant-Id") String tenantId,
+            @Valid ProjectExecutionRequest request) {
+        return executeProjectSpecInternal(projectId, tenantId, request);
+    }
+
+    /**
+     * REST-friendly alias for execute-spec.
+     */
+    @POST
+    @Path("/{projectId}/executions")
+    @Operation(summary = "Create project execution",
+            description = "Alias for /execute-spec. Accepts the same request payload and starts execution")
+    public Uni<Response> createExecution(
+            @PathParam("projectId") UUID projectId,
+            @HeaderParam("X-Tenant-Id") String tenantId,
+            @Valid ProjectExecutionRequest request) {
+        return executeProjectSpecInternal(projectId, tenantId, request);
+    }
+
+    private Uni<Response> executeProjectSpecInternal(
+            UUID projectId,
+            String tenantId,
+            ProjectExecutionRequest request) {
+        String resolvedTenant = resolveTenantId(tenantId);
+        if (request == null || request.spec() == null) {
+            return Uni.createFrom().item(Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("message", "Request body with 'spec' is required"))
+                    .build());
+        }
+
+        String schema = BuiltinSchemaCatalog.get(BuiltinSchemaCatalog.WAYANG_SPEC);
+        Map<String, Object> specPayload = objectMapper.convertValue(
+                request.spec(), new TypeReference<Map<String, Object>>() {});
+        ValidationResult validation = schemaValidationService.validateSchema(schema, specPayload);
+        if (!validation.isValid()) {
+            return Uni.createFrom().item(Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of(
+                            "message", "WayangSpec validation failed",
+                            "detail", validation.getMessage()))
+                    .build());
+        }
+
+        String definitionName = (request.name() == null || request.name().isBlank())
+                ? "project-" + projectId + "-spec"
+                : request.name();
+        String createdBy = (request.createdBy() == null || request.createdBy().isBlank())
+                ? "api"
+                : request.createdBy();
+        Map<String, Object> runtimeInputs = request.inputs() == null ? Map.of() : request.inputs();
+
+        return projectManager.getProject(projectId, resolvedTenant)
+                .flatMap(project -> {
+                    if (project == null) {
+                        return Uni.createFrom().item(Response.status(Response.Status.NOT_FOUND)
+                                .entity(new ProjectExecutionErrorResponse("Project not found: " + projectId))
+                                .build());
+                    }
+
+                    return definitionService
+                            .create(
+                                    resolvedTenant,
+                                    projectId,
+                                    definitionName,
+                                    request.description(),
+                                    DefinitionType.WORKFLOW_TEMPLATE,
+                                    request.spec(),
+                                    createdBy)
+                            .flatMap(def -> definitionService.publish(def.definitionId, createdBy)
+                                    .flatMap(published -> definitionService.run(published.definitionId, runtimeInputs)
+                                            .map(executionId -> {
+                                                realtimeEvents.fire(new ControlPlaneRealtimeEvent(
+                                                        "project.execution.started",
+                                                        "wayang",
+                                                        BuiltinSchemaCatalog.WAYANG_SPEC,
+                                                        Map.of(
+                                                                "projectId", projectId.toString(),
+                                                                "definitionId", published.definitionId.toString(),
+                                                                "workflowDefinitionId",
+                                                                published.workflowDefinitionId,
+                                                                "executionId", executionId),
+                                                        Map.of("source", "project-resource"),
+                                                        Set.of(
+                                                                "tenant:" + resolvedTenant,
+                                                                "project:" + projectId)));
+
+                                                return Response.accepted(new ProjectExecutionAcceptedResponse(
+                                                        projectId.toString(),
+                                                        published.definitionId.toString(),
+                                                        published.workflowDefinitionId,
+                                                        executionId,
+                                                        "STARTED"))
+                                                        .build();
+                                            })));
+                })
+                .onFailure(IllegalArgumentException.class)
+                .recoverWithItem(error -> Response.status(Response.Status.BAD_REQUEST)
+                        .entity(new ProjectExecutionErrorResponse(error.getMessage()))
+                        .build())
+                .onFailure(IllegalStateException.class)
+                .recoverWithItem(error -> Response.status(Response.Status.CONFLICT)
+                        .entity(new ProjectExecutionErrorResponse(error.getMessage()))
+                        .build())
+                .onFailure().recoverWithItem(error -> {
+                    LOG.errorf(error, "Failed to execute WayangSpec for project %s tenant %s", projectId,
+                            resolvedTenant);
+                    return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                            .entity(new ProjectExecutionErrorResponse("Failed to execute WayangSpec"))
+                            .build();
+                });
+    }
+
     private static String resolveTenantId(String tenantId) {
         return (tenantId == null || tenantId.isBlank()) ? DEFAULT_TENANT_ID : tenantId;
     }
@@ -119,4 +264,23 @@ public class ProjectResource {
                 Map.of("source", "project-resource"),
                 Set.of("tenant:" + tenantId, "project:" + projectId)));
     }
+}
+
+record ProjectExecutionRequest(
+        String name,
+        String description,
+        @NotNull @JsonAlias({ "wayangSpec", "workflowSpec" }) WayangSpec spec,
+        Map<String, Object> inputs,
+        String createdBy) {
+}
+
+record ProjectExecutionErrorResponse(String message) {
+}
+
+record ProjectExecutionAcceptedResponse(
+        String projectId,
+        String definitionId,
+        String workflowDefinitionId,
+        String executionId,
+        String status) {
 }

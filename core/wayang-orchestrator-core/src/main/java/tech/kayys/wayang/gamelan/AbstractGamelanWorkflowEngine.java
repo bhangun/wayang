@@ -31,9 +31,22 @@ import tech.kayys.wayang.schema.WayangSpec;
 import tech.kayys.wayang.schema.canvas.CanvasNode;
 
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public abstract class AbstractGamelanWorkflowEngine implements WayangOrchestratorSpi, AutoCloseable {
+    private static final java.util.Set<String> SOURCE_TRIGGER_TYPES = java.util.Set.of(
+            "start",
+            "trigger-manual",
+            "trigger-schedule",
+            "trigger-email",
+            "trigger-telegram",
+            "trigger-websocket",
+            "trigger-webhook",
+            "trigger-event",
+            "trigger-kafka",
+            "trigger-file");
+    private static final String SOURCE_TRIGGER_EXECUTOR = "trigger-source-executor";
 
     protected GamelanClient client;
     protected GamelanEngineConfig config;
@@ -63,16 +76,19 @@ public abstract class AbstractGamelanWorkflowEngine implements WayangOrchestrato
         // Map Wayang canvas nodes to Gamelan nodes
         if (spec.getCanvas() != null && spec.getCanvas().nodes != null) {
             for (CanvasNode node : spec.getCanvas().nodes) {
+                String nodeName = node.config != null && node.config.containsKey("label")
+                        ? node.config.get("label").toString()
+                        : (node.label != null ? node.label : node.id);
+                String executorType = resolveExecutorType(node);
+                Map<String, Object> configuration = buildNodeConfiguration(node, nodeName, executorType);
+
                 // Create Gamelan node definition based on Wayang canvas
                 NodeDefinition gNode = NodeDefinition.builder()
                         .id(NodeId.of(node.id))
-                        .name(node.config != null && node.config.containsKey("label")
-                                ? node.config.get("label").toString()
-                                : (node.label != null ? node.label : node.id))
+                        .name(nodeName)
                         .type(NodeType.EXECUTOR) // Default to EXECUTOR for Wayang nodes
-                        // Gamelan executor type must match the Wayang node type
-                        .executorType(node.type)
-                        .configuration(node.config)
+                        .executorType(executorType)
+                        .configuration(configuration)
                         .build();
 
                 builder.addNode(gNode);
@@ -84,6 +100,47 @@ public abstract class AbstractGamelanWorkflowEngine implements WayangOrchestrato
 
         // Deploy Workflow Definition to Gamelan and return its native ID
         return builder.execute().map(workflowDef -> workflowDef.id().value());
+    }
+
+    private static String resolveExecutorType(CanvasNode node) {
+        if (node.type != null && !node.type.isBlank()) {
+            if (SOURCE_TRIGGER_TYPES.contains(node.type)) {
+                return SOURCE_TRIGGER_EXECUTOR;
+            }
+            return node.type;
+        }
+        if (node.subType != null && !node.subType.isBlank()) {
+            return node.subType;
+        }
+        return node.id;
+    }
+
+    private static Map<String, Object> buildNodeConfiguration(CanvasNode node, String nodeName, String executorType) {
+        Map<String, Object> configuration = new LinkedHashMap<>();
+        if (node.config != null) {
+            configuration.putAll(node.config);
+        }
+
+        // __node_type__ must stay as the original canvas node type for executor canHandle().
+        String nodeType = resolveNodeType(node, executorType);
+        configuration.put("__node_type__", nodeType);
+        configuration.putIfAbsent("__executor_type__", executorType);
+        configuration.putIfAbsent("__node_id__", node.id);
+        if (nodeName != null && !nodeName.isBlank()) {
+            configuration.putIfAbsent("__node_label__", nodeName);
+        }
+
+        return configuration;
+    }
+
+    private static String resolveNodeType(CanvasNode node, String fallback) {
+        if (node.type != null && !node.type.isBlank()) {
+            return node.type;
+        }
+        if (node.subType != null && !node.subType.isBlank()) {
+            return node.subType;
+        }
+        return fallback;
     }
 
     @Override

@@ -4,6 +4,7 @@ import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.kayys.gamelan.sdk.client.GamelanClient;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -61,8 +63,9 @@ public class AbstractGamelanWorkflowEngineTest {
         CanvasData canvas = new CanvasData();
         CanvasNode node = new CanvasNode();
         node.id = "node-1";
-        node.type = "java-executor";
+        node.type = "trigger-manual";
         node.label = "Node 1";
+        node.config = Map.of("allowApiStart", true);
         canvas.nodes.add(node);
         spec.setCanvas(canvas);
         spec.setSpecVersion("1.2.3");
@@ -85,6 +88,15 @@ public class AbstractGamelanWorkflowEngineTest {
         verify(definitionBuilder).version("1.2.3");
         verify(definitionBuilder, times(1)).addNode(any(NodeDefinition.class));
         verify(definitionBuilder).execute();
+
+        ArgumentCaptor<NodeDefinition> nodeCaptor = ArgumentCaptor.forClass(NodeDefinition.class);
+        verify(definitionBuilder).addNode(nodeCaptor.capture());
+        NodeDefinition mapped = nodeCaptor.getValue();
+        assertEquals("trigger-source-executor", mapped.executorType());
+        assertNotNull(mapped.configuration());
+        assertEquals("trigger-manual", mapped.configuration().get("__node_type__"));
+        assertEquals("trigger-source-executor", mapped.configuration().get("__executor_type__"));
+        assertEquals(true, mapped.configuration().get("allowApiStart"));
     }
 
     @Test

@@ -3,6 +3,9 @@ package tech.kayys.wayang.engine;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
+import jakarta.enterprise.inject.Instance;
+import tech.kayys.gamelan.engine.workflow.WorkflowDefinitionService;
+import tech.kayys.gamelan.engine.workflow.WorkflowRunManager;
 import tech.kayys.wayang.gamelan.GamelanEngineConfig;
 import tech.kayys.wayang.gamelan.GamelanWorkflowEngine;
 
@@ -26,8 +29,17 @@ public class GamelanWorkflowEngineTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void testEngineInitialization() {
-        try (GamelanWorkflowEngine engine = new GamelanWorkflowEngine(config)) {
+        Instance<WorkflowRunManager> runManagerInstance = Mockito.mock(Instance.class);
+        Instance<WorkflowDefinitionService> definitionServiceInstance = Mockito.mock(Instance.class);
+        when(runManagerInstance.isResolvable()).thenReturn(true);
+        when(definitionServiceInstance.isResolvable()).thenReturn(true);
+        when(runManagerInstance.get()).thenReturn(Mockito.mock(WorkflowRunManager.class));
+        when(definitionServiceInstance.get()).thenReturn(Mockito.mock(WorkflowDefinitionService.class));
+
+        try (GamelanWorkflowEngine engine = new GamelanWorkflowEngine(
+                config, runManagerInstance, definitionServiceInstance)) {
             assertNotNull(engine);
         } catch (Exception e) {
             fail("Engine initialization failed: " + e.getMessage());

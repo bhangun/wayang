@@ -1,62 +1,46 @@
 package tech.kayys.wayang.agent.common;
 
-import io.quarkus.test.InjectMock;
-import io.quarkus.test.junit.QuarkusTest;
-import io.smallrye.mutiny.Uni;
-import io.smallrye.mutiny.helpers.test.UniAssertSubscriber;
-import jakarta.inject.Inject;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import tech.kayys.gamelan.engine.execution.ExecutionToken;
 import tech.kayys.gamelan.engine.node.NodeExecutionResult;
+import tech.kayys.gamelan.engine.node.NodeExecutionStatus;
 import tech.kayys.gamelan.engine.node.NodeExecutionTask;
 import tech.kayys.gamelan.engine.node.NodeId;
-import tech.kayys.gamelan.engine.node.NodeExecutionStatus;
+import tech.kayys.gamelan.engine.run.RetryPolicy;
 import tech.kayys.gamelan.engine.workflow.WorkflowRunId;
+import tech.kayys.wayang.agent.core.inference.AgentInferenceRequest;
 import tech.kayys.wayang.agent.core.inference.AgentInferenceResponse;
 import tech.kayys.wayang.agent.core.inference.GollekInferenceService;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.UUID;
 
-@QuarkusTest
 public class CommonAgentExecutorTest {
-
-    @Inject
-    CommonAgentExecutor executor;
-
-    @InjectMock
-    GollekInferenceService inferenceService;
 
     @Test
     public void testExecuteDataProcessor() {
-        // Setup task
-        NodeExecutionTask task = Mockito.mock(NodeExecutionTask.class);
-        Mockito.when(task.nodeId()).thenReturn(NodeId.of("node-1"));
-        Mockito.when(task.runId()).thenReturn(WorkflowRunId.of("run-1"));
-        Mockito.when(task.attempt()).thenReturn(1);
-        Mockito.when(task.context()).thenReturn(Map.of(
+        CommonAgentExecutor executor = new CommonAgentExecutor();
+        RecordingInferenceService inferenceService = new RecordingInferenceService(
+                AgentInferenceResponse.builder()
+                        .content("Processed content")
+                        .providerUsed("test-provider")
+                        .modelUsed("test-model")
+                        .totalTokens(100)
+                        .latency(Duration.ofMillis(500))
+                        .build());
+        executor.inferenceService = inferenceService;
+
+        Map<String, Object> context = Map.of(
                 "taskType", "data-processor",
                 "instruction", "process some data",
-                "agentId", "agent-common-1"));
-
-        // Mock inference response
-        AgentInferenceResponse response = Mockito.mock(AgentInferenceResponse.class);
-        Mockito.when(response.isError()).thenReturn(false);
-        Mockito.when(response.getContent()).thenReturn("Processed content");
-        Mockito.when(response.getProviderUsed()).thenReturn("test-provider");
-        Mockito.when(response.getModelUsed()).thenReturn("test-model");
-        Mockito.when(response.getTotalTokens()).thenReturn(100);
-        Mockito.when(response.getLatency()).thenReturn(Duration.ofMillis(500));
-
-        Mockito.when(inferenceService.inferWithFallback(Mockito.any(), Mockito.any()))
-                .thenReturn(response);
+                "agentId", "agent-common-1");
+        NodeExecutionTask task = createTask(context);
 
         // Execute
         NodeExecutionResult result = executor.execute(task)
-                .subscribe().withSubscriber(UniAssertSubscriber.create())
-                .awaitItem()
-                .getItem();
+                .await().atMost(Duration.ofSeconds(3));
 
         // Verify
         Assertions.assertEquals(NodeExecutionStatus.COMPLETED, result.status());
@@ -66,39 +50,62 @@ public class CommonAgentExecutorTest {
         Assertions.assertEquals("test-provider", output.get("provider"));
         Assertions.assertEquals(500L, output.get("latency_ms"));
 
-        // Verify inference was called
-        Mockito.verify(inferenceService).inferWithFallback(Mockito.any(), Mockito.any());
+        // Verify inference payload includes full task context for downstream provider/vault
+        AgentInferenceRequest request = inferenceService.lastRequest;
+        Assertions.assertEquals("agent-common-1", request.getAgentId());
+        Assertions.assertTrue(request.getUseMemory());
+        Assertions.assertNotNull(request.getAdditionalParams());
+        Assertions.assertEquals(context, request.getAdditionalParams().get("context"));
     }
 
     @Test
     public void testFailure() {
-        // Setup task
-        NodeExecutionTask task = Mockito.mock(NodeExecutionTask.class);
-        Mockito.when(task.nodeId()).thenReturn(NodeId.of("node-1"));
-        Mockito.when(task.runId()).thenReturn(WorkflowRunId.of("run-1"));
-        Mockito.when(task.attempt()).thenReturn(1);
-        Mockito.when(task.context()).thenReturn(Map.of(
+        CommonAgentExecutor executor = new CommonAgentExecutor();
+        executor.inferenceService = new RecordingInferenceService(
+                AgentInferenceResponse.builder()
+                        .error("Inference failed")
+                        .build());
+
+        NodeExecutionTask task = createTask(Map.of(
                 "taskType", "data-processor",
                 "instruction", "process some data"));
 
-        // Mock inference response with error
-        AgentInferenceResponse response = Mockito.mock(AgentInferenceResponse.class);
-        Mockito.when(response.isError()).thenReturn(true);
-        Mockito.when(response.getError()).thenReturn("Inference failed");
-
-        Mockito.when(inferenceService.inferWithFallback(Mockito.any(), Mockito.any()))
-                .thenReturn(response);
-
         // Execute
         NodeExecutionResult result = executor.execute(task)
-                .subscribe().withSubscriber(UniAssertSubscriber.create())
-                .awaitItem()
-                .getItem();
+                .await().atMost(Duration.ofSeconds(3));
 
         // Verify failure
         Assertions.assertEquals(NodeExecutionStatus.FAILED, result.status());
         Assertions.assertNotNull(result.error());
         Assertions.assertEquals("inference-error", result.error().code());
         Assertions.assertEquals("Inference failed", result.error().message());
+    }
+
+    private NodeExecutionTask createTask(Map<String, Object> context) {
+        WorkflowRunId runId = new WorkflowRunId(UUID.randomUUID().toString());
+        NodeId nodeId = new NodeId("common-test-node");
+        int attempt = 1;
+        return new NodeExecutionTask(
+                runId,
+                nodeId,
+                attempt,
+                ExecutionToken.create(runId, nodeId, attempt, Duration.ofMinutes(5)),
+                context,
+                RetryPolicy.none());
+    }
+
+    private static final class RecordingInferenceService extends GollekInferenceService {
+        private final AgentInferenceResponse response;
+        private AgentInferenceRequest lastRequest;
+
+        private RecordingInferenceService(AgentInferenceResponse response) {
+            this.response = response;
+        }
+
+        @Override
+        public AgentInferenceResponse inferWithFallback(AgentInferenceRequest request, String fallbackProvider) {
+            this.lastRequest = request;
+            return response;
+        }
     }
 }

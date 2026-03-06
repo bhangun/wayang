@@ -31,6 +31,7 @@ import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.networknt.schema.JsonSchema;
 
 /**
@@ -91,11 +92,25 @@ public class SchemaValidator {
     public JsonSchema createSchema(String schemaJson) {
         try {
             JsonNode schemaNode = objectMapper.readTree(schemaJson);
+            schemaNode = sanitizeSchemaNode(schemaNode);
             return schemaFactory.getSchema(schemaNode);
         } catch (Exception e) {
             LOG.errorf(e, "Failed to create schema");
             throw new RuntimeException("Invalid schema", e);
         }
+    }
+
+    private JsonNode sanitizeSchemaNode(JsonNode schemaNode) {
+        if (schemaNode instanceof ObjectNode objectNode && objectNode.has("$schema")) {
+            String declaredSchema = objectNode.path("$schema").asText("");
+            // The bundled validator factory is configured for Draft-07.
+            // If we receive newer meta-schema declarations, drop only the declaration
+            // so validation can proceed using compatible keywords.
+            if (declaredSchema.contains("json-schema.org/draft/2020-12")) {
+                objectNode.remove("$schema");
+            }
+        }
+        return schemaNode;
     }
 
     /**

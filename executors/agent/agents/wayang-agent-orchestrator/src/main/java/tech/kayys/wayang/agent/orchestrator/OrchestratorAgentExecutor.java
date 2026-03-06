@@ -26,6 +26,7 @@ import tech.kayys.wayang.agent.common.CommonAgentExecutor;
 import tech.kayys.wayang.agent.planner.PlannerAgentExecutor;
 import tech.kayys.wayang.agent.coder.CoderAgentExecutor;
 import tech.kayys.wayang.agent.analytic.AnalyticAgentExecutor;
+import tech.kayys.wayang.agent.evaluator.EvaluatorAgentExecutor;
 import tech.kayys.wayang.agent.BuiltInAgents;
 import tech.kayys.wayang.agent.orchestrator.CoordinationStrategy;
 import tech.kayys.wayang.agent.orchestrator.OrchestrationType;
@@ -65,6 +66,9 @@ public class OrchestratorAgentExecutor extends AbstractAgentExecutor {
 
     @Inject
     AnalyticAgentExecutor analyticAgentExecutor;
+
+    @Inject
+    EvaluatorAgentExecutor evaluatorAgentExecutor;
 
     @Override
     public String getExecutorType() {
@@ -306,13 +310,15 @@ public class OrchestratorAgentExecutor extends AbstractAgentExecutor {
 
         // Delegate to appropriate executor
         return switch (agentType) {
-            case "common-agent" -> commonAgentExecutor.execute(subTask)
+            case "common-agent", "agent-basic" -> commonAgentExecutor.execute(subTask)
                     .map(NodeExecutionResult::output);
-            case "planner-agent" -> plannerAgentExecutor.execute(subTask)
+            case "planner-agent", "agent-planner" -> plannerAgentExecutor.execute(subTask)
                     .map(NodeExecutionResult::output);
-            case "coder-agent" -> coderAgentExecutor.execute(subTask)
+            case "coder-agent", "agent-coder" -> coderAgentExecutor.execute(subTask)
                     .map(NodeExecutionResult::output);
-            case "analytics-agent" -> analyticAgentExecutor.execute(subTask)
+            case "analytics-agent", "agent-analytic" -> analyticAgentExecutor.execute(subTask)
+                    .map(NodeExecutionResult::output);
+            case "evaluator-agent", "agent-evaluator" -> evaluatorAgentExecutor.execute(subTask)
                     .map(NodeExecutionResult::output);
             default -> Uni.createFrom().item(Map.of("error", "Unknown agent type: " + agentType));
         };
@@ -334,6 +340,8 @@ public class OrchestratorAgentExecutor extends AbstractAgentExecutor {
         // Orchestration requires reasoning and planning capabilities
         double temperature = 0.2; // Very low temperature for consistent decisions
         int maxTokens = 2048;
+        Map<String, Object> additionalParams = new HashMap<>();
+        additionalParams.put("context", context);
 
         AgentInferenceRequest request = AgentInferenceRequest.builder()
                 .systemPrompt(systemPrompt)
@@ -341,6 +349,7 @@ public class OrchestratorAgentExecutor extends AbstractAgentExecutor {
                 .preferredProvider(provider)
                 .temperature(temperature)
                 .maxTokens(maxTokens)
+                .additionalParams(additionalParams)
                 .build();
 
         // Execute with fallback

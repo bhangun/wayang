@@ -7,6 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.kayys.gollek.sdk.local.GollekLocalClient;
 import tech.kayys.gollek.spi.inference.InferenceRequest;
@@ -18,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class GollekInferenceServiceTest {
@@ -79,5 +81,69 @@ class GollekInferenceServiceTest {
                 Assertions.assertEquals("response content", response.getContent());
                 Mockito.verify(memoryService).retrieveContext(eq("agent-1"), eq("hello"), anyInt());
                 Mockito.verify(gollekClient).createCompletion(any(InferenceRequest.class));
+        }
+
+        @Test
+        void testInferResolvesProviderAndApiKeyFromContext() {
+                InferenceResponse mockResponse = InferenceResponse.builder()
+                                .requestId("test-req-3")
+                                .content("provider-aware response")
+                                .model("gemini-2.0-flash")
+                                .build();
+                Mockito.when(gollekClient.createCompletion(any(InferenceRequest.class))).thenReturn(mockResponse);
+
+                AgentInferenceRequest request = AgentInferenceRequest.builder()
+                                .userPrompt("hello")
+                                .model("gemini-2.0-flash")
+                                .additionalParams(java.util.Map.of(
+                                                "context", java.util.Map.of(
+                                                                "providerMode", "cloud",
+                                                                "cloudProvider", java.util.Map.of(
+                                                                                "providerId",
+                                                                                "tech.kayys/gemini-provider"),
+                                                                "_resolvedCredentials", java.util.Map.of(
+                                                                                "gemini-api-key", "secret-123"))))
+                                .build();
+
+                inferenceService.infer(request);
+
+                ArgumentCaptor<InferenceRequest> captor = ArgumentCaptor.forClass(InferenceRequest.class);
+                Mockito.verify(gollekClient, times(1)).createCompletion(captor.capture());
+                InferenceRequest actual = captor.getValue();
+
+                Assertions.assertEquals("secret-123", actual.getApiKey());
+                Assertions.assertTrue(actual.getPreferredProvider().isPresent());
+                Assertions.assertEquals("tech.kayys/gemini-provider", actual.getPreferredProvider().get());
+        }
+
+        @Test
+        void testInferUsesRequestPreferredProviderWhenProvided() {
+                InferenceResponse mockResponse = InferenceResponse.builder()
+                                .requestId("test-req-4")
+                                .content("preferred response")
+                                .model("gpt-4")
+                                .build();
+                Mockito.when(gollekClient.createCompletion(any(InferenceRequest.class))).thenReturn(mockResponse);
+
+                AgentInferenceRequest request = AgentInferenceRequest.builder()
+                                .userPrompt("hello")
+                                .model("gpt-4")
+                                .preferredProvider("tech.kayys/openai-provider")
+                                .additionalParams(java.util.Map.of(
+                                                "context", java.util.Map.of(
+                                                                "providerMode", "local",
+                                                                "localProvider", java.util.Map.of(
+                                                                                "providerId",
+                                                                                "tech.kayys/ollama-provider"))))
+                                .build();
+
+                inferenceService.infer(request);
+
+                ArgumentCaptor<InferenceRequest> captor = ArgumentCaptor.forClass(InferenceRequest.class);
+                Mockito.verify(gollekClient, times(1)).createCompletion(captor.capture());
+                InferenceRequest actual = captor.getValue();
+
+                Assertions.assertTrue(actual.getPreferredProvider().isPresent());
+                Assertions.assertEquals("tech.kayys/openai-provider", actual.getPreferredProvider().get());
         }
 }

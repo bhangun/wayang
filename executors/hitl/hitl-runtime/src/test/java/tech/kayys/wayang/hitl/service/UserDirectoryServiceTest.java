@@ -26,7 +26,7 @@ class UserDirectoryServiceTest {
 
         // Then
         String email = result.await().indefinitely();
-        assertEquals("user1@company.com", email);
+        assertEquals("[EMAIL_ADDRESS]", email);
     }
 
     @Test
@@ -54,7 +54,7 @@ class UserDirectoryServiceTest {
         UserDirectoryService.UserInfo userInfo = result.await().indefinitely();
         assertNotNull(userInfo);
         assertEquals("user2", userInfo.userId());
-        assertEquals("user2@company.com", userInfo.email());
+        assertEquals("[EMAIL_ADDRESS]", userInfo.email());
         assertEquals("Jane Smith", userInfo.displayName());
     }
 
@@ -78,8 +78,8 @@ class UserDirectoryServiceTest {
         Uni<String> user2Email = userDirectoryService.getUserEmail("user2");
         Uni<String> adminEmail = userDirectoryService.getUserEmail("admin");
 
-        assertEquals("user1@company.com", user1Email.await().indefinitely());
-        assertEquals("user2@company.com", user2Email.await().indefinitely());
-        assertEquals("admin@company.com", adminEmail.await().indefinitely());
+        assertEquals("[EMAIL_ADDRESS]", user1Email.await().indefinitely());
+        assertEquals("[EMAIL_ADDRESS]", user2Email.await().indefinitely());
+        assertEquals("[EMAIL_ADDRESS]", adminEmail.await().indefinitely());
     }
 }

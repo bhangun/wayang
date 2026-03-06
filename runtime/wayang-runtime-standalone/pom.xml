@@ -73,6 +73,11 @@
             <version>${gamelan.version}</version>
         </dependency>
         <dependency>
+            <groupId>tech.kayys.gamelan</groupId>
+            <artifactId>gamelan-sdk-client-local</artifactId>
+            <version>${gamelan.version}</version>
+        </dependency>
+        <dependency>
             <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-vault-manager</artifactId>
             <version>${project.version}</version>

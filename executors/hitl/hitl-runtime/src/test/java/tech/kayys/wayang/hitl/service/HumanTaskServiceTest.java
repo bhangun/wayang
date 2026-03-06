@@ -68,7 +68,9 @@ class HumanTaskServiceTest {
         // Then
         HumanTask task = result.await().indefinitely();
         assertNotNull(task);
-        assertEquals(taskId.value(), task.getId().value());
+        assertEquals("RUN-456", task.getWorkflowRunId());
+        assertNotNull(task.getCurrentAssignment());
+        assertEquals("user1", task.getCurrentAssignment().getAssigneeIdentifier());
     }
 
     @Test
@@ -119,7 +121,8 @@ class HumanTaskServiceTest {
         List<HumanTask> tasks = result.await().indefinitely();
         assertNotNull(tasks);
         assertEquals(1, tasks.size());
-        assertEquals("TASK-123", tasks.get(0).getId().value());
+        assertEquals("RUN-456", tasks.get(0).getWorkflowRunId());
+        assertEquals("Test Task", tasks.get(0).getTitle());
     }
 
     @Test

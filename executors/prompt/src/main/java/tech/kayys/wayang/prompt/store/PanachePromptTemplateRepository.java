@@ -1,5 +1,6 @@
 package tech.kayys.wayang.prompt.store;
 
+import io.quarkus.arc.properties.IfBuildProperty;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -32,6 +33,7 @@ import java.util.List;
  * schema reference.
  */
 @ApplicationScoped
+@IfBuildProperty(name = "quarkus.hibernate-orm.enabled", stringValue = "true", enableIfMissing = true)
 public class PanachePromptTemplateRepository implements PromptTemplateRepository {
 
     private static final Logger LOG = Logger.getLogger(PanachePromptTemplateRepository.class);

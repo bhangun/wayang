@@ -31,8 +31,18 @@ public abstract class AbstractAgentExecutor implements WorkflowExecutor {
                 task.runId(), task.nodeId(), getExecutorType());
 
         return beforeExecute(task)
-                .chain(() -> doExecute(task))
-                .invoke(result -> logger.info("Task completed successfully: runId={}, nodeId={}",
+                .chain(() -> runGuardrailsPreCheck(task))
+                .chain(guardrailResult -> {
+                    if (guardrailResult != null && !guardrailResult.allowed()) {
+                        logger.warn("Task blocked by guardrails: runId={}, nodeId={}, reason={}",
+                                task.runId(), task.nodeId(), guardrailResult.reason());
+                        return Uni.createFrom()
+                                .item(createFailureResult(task, new WayangException(ErrorCode.VALIDATION_FAILED,
+                                        "Guardrail blocked execution: " + guardrailResult.reason())));
+                    }
+                    return doExecute(task);
+                })
+                .invoke(result -> logger.info("Task completed: runId={}, nodeId={}",
                         task.runId(), task.nodeId()))
                 .call(result -> afterExecute(task, result))
                 .onFailure().invoke(error -> {
@@ -43,6 +53,24 @@ public abstract class AbstractAgentExecutor implements WorkflowExecutor {
                             },
                             e -> logger.error("Error in onError handler", e));
                 });
+    }
+
+    private Uni<tech.kayys.wayang.guardrails.GuardrailResult> runGuardrailsPreCheck(NodeExecutionTask task) {
+        if (guardrailsService == null) {
+            return Uni.createFrom().nullItem();
+        }
+
+        // Extract text from task context to check, if applicable
+        // This is a naive extraction; adjust based on actual agent task structure
+        Object contentObj = task.context().get("content");
+        if (contentObj == null)
+            contentObj = task.context().get("prompt");
+
+        if (contentObj instanceof String text) {
+            return guardrailsService.preCheck(text, task.context());
+        }
+
+        return Uni.createFrom().item(tech.kayys.wayang.guardrails.GuardrailResult.success());
     }
 
     /**
@@ -93,6 +121,9 @@ public abstract class AbstractAgentExecutor implements WorkflowExecutor {
 
     @jakarta.inject.Inject
     protected ObjectMapper objectMapper;
+
+    @jakarta.inject.Inject
+    protected tech.kayys.wayang.guardrails.GuardrailsService guardrailsService;
 
     /**
      * Called before execution starts

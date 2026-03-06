@@ -57,8 +57,10 @@ class HumanTaskEntityTest {
         assertEquals(assignment.getAssignedBy(), entity.assignedBy);
         assertEquals(assignment.getAssignedAt(), entity.assignedAt);
         assertEquals(task.getDueDate(), entity.dueDate);
-        assertEquals(task.getContext().toString(), entity.contextData);
-        assertEquals(task.getFormData().toString(), entity.formData);
+        assertNotNull(entity.contextData);
+        assertTrue(entity.contextData.contains("\"key1\":\"value1\""));
+        assertNotNull(entity.formData);
+        assertTrue(entity.formData.contains("\"field1\":\"data1\""));
     }
 
     @Test

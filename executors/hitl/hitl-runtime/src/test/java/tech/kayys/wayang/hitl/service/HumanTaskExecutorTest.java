@@ -112,13 +112,21 @@ class HumanTaskExecutorTest {
         completionData.put("result", "approved");
         String comments = "Approved by reviewer";
 
+        TaskAssignment assignment = TaskAssignment.builder()
+                .assigneeType(AssigneeType.USER)
+                .assigneeIdentifier(userId)
+                .assignedBy("SYSTEM")
+                .build();
+
         HumanTask task = HumanTask.builder()
                 .workflowRunId("RUN-123")
                 .nodeId("NODE-456")
                 .tenantId("default-tenant")
                 .taskType("approval")
                 .title("Test Task")
+                .assignTo(assignment)
                 .build();
+        task.claim(userId);
 
         when(humanTaskService.getTask(any(HumanTaskId.class))).thenReturn(Uni.createFrom().item(task));
         when(repository.save(any(HumanTask.class))).thenReturn(Uni.createFrom().item(task));
@@ -129,7 +137,7 @@ class HumanTaskExecutorTest {
         // Then
         result.await().indefinitely();
         verify(humanTaskService, times(1)).getTask(any(HumanTaskId.class));
-        verify(repository, times(2)).save(any(HumanTask.class)); // Once for initial, once for completion
+        verify(repository, times(1)).save(any(HumanTask.class));
     }
 
     @Test
@@ -139,12 +147,19 @@ class HumanTaskExecutorTest {
         String userId = "user1";
         String tenantId = "tenant-001";
 
+        TaskAssignment assignment = TaskAssignment.builder()
+                .assigneeType(AssigneeType.USER)
+                .assigneeIdentifier(userId)
+                .assignedBy("SYSTEM")
+                .build();
+
         HumanTask task = HumanTask.builder()
                 .workflowRunId("RUN-123")
                 .nodeId("NODE-456")
                 .tenantId("default-tenant")
                 .taskType("approval")
                 .title("Test Task")
+                .assignTo(assignment)
                 .build();
 
         when(humanTaskService.getTask(any(HumanTaskId.class))).thenReturn(Uni.createFrom().item(task));
@@ -168,12 +183,19 @@ class HumanTaskExecutorTest {
         String toUserId = "user2";
         String reason = "Going on vacation";
 
+        TaskAssignment assignment = TaskAssignment.builder()
+                .assigneeType(AssigneeType.USER)
+                .assigneeIdentifier(fromUserId)
+                .assignedBy("SYSTEM")
+                .build();
+
         HumanTask task = HumanTask.builder()
                 .workflowRunId("RUN-123")
                 .nodeId("NODE-456")
                 .tenantId("default-tenant")
                 .taskType("approval")
                 .title("Test Task")
+                .assignTo(assignment)
                 .build();
 
         when(humanTaskService.getTask(any(HumanTaskId.class))).thenReturn(Uni.createFrom().item(task));

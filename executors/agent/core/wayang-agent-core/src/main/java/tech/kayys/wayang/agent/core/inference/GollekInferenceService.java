@@ -15,7 +15,12 @@ import tech.kayys.gollek.spi.inference.InferenceResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Shared inference service for all Wayang agents.
@@ -52,9 +57,11 @@ public class GollekInferenceService {
         Instant start = Instant.now();
 
         try {
+            String preferredProvider = resolvePreferredProvider(request);
+
             // Set preferred provider if specified
-            if (request.getPreferredProvider() != null) {
-                gollekClient.setPreferredProvider(request.getPreferredProvider());
+            if (preferredProvider != null && !preferredProvider.isBlank()) {
+                gollekClient.setPreferredProvider(preferredProvider);
             }
 
             // 1. Inject Memory Context if enabled
@@ -143,6 +150,8 @@ public class GollekInferenceService {
                     .maxTokens(request.getMaxTokens())
                     .model(request.getModel())
                     .additionalParams(request.getAdditionalParams())
+                    .agentId(request.getAgentId())
+                    .useMemory(request.getUseMemory())
                     .stream(request.getStream() != null ? request.getStream() : false)
                     .build();
 
@@ -169,13 +178,210 @@ public class GollekInferenceService {
         // Add user message
         messages.add(Message.user(request.getUserPrompt()));
 
-        return InferenceRequest.builder()
+        InferenceRequest.Builder builder = InferenceRequest.builder()
                 .messages(messages)
                 .model(request.getModel())
                 .temperature(request.getTemperature())
                 .maxTokens(request.getMaxTokens().intValue())
-                .streaming(request.getStream() != null ? request.getStream() : false)
-                .build();
+                .streaming(request.getStream() != null ? request.getStream() : false);
+
+        String preferredProvider = resolvePreferredProvider(request);
+        if (preferredProvider != null && !preferredProvider.isBlank()) {
+            builder.preferredProvider(preferredProvider);
+        }
+
+        resolveApiKey(request, preferredProvider).ifPresent(builder::apiKey);
+        Map<String, Object> metadata = buildRequestMetadata(request, preferredProvider);
+        if (!metadata.isEmpty()) {
+            builder.metadata(metadata);
+        }
+
+        return builder.build();
+    }
+
+    private String resolvePreferredProvider(AgentInferenceRequest request) {
+        if (request.getPreferredProvider() != null && !request.getPreferredProvider().isBlank()) {
+            return request.getPreferredProvider();
+        }
+
+        Map<String, Object> context = requestContextMap(request);
+        if (context.isEmpty()) {
+            return null;
+        }
+
+        String providerMode = stringValue(context.get("providerMode"));
+        String directPreferred = firstNonBlank(
+                stringValue(context.get("preferredProvider")),
+                stringValue(context.get("provider")));
+        if (directPreferred != null) {
+            return directPreferred;
+        }
+
+        Map<String, Object> cloudProvider = mapValue(context.get("cloudProvider"));
+        Map<String, Object> localProvider = mapValue(context.get("localProvider"));
+
+        if ("cloud".equalsIgnoreCase(providerMode)) {
+            return firstNonBlank(
+                    stringValue(cloudProvider.get("providerId")),
+                    stringValue(context.get("fallbackProvider")),
+                    stringValue(localProvider.get("providerId")));
+        }
+        if ("local".equalsIgnoreCase(providerMode)) {
+            return firstNonBlank(
+                    stringValue(localProvider.get("providerId")),
+                    stringValue(context.get("fallbackProvider")),
+                    stringValue(cloudProvider.get("providerId")));
+        }
+
+        return firstNonBlank(
+                stringValue(cloudProvider.get("providerId")),
+                stringValue(localProvider.get("providerId")),
+                stringValue(context.get("fallbackProvider")));
+    }
+
+    private Optional<String> resolveApiKey(AgentInferenceRequest request, String providerId) {
+        Map<String, String> credentials = resolvedCredentialMap(request);
+        if (credentials.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String providerHint = providerHint(providerId);
+        if (!providerHint.isBlank()) {
+            for (Map.Entry<String, String> entry : credentials.entrySet()) {
+                String key = entry.getKey().toLowerCase(Locale.ROOT);
+                if (key.contains(providerHint) && looksLikeSecretKeyName(key)) {
+                    return Optional.of(entry.getValue());
+                }
+            }
+        }
+
+        for (Map.Entry<String, String> entry : credentials.entrySet()) {
+            if (looksLikeSecretKeyName(entry.getKey().toLowerCase(Locale.ROOT))) {
+                return Optional.of(entry.getValue());
+            }
+        }
+
+        if (credentials.size() == 1) {
+            return Optional.of(credentials.values().iterator().next());
+        }
+
+        return Optional.empty();
+    }
+
+    private Map<String, Object> buildRequestMetadata(AgentInferenceRequest request, String preferredProvider) {
+        Map<String, Object> context = requestContextMap(request);
+        if (context.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        String providerMode = stringValue(context.get("providerMode"));
+        if (providerMode != null) {
+            metadata.put("providerMode", providerMode);
+        }
+        if (preferredProvider != null && !preferredProvider.isBlank()) {
+            metadata.put("preferredProvider", preferredProvider);
+        }
+        Map<String, String> credentials = resolvedCredentialMap(request);
+        if (!credentials.isEmpty()) {
+            metadata.put("resolvedCredentialNames", credentials.keySet().stream().sorted().toList());
+        }
+        return metadata;
+    }
+
+    private Map<String, Object> requestContextMap(AgentInferenceRequest request) {
+        Map<String, Object> additional = request.getAdditionalParams();
+        if (additional == null || additional.isEmpty()) {
+            return Map.of();
+        }
+        Object context = additional.get("context");
+        if (context instanceof Map<?, ?> map) {
+            Map<String, Object> result = new LinkedHashMap<>();
+            map.forEach((k, v) -> result.put(String.valueOf(k), v));
+            return result;
+        }
+        return Collections.emptyMap();
+    }
+
+    private Map<String, String> resolvedCredentialMap(AgentInferenceRequest request) {
+        Map<String, String> resolved = new LinkedHashMap<>();
+        Map<String, Object> additional = request.getAdditionalParams();
+        if (additional != null) {
+            mergeCredentialMap(resolved, additional.get("_resolvedCredentials"));
+        }
+        Map<String, Object> context = requestContextMap(request);
+        if (!context.isEmpty()) {
+            mergeCredentialMap(resolved, context.get("_resolvedCredentials"));
+        }
+        return resolved;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void mergeCredentialMap(Map<String, String> target, Object raw) {
+        if (!(raw instanceof Map<?, ?> map)) {
+            return;
+        }
+        map.forEach((k, v) -> {
+            if (k == null || v == null) {
+                return;
+            }
+            String key = String.valueOf(k).trim();
+            String value = String.valueOf(v).trim();
+            if (!key.isEmpty() && !value.isEmpty()) {
+                target.putIfAbsent(key, value);
+            }
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> mapValue(Object raw) {
+        if (!(raw instanceof Map<?, ?> map)) {
+            return Map.of();
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        map.forEach((k, v) -> result.put(String.valueOf(k), v));
+        return result;
+    }
+
+    private static String stringValue(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        String value = String.valueOf(raw).trim();
+        return value.isEmpty() ? null : value;
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private static boolean looksLikeSecretKeyName(String key) {
+        String normalized = key.toLowerCase(Locale.ROOT);
+        return normalized.contains("apikey")
+                || normalized.contains("api-key")
+                || normalized.contains("api_key")
+                || normalized.contains("token")
+                || normalized.endsWith("key");
+    }
+
+    private static String providerHint(String providerId) {
+        if (providerId == null || providerId.isBlank()) {
+            return "";
+        }
+        String normalized = providerId.toLowerCase(Locale.ROOT);
+        if (normalized.contains("openai")) return "openai";
+        if (normalized.contains("anthropic")) return "anthropic";
+        if (normalized.contains("gemini") || normalized.contains("google")) return "gemini";
+        if (normalized.contains("mistral")) return "mistral";
+        if (normalized.contains("cerebras")) return "cerebras";
+        if (normalized.contains("azure")) return "azure";
+        if (normalized.contains("ollama")) return "ollama";
+        return normalized;
     }
 
     /**

@@ -75,6 +75,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-guardrails-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>tech.kayys.gamelan</groupId>
             <artifactId>gamelan-sdk-executor-core</artifactId>
             <version>1.0.0-SNAPSHOT</version>

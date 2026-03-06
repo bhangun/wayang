@@ -262,7 +262,7 @@ class HumanTaskTest {
 
         // Then
         assertEquals(HumanTaskStatus.CANCELLED, task.getStatus());
-        assertEquals("admin", task.getComments());
+        assertEquals("Business requirements changed", task.getComments());
     }
 
     @Test

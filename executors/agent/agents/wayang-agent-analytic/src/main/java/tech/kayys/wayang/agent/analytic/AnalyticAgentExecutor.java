@@ -17,6 +17,7 @@ import tech.kayys.wayang.error.ErrorCode;
 import tech.kayys.wayang.error.WayangException;
 import tech.kayys.wayang.agent.schema.AnalyticAgentConfig;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -111,6 +112,8 @@ public class AnalyticAgentExecutor extends AbstractAgentExecutor {
         // Analytics needs high precision but also reasoning capability
         double temperature = 0.3;
         int maxTokens = 4096; // Analysis can be verbose
+        Map<String, Object> additionalParams = new LinkedHashMap<>();
+        additionalParams.put("context", context);
 
         AgentInferenceRequest request = AgentInferenceRequest.builder()
                 .systemPrompt(systemPrompt)
@@ -118,6 +121,7 @@ public class AnalyticAgentExecutor extends AbstractAgentExecutor {
                 .preferredProvider(provider)
                 .temperature(temperature)
                 .maxTokens(maxTokens)
+                .additionalParams(additionalParams)
                 .build();
 
         // Execute with fallback

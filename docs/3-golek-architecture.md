@@ -14,6 +14,94 @@ Multi-tenancy is disabled by default and enabled per component via extensions.
 
 The extensions automatically set `wayang.multitenancy.enabled=true`. See `wayang-enterprise/modules/tenant/README.md` for details.
 
+## Agent Inference Provider Contract (Local/Cloud + Vault)
+
+Wayang execution payload (`POST /api/v1/projects/{projectId}/executions`) supports agent configuration that explicitly selects local/cloud inference path and secret references.
+
+This is aligned with:
+
+- cloud provider extensions under `inference-gollek/extension/cloud`
+- secret backends in `wayang/core/wayang-vault-manager`
+
+### Agent Config Keys
+
+- `providerMode`: `auto` | `local` | `cloud`
+- `provider` / `preferredProvider` / `fallbackProvider`
+- `localProvider`: local runtime/provider settings (`providerId`, `model`, `endpoint`, `runtime`)
+- `cloudProvider`: cloud runtime/provider settings (`providerId`, `model`, `endpoint`, `region`)
+- `credentialRefs`: reference-only secret bindings (`backend`, `path`, `key`, optional `version`)
+- `vault`: secret backend routing (`backend`, `tenantId`, `pathPrefix`)
+- agent typed inputs:
+  - basic (`agent-basic`): generic common-task context
+  - coder (`agent-coder`): `instruction`, optional `taskType`
+  - analytic (`agent-analytic`): `question`, optional `taskType`
+  - planner (`agent-planner`): `goal`, `objective`, `instruction`, `strategy`
+  - evaluator (`agent-evaluator`): `candidateOutput`, `criteria` (fallbacks: `output` / `result` / `content`)
+  - orchestrator (`agent-orchestrator`): `objective` or (`agentTasks`, `orchestrationType`, `coordinationStrategy`)
+
+Example node configuration:
+
+```json
+{
+  "id": "agent-1",
+  "type": "agent-basic",
+  "configuration": {
+    "providerMode": "cloud",
+    "cloudProvider": {
+      "providerId": "tech.kayys/gemini-provider",
+      "model": "gemini-2.0-flash",
+      "region": "us-central1"
+    },
+    "localProvider": {
+      "providerId": "tech.kayys/ollama-provider",
+      "model": "llama3.2"
+    },
+    "credentialRefs": [
+      {
+        "name": "gemini-api-key",
+        "backend": "vault",
+        "path": "wayang/providers/gemini",
+        "key": "apiKey"
+      }
+    ],
+    "vault": {
+      "backend": "vault",
+      "tenantId": "community",
+      "pathPrefix": "wayang/providers"
+    }
+  }
+}
+```
+
+Important: execution payload carries references only (`credentialRefs`/`vault`), not raw secrets.
+
+In standalone runtime, execution start events also include `agentConfigCoverage`
+metadata (provider-mode counts, provider config counts, credential-ref counts, and
+secret-reference check status) without exposing secret values.
+If `credentialRefs[].path` is relative (for example `"gemini"`), runtime applies
+`extensions.vault.pathPrefix` (for example `"wayang/providers"`) so the effective
+path becomes `"wayang/providers/gemini"`.
+For agent executors, resolved credentials are also propagated into the Gollek
+inference request path:
+- provider is resolved from `preferredProvider` or `providerMode` + `cloudProvider/localProvider`
+- API key is selected from `_resolvedCredentials` (provider-aware matching) and
+  sent through `InferenceRequest.apiKey`
+- only non-sensitive metadata (for example resolved credential names) is included
+  in request metadata/events
+- planner/evaluator executors consume typed config first (schema fields above),
+  with backward-compatible fallback to context keys
+- orchestrator accepts objective-driven mode and delegated `agentTasks` mode, with
+  agent alias routing for planner/coder/analytic/evaluator/common
+
+Regression coverage:
+- `SchemaCatalogApiTest` validates `agent-planner` and `agent-evaluator` appear in
+  `/v1/schema/catalog` and include typed fields:
+  - planner: `goal`, `strategy`
+  - evaluator: `candidateOutput`, `criteria`
+- `SchemaApiDynamicGenerationTest` validates additional agent schemas:
+  - orchestrator: `orchestrationType`, `coordinationStrategy`, `agentTasks`
+  - analytic: `instruction`, `preferredProvider`
+
 ## 🔁 Gollek Inference Server — Internal Flowchart
 
 ```mermaid

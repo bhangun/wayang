@@ -24,15 +24,23 @@ jobs:
         include:
           - runner: ubuntu-latest
             asset_name: wayang-standalone-linux-x86_64
+            service_bundle_name: wayang-service-bundle-linux-x86_64
+            service_os: linux
             shell: bash
           - runner: macos-13
             asset_name: wayang-standalone-osx-x86_64
+            service_bundle_name: wayang-service-bundle-osx-x86_64
+            service_os: macos
             shell: bash
           - runner: macos-14
             asset_name: wayang-standalone-osx-aarch_64
+            service_bundle_name: wayang-service-bundle-osx-aarch_64
+            service_os: macos
             shell: bash
           - runner: windows-latest
             asset_name: wayang-standalone-windows-x86_64.exe
+            service_bundle_name: wayang-service-bundle-windows-x86_64
+            service_os: windows
             shell: pwsh
 
     steps:
@@ -62,6 +70,26 @@ jobs:
           cp runtime/wayang-runtime-standalone/target/*-runner "artifacts/${{ matrix.asset_name }}"
           chmod +x "artifacts/${{ matrix.asset_name }}"
 
+      - name: Build Unix service bundle
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: wayang
+        run: |
+          set -euo pipefail
+          bundle_root="artifacts/${{ matrix.service_bundle_name }}"
+          wayang_home="${bundle_root}/.wayang"
+          mkdir -p "${wayang_home}/bin" "${wayang_home}/config" "${wayang_home}/logs" "${wayang_home}/plugins" "${wayang_home}/secrets" "${wayang_home}/gollek/models" "${wayang_home}/gollek/storage"
+          cp "artifacts/${{ matrix.asset_name }}" "${wayang_home}/bin/${{ matrix.asset_name }}"
+          cp "artifacts/${{ matrix.asset_name }}" "${wayang_home}/bin/wayang"
+          chmod +x "${wayang_home}/bin/${{ matrix.asset_name }}" "${wayang_home}/bin/wayang"
+          mkdir -p "${bundle_root}/scripts/service/${{ matrix.service_os }}"
+          cp -R "scripts/service/${{ matrix.service_os }}/." "${bundle_root}/scripts/service/${{ matrix.service_os }}/"
+          cp scripts/INSTALL.md "${bundle_root}/INSTALL.md"
+          (
+            cd "${bundle_root}"
+            zip -r "../${{ matrix.service_bundle_name }}.zip" .
+          )
+
       - name: Build native image (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -73,11 +101,40 @@ jobs:
           if (-not $runner) { throw "Native executable not found." }
           Copy-Item $runner.FullName "artifacts/${{ matrix.asset_name }}"
 
+      - name: Build Windows service bundle
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: wayang
+        run: |
+          $bundleRoot = "artifacts/${{ matrix.service_bundle_name }}"
+          $wayangHome = Join-Path $bundleRoot ".wayang"
+          New-Item -ItemType Directory -Force -Path "$wayangHome\bin" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$wayangHome\config" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$wayangHome\logs" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$wayangHome\plugins" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$wayangHome\secrets" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$wayangHome\gollek\models" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$wayangHome\gollek\storage" | Out-Null
+          Copy-Item "artifacts/${{ matrix.asset_name }}" "$wayangHome\bin\${{ matrix.asset_name }}"
+          Copy-Item "artifacts/${{ matrix.asset_name }}" "$wayangHome\bin\wayang.exe"
+          New-Item -ItemType Directory -Force -Path "$bundleRoot\scripts\service\windows" | Out-Null
+          Copy-Item -Path "scripts\service\windows\*" -Destination "$bundleRoot\scripts\service\windows" -Recurse -Force
+          Copy-Item "scripts\INSTALL.md" "$bundleRoot\INSTALL.md"
+          $bundleEntries = @("$wayangHome", "$bundleRoot\scripts", "$bundleRoot\INSTALL.md")
+          Compress-Archive -LiteralPath $bundleEntries -DestinationPath "artifacts/${{ matrix.service_bundle_name }}.zip" -Force
+
       - name: Upload native artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset_name }}
           path: wayang/artifacts/${{ matrix.asset_name }}
+          if-no-files-found: error
+
+      - name: Upload service bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.service_bundle_name }}
+          path: wayang/artifacts/${{ matrix.service_bundle_name }}.zip
           if-no-files-found: error
 
   build-jar-and-service-assets:
@@ -168,6 +225,10 @@ jobs:
             release-assets/wayang-standalone-osx-x86_64
             release-assets/wayang-standalone-osx-aarch_64
             release-assets/wayang-standalone-windows-x86_64.exe
+            release-assets/wayang-service-bundle-linux-x86_64.zip
+            release-assets/wayang-service-bundle-osx-x86_64.zip
+            release-assets/wayang-service-bundle-osx-aarch_64.zip
+            release-assets/wayang-service-bundle-windows-x86_64.zip
             release-assets/wayang-runtime-standalone-*.jar
             release-assets/wayang-service-assets-*.zip
           generate_release_notes: true
@@ -176,6 +237,7 @@ jobs:
           body: |
             Wayang standalone release assets:
             - Native executables
+            - Service-ready executable bundles with `.wayang/*` layout
             - Runnable standalone jar
             - Service helper scripts archive
             

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import tech.kayys.gamelan.engine.protocol.CommunicationType;
 import tech.kayys.gamelan.dispatcher.TaskDispatcherAggregator;
 import tech.kayys.gamelan.engine.event.EventPublisher;
 import tech.kayys.gamelan.engine.event.ExecutionEvent;
@@ -20,6 +21,7 @@ import tech.kayys.gamelan.engine.run.RetryPolicy;
 import tech.kayys.gamelan.engine.workflow.WorkflowRunId;
 import tech.kayys.gamelan.registry.ExecutorRegistry;
 import tech.kayys.gamelan.scheduler.WorkflowScheduler;
+import tech.kayys.wayang.runtime.standalone.service.StandaloneExecutionTimelineService;
 
 @ApplicationScoped
 public class InMemoryWorkflowScheduler implements WorkflowScheduler {
@@ -33,6 +35,9 @@ public class InMemoryWorkflowScheduler implements WorkflowScheduler {
     @Inject
     ExecutorRegistry executorRegistry;
 
+    @Inject
+    StandaloneExecutionTimelineService executionTimelineService;
+
     private final Map<String, RetryEntry> retryQueue = new ConcurrentHashMap<>();
     private final Map<String, NodeExecutionTask> activeTasks = new ConcurrentHashMap<>();
 
@@ -41,7 +46,7 @@ public class InMemoryWorkflowScheduler implements WorkflowScheduler {
         String taskKey = task.runId().value() + ":" + task.nodeId().value() + ":" + task.attempt();
         activeTasks.put(taskKey, task);
 
-        return executorRegistry.getExecutorForNode(task.nodeId())
+        return resolveExecutor(task)
                 .flatMap((Optional<ExecutorInfo> executorOpt) -> {
                     if (executorOpt.isEmpty()) {
                         return handleDispatchFailure(task, new IllegalStateException("No executor available"));
@@ -50,6 +55,26 @@ public class InMemoryWorkflowScheduler implements WorkflowScheduler {
                             .onFailure().recoverWithUni(err -> handleDispatchFailure(task, err))
                             .replaceWithVoid();
                 });
+    }
+
+    private Uni<Optional<ExecutorInfo>> resolveExecutor(NodeExecutionTask task) {
+        String nodeType = task.context() != null ? (String) task.context().get("__node_type__") : null;
+        if (nodeType != null && !nodeType.isBlank()) {
+            return executorRegistry.getExecutorsByType(nodeType)
+                    .map(executors -> {
+                        if (executors == null || executors.isEmpty()) {
+                            return Optional.<ExecutorInfo>empty();
+                        }
+                        Optional<ExecutorInfo> local = executors.stream()
+                                .filter(executor -> executor.communicationType() == CommunicationType.LOCAL)
+                                .findFirst();
+                        return local.isPresent() ? local : Optional.of(executors.get(0));
+                    })
+                    .flatMap(selected -> selected.isPresent()
+                            ? Uni.createFrom().item(selected)
+                            : executorRegistry.getExecutorForNode(task.nodeId()));
+        }
+        return executorRegistry.getExecutorForNode(task.nodeId());
     }
 
     @Override
@@ -69,7 +94,12 @@ public class InMemoryWorkflowScheduler implements WorkflowScheduler {
 
     @Override
     public Uni<Void> publishEvents(List<ExecutionEvent> events) {
-        return events.isEmpty() ? Uni.createFrom().voidItem() : eventPublisher.publish(events);
+        if (events.isEmpty()) {
+            return Uni.createFrom().voidItem();
+        }
+        return executionTimelineService.recordEngineEvents(events)
+                .onFailure().recoverWithNull()
+                .flatMap(v -> eventPublisher.publish(events));
     }
 
     @Override

@@ -1,5 +1,6 @@
 package tech.kayys.wayang.hitl.service;
 
+import io.quarkus.mailer.reactive.ReactiveMailer;
 import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,9 @@ class NotificationServiceTest {
         @Mock
         private HumanTaskRepository repository;
 
+        @Mock
+        private ReactiveMailer mailer;
+
         private NotificationService notificationService;
 
         @BeforeEach
@@ -42,9 +46,15 @@ class NotificationServiceTest {
                         java.lang.reflect.Field repoField = NotificationService.class.getDeclaredField("repository");
                         repoField.setAccessible(true);
                         repoField.set(notificationService, repository);
+
+                        java.lang.reflect.Field mailerField = NotificationService.class.getDeclaredField("mailer");
+                        mailerField.setAccessible(true);
+                        mailerField.set(notificationService, mailer);
                 } catch (Exception e) {
                         throw new RuntimeException("Failed to inject mock services", e);
                 }
+
+                when(mailer.send(any(io.quarkus.mailer.Mail[].class))).thenReturn(Uni.createFrom().voidItem());
         }
 
         @Test

@@ -16,6 +16,7 @@ import tech.kayys.wayang.agent.core.inference.AgentInferenceRequest;
 import tech.kayys.wayang.agent.core.inference.AgentInferenceResponse;
 import tech.kayys.wayang.agent.core.inference.GollekInferenceService;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -148,9 +149,12 @@ public class CommonAgentExecutor implements WorkflowExecutor {
 
         // Temporary workaround: pass tools via additionalParams if tools method is
         // missing
+        Map<String, Object> additionalParams = new LinkedHashMap<>();
+        additionalParams.put("context", context);
         if (tools != null && !tools.isEmpty()) {
-            builder.additionalParams(Map.of("tools", tools));
+            additionalParams.put("tools", tools);
         }
+        builder.additionalParams(additionalParams);
 
         AgentInferenceRequest request = builder.build();
 

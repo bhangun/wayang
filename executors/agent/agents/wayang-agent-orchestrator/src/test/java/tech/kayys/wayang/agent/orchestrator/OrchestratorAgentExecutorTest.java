@@ -26,6 +26,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -103,6 +104,104 @@ class OrchestratorAgentExecutorTest {
     }
 
     @Test
+    void executeSequentialRespectsMaxIterationsBudget() {
+        TestOrchestratorAgentExecutor executor = new TestOrchestratorAgentExecutor();
+        executor.setObjectMapper(lenientMapper());
+        executor.commonAgentExecutor = new FakeCommonAgentExecutor();
+        executor.plannerAgentExecutor = new FakePlannerAgentExecutor();
+        executor.coderAgentExecutor = new FakeCoderAgentExecutor();
+        executor.analyticAgentExecutor = new FakeAnalyticAgentExecutor();
+        executor.evaluatorAgentExecutor = new FakeEvaluatorAgentExecutor();
+
+        NodeExecutionTask task = createTask(Map.of(
+                "orchestrationType", "SEQUENTIAL",
+                "coordinationStrategy", "CENTRALIZED",
+                "maxIterations", 2,
+                "maxAgentLatencyMs", 500L,
+                "agentTasks", List.of(
+                        Map.of("agentType", "planner-agent", "context", Map.of("step", "plan-v1")),
+                        Map.of("agentType", "coder-agent", "context", Map.of("step", "execute")),
+                        Map.of("agentType", "evaluator-agent", "context", Map.of("step", "evaluate")))));
+
+        NodeExecutionResult result = executor.execute(task)
+                .await().atMost(Duration.ofSeconds(3));
+
+        assertEquals(NodeExecutionStatus.COMPLETED, result.status());
+        assertEquals(2, result.output().get("tasksExecuted"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> budget = (Map<String, Object>) result.output().get("budget");
+        assertEquals(2, budget.get("maxIterations"));
+        assertEquals(500L, budget.get("maxAgentLatencyMs"));
+        assertEquals(3, budget.get("tasksRequested"));
+        assertEquals(2, budget.get("tasksProcessed"));
+        assertEquals(Boolean.TRUE, budget.get("iterationLimitApplied"));
+        assertEquals(Boolean.FALSE, budget.get("delegationLimitApplied"));
+    }
+
+    @Test
+    void executeSequentialRespectsMaxDelegationsBudget() {
+        TestOrchestratorAgentExecutor executor = new TestOrchestratorAgentExecutor();
+        executor.setObjectMapper(lenientMapper());
+        executor.commonAgentExecutor = new FakeCommonAgentExecutor();
+        executor.plannerAgentExecutor = new FakePlannerAgentExecutor();
+        executor.coderAgentExecutor = new FakeCoderAgentExecutor();
+        executor.analyticAgentExecutor = new FakeAnalyticAgentExecutor();
+        executor.evaluatorAgentExecutor = new FakeEvaluatorAgentExecutor();
+
+        NodeExecutionTask task = createTask(Map.of(
+                "orchestrationType", "SEQUENTIAL",
+                "maxDelegations", 1,
+                "agentTasks", List.of(
+                        Map.of("agentType", "planner-agent", "context", Map.of("step", "plan-v1")),
+                        Map.of("agentType", "coder-agent", "context", Map.of("step", "execute")))));
+
+        NodeExecutionResult result = executor.execute(task)
+                .await().atMost(Duration.ofSeconds(3));
+
+        assertEquals(NodeExecutionStatus.COMPLETED, result.status());
+        assertEquals(1, result.output().get("tasksExecuted"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> budget = (Map<String, Object>) result.output().get("budget");
+        assertEquals(1, budget.get("maxDelegations"));
+        assertEquals(2, budget.get("tasksRequested"));
+        assertEquals(1, budget.get("tasksProcessed"));
+        assertEquals(Boolean.TRUE, budget.get("delegationLimitApplied"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> telemetry = (Map<String, Object>) result.output().get("telemetry");
+        assertEquals(1, telemetry.get("delegationAttempts"));
+        assertEquals(0, telemetry.get("delegationRetries"));
+    }
+
+    @Test
+    void executeRetriesDelegatedTaskWhenConfigured() {
+        TestOrchestratorAgentExecutor executor = new TestOrchestratorAgentExecutor();
+        executor.setObjectMapper(lenientMapper());
+        executor.commonAgentExecutor = new FakeCommonAgentExecutor();
+        executor.plannerAgentExecutor = new FlakyPlannerAgentExecutor();
+        executor.coderAgentExecutor = new FakeCoderAgentExecutor();
+        executor.analyticAgentExecutor = new FakeAnalyticAgentExecutor();
+        executor.evaluatorAgentExecutor = new FakeEvaluatorAgentExecutor();
+
+        NodeExecutionTask task = createTask(Map.of(
+                "orchestrationType", "SEQUENTIAL",
+                "maxRetriesPerDelegation", 1,
+                "agentTasks", List.of(Map.of("agentType", "planner-agent", "context", Map.of()))));
+
+        NodeExecutionResult result = executor.execute(task)
+                .await().atMost(Duration.ofSeconds(3));
+
+        assertEquals(NodeExecutionStatus.COMPLETED, result.status());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> budget = (Map<String, Object>) result.output().get("budget");
+        assertEquals(1, budget.get("maxRetriesPerDelegation"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> telemetry = (Map<String, Object>) result.output().get("telemetry");
+        assertEquals(2, telemetry.get("delegationAttempts"));
+        assertEquals(1, telemetry.get("delegationRetries"));
+        assertEquals(1, telemetry.get("delegationFailures"));
+    }
+
+    @Test
     void executeFailsWhenNoObjectiveAndNoAgentTasks() {
         TestOrchestratorAgentExecutor executor = new TestOrchestratorAgentExecutor();
         executor.setObjectMapper(lenientMapper());
@@ -115,6 +214,121 @@ class OrchestratorAgentExecutorTest {
         assertEquals(NodeExecutionStatus.FAILED, result.status());
         assertNotNull(result.error());
         assertTrue(result.error().message().contains("Neither agentTasks nor objective"));
+    }
+
+    @Test
+    void executeFailsWhenMaxIterationsInvalid() {
+        TestOrchestratorAgentExecutor executor = new TestOrchestratorAgentExecutor();
+        executor.setObjectMapper(lenientMapper());
+        executor.commonAgentExecutor = new FakeCommonAgentExecutor();
+        executor.plannerAgentExecutor = new FakePlannerAgentExecutor();
+        executor.coderAgentExecutor = new FakeCoderAgentExecutor();
+        executor.analyticAgentExecutor = new FakeAnalyticAgentExecutor();
+        executor.evaluatorAgentExecutor = new FakeEvaluatorAgentExecutor();
+
+        NodeExecutionTask task = createTask(Map.of(
+                "orchestrationType", "SEQUENTIAL",
+                "maxIterations", 0,
+                "agentTasks", List.of(Map.of("agentType", "planner-agent", "context", Map.of()))));
+
+        NodeExecutionResult result = executor.execute(task)
+                .await().atMost(Duration.ofSeconds(3));
+
+        assertEquals(NodeExecutionStatus.FAILED, result.status());
+        assertNotNull(result.error());
+        assertTrue(result.error().message().contains("maxIterations must be >= 1"));
+    }
+
+    @Test
+    void executeFailsWhenMaxDelegationsInvalid() {
+        TestOrchestratorAgentExecutor executor = new TestOrchestratorAgentExecutor();
+        executor.setObjectMapper(lenientMapper());
+        executor.commonAgentExecutor = new FakeCommonAgentExecutor();
+        executor.plannerAgentExecutor = new FakePlannerAgentExecutor();
+        executor.coderAgentExecutor = new FakeCoderAgentExecutor();
+        executor.analyticAgentExecutor = new FakeAnalyticAgentExecutor();
+        executor.evaluatorAgentExecutor = new FakeEvaluatorAgentExecutor();
+
+        NodeExecutionTask task = createTask(Map.of(
+                "orchestrationType", "SEQUENTIAL",
+                "maxDelegations", 0,
+                "agentTasks", List.of(Map.of("agentType", "planner-agent", "context", Map.of()))));
+
+        NodeExecutionResult result = executor.execute(task)
+                .await().atMost(Duration.ofSeconds(3));
+
+        assertEquals(NodeExecutionStatus.FAILED, result.status());
+        assertNotNull(result.error());
+        assertTrue(result.error().message().contains("maxDelegations must be >= 1"));
+    }
+
+    @Test
+    void executeFailsWhenMaxLatencyExceeded() {
+        TestOrchestratorAgentExecutor executor = new TestOrchestratorAgentExecutor();
+        executor.setObjectMapper(lenientMapper());
+        executor.commonAgentExecutor = new FakeCommonAgentExecutor();
+        executor.plannerAgentExecutor = new SlowPlannerAgentExecutor();
+        executor.coderAgentExecutor = new FakeCoderAgentExecutor();
+        executor.analyticAgentExecutor = new FakeAnalyticAgentExecutor();
+        executor.evaluatorAgentExecutor = new FakeEvaluatorAgentExecutor();
+
+        NodeExecutionTask task = createTask(Map.of(
+                "orchestrationType", "SEQUENTIAL",
+                "maxAgentLatencyMs", 1L,
+                "agentTasks", List.of(Map.of("agentType", "planner-agent", "context", Map.of()))));
+
+        NodeExecutionResult result = executor.execute(task)
+                .await().atMost(Duration.ofSeconds(3));
+
+        assertEquals(NodeExecutionStatus.FAILED, result.status());
+        assertNotNull(result.error());
+        assertTrue(result.error().message().contains("maxAgentLatencyMs"));
+    }
+
+    @Test
+    void executeFailsWhenMaxAgentLatencyInvalid() {
+        TestOrchestratorAgentExecutor executor = new TestOrchestratorAgentExecutor();
+        executor.setObjectMapper(lenientMapper());
+        executor.commonAgentExecutor = new FakeCommonAgentExecutor();
+        executor.plannerAgentExecutor = new FakePlannerAgentExecutor();
+        executor.coderAgentExecutor = new FakeCoderAgentExecutor();
+        executor.analyticAgentExecutor = new FakeAnalyticAgentExecutor();
+        executor.evaluatorAgentExecutor = new FakeEvaluatorAgentExecutor();
+
+        NodeExecutionTask task = createTask(Map.of(
+                "orchestrationType", "SEQUENTIAL",
+                "maxAgentLatencyMs", 0L,
+                "agentTasks", List.of(Map.of("agentType", "planner-agent", "context", Map.of()))));
+
+        NodeExecutionResult result = executor.execute(task)
+                .await().atMost(Duration.ofSeconds(3));
+
+        assertEquals(NodeExecutionStatus.FAILED, result.status());
+        assertNotNull(result.error());
+        assertTrue(result.error().message().contains("maxAgentLatencyMs must be >= 1"));
+    }
+
+    @Test
+    void executeFailsWhenMaxRetriesPerDelegationInvalid() {
+        TestOrchestratorAgentExecutor executor = new TestOrchestratorAgentExecutor();
+        executor.setObjectMapper(lenientMapper());
+        executor.commonAgentExecutor = new FakeCommonAgentExecutor();
+        executor.plannerAgentExecutor = new FakePlannerAgentExecutor();
+        executor.coderAgentExecutor = new FakeCoderAgentExecutor();
+        executor.analyticAgentExecutor = new FakeAnalyticAgentExecutor();
+        executor.evaluatorAgentExecutor = new FakeEvaluatorAgentExecutor();
+
+        NodeExecutionTask task = createTask(Map.of(
+                "orchestrationType", "SEQUENTIAL",
+                "maxRetriesPerDelegation", -1,
+                "agentTasks", List.of(Map.of("agentType", "planner-agent", "context", Map.of()))));
+
+        NodeExecutionResult result = executor.execute(task)
+                .await().atMost(Duration.ofSeconds(3));
+
+        assertEquals(NodeExecutionStatus.FAILED, result.status());
+        assertNotNull(result.error());
+        assertTrue(result.error().message().contains("maxRetriesPerDelegation must be >= 0"));
     }
 
     @Test
@@ -180,6 +394,28 @@ class OrchestratorAgentExecutorTest {
         @Override
         public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
             return Uni.createFrom().item(success(task, Map.of("agent", "planner")));
+        }
+    }
+
+    private static final class SlowPlannerAgentExecutor extends PlannerAgentExecutor {
+        @Override
+        public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
+            return Uni.createFrom().item(success(task, Map.of("agent", "planner")))
+                    .onItem().delayIt().by(Duration.ofMillis(25));
+        }
+    }
+
+    private static final class FlakyPlannerAgentExecutor extends PlannerAgentExecutor {
+        private final AtomicInteger attempts = new AtomicInteger();
+
+        @Override
+        public Uni<NodeExecutionResult> execute(NodeExecutionTask task) {
+            return Uni.createFrom().deferred(() -> {
+                if (attempts.incrementAndGet() == 1) {
+                    return Uni.createFrom().failure(new IllegalStateException("transient planner failure"));
+                }
+                return Uni.createFrom().item(success(task, Map.of("agent", "planner")));
+            });
         }
     }
 

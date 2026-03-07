@@ -18,6 +18,21 @@ public class OrchestratorAgentConfig extends AgentConfig {
     @JsonProperty("agentTasks")
     private List<Map<String, Object>> agentTasks;
 
+    @JsonProperty("maxIterations")
+    private Integer maxIterations;
+
+    @JsonProperty("maxDelegations")
+    private Integer maxDelegations;
+
+    @JsonProperty("maxLatencyMs")
+    private Long maxLatencyMs;
+
+    @JsonProperty("maxAgentLatencyMs")
+    private Long maxAgentLatencyMs;
+
+    @JsonProperty("maxRetriesPerDelegation")
+    private Integer maxRetriesPerDelegation;
+
     public OrchestratorAgentConfig() {
         super();
     }
@@ -44,5 +59,45 @@ public class OrchestratorAgentConfig extends AgentConfig {
 
     public void setAgentTasks(List<Map<String, Object>> agentTasks) {
         this.agentTasks = agentTasks;
+    }
+
+    public Integer getMaxIterations() {
+        return maxIterations;
+    }
+
+    public void setMaxIterations(Integer maxIterations) {
+        this.maxIterations = maxIterations;
+    }
+
+    public Integer getMaxDelegations() {
+        return maxDelegations;
+    }
+
+    public void setMaxDelegations(Integer maxDelegations) {
+        this.maxDelegations = maxDelegations;
+    }
+
+    public Long getMaxLatencyMs() {
+        return maxLatencyMs;
+    }
+
+    public void setMaxLatencyMs(Long maxLatencyMs) {
+        this.maxLatencyMs = maxLatencyMs;
+    }
+
+    public Long getMaxAgentLatencyMs() {
+        return maxAgentLatencyMs;
+    }
+
+    public void setMaxAgentLatencyMs(Long maxAgentLatencyMs) {
+        this.maxAgentLatencyMs = maxAgentLatencyMs;
+    }
+
+    public Integer getMaxRetriesPerDelegation() {
+        return maxRetriesPerDelegation;
+    }
+
+    public void setMaxRetriesPerDelegation(Integer maxRetriesPerDelegation) {
+        this.maxRetriesPerDelegation = maxRetriesPerDelegation;
     }
 }

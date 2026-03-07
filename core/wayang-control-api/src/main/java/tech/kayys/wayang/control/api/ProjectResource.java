@@ -188,6 +188,7 @@ public class ProjectResource {
         String createdBy = (request.createdBy() == null || request.createdBy().isBlank())
                 ? "api"
                 : request.createdBy();
+        boolean dryRun = Boolean.TRUE.equals(request.dryRun()) || Boolean.TRUE.equals(request.validateOnly());
         Map<String, Object> runtimeInputs = request.inputs() == null ? Map.of() : request.inputs();
 
         return projectManager.getProject(projectId, resolvedTenant)
@@ -195,6 +196,19 @@ public class ProjectResource {
                     if (project == null) {
                         return Uni.createFrom().item(Response.status(Response.Status.NOT_FOUND)
                                 .entity(new ProjectExecutionErrorResponse("Project not found: " + projectId))
+                                .build());
+                    }
+
+                    if (dryRun) {
+                        return Uni.createFrom().item(Response.ok(new ProjectExecutionDryRunResponse(
+                                projectId.toString(),
+                                true,
+                                true,
+                                true,
+                                BuiltinSchemaCatalog.WAYANG_SPEC,
+                                definitionName,
+                                runtimeInputs.size(),
+                                "DRY_RUN_VALID"))
                                 .build());
                     }
 
@@ -271,7 +285,9 @@ record ProjectExecutionRequest(
         String description,
         @NotNull @JsonAlias({ "wayangSpec", "workflowSpec" }) WayangSpec spec,
         Map<String, Object> inputs,
-        String createdBy) {
+        String createdBy,
+        Boolean dryRun,
+        Boolean validateOnly) {
 }
 
 record ProjectExecutionErrorResponse(String message) {
@@ -282,5 +298,16 @@ record ProjectExecutionAcceptedResponse(
         String definitionId,
         String workflowDefinitionId,
         String executionId,
+        String status) {
+}
+
+record ProjectExecutionDryRunResponse(
+        String projectId,
+        boolean dryRun,
+        boolean validated,
+        boolean canExecute,
+        String schemaId,
+        String name,
+        int inputCount,
         String status) {
 }

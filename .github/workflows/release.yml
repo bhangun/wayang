@@ -79,6 +79,16 @@ jobs:
           bundle_root="artifacts/${{ matrix.service_bundle_name }}"
           wayang_home="${bundle_root}/.wayang"
           mkdir -p "${wayang_home}/bin" "${wayang_home}/config" "${wayang_home}/logs" "${wayang_home}/plugins" "${wayang_home}/secrets" "${wayang_home}/gollek/models" "${wayang_home}/gollek/storage"
+          printf '%s\n' \
+            'WAYANG_HOME=$HOME/.wayang' \
+            'WAYANG_CONFIG_DIR=$WAYANG_HOME/config' \
+            'WAYANG_LOG_DIR=$WAYANG_HOME/logs' \
+            'WAYANG_PLUGINS_DIR=$WAYANG_HOME/plugins' \
+            'WAYANG_SECRETS_DIR=$WAYANG_HOME/secrets' \
+            'WAYANG_GOLLEK_HOME=$WAYANG_HOME/gollek' \
+            '# Legacy fallback if WAYANG_GOLLEK_HOME cannot be used:' \
+            '# GOLLEK_HOME=$HOME/.gollek' \
+            > "${wayang_home}/config/wayang.env.example"
           cp "artifacts/${{ matrix.asset_name }}" "${wayang_home}/bin/${{ matrix.asset_name }}"
           cp "artifacts/${{ matrix.asset_name }}" "${wayang_home}/bin/wayang"
           chmod +x "${wayang_home}/bin/${{ matrix.asset_name }}" "${wayang_home}/bin/wayang"
@@ -115,13 +125,28 @@ jobs:
           New-Item -ItemType Directory -Force -Path "$wayangHome\secrets" | Out-Null
           New-Item -ItemType Directory -Force -Path "$wayangHome\gollek\models" | Out-Null
           New-Item -ItemType Directory -Force -Path "$wayangHome\gollek\storage" | Out-Null
+          @(
+            "WAYANG_HOME=%USERPROFILE%\.wayang",
+            "WAYANG_CONFIG_DIR=%WAYANG_HOME%\config",
+            "WAYANG_LOG_DIR=%WAYANG_HOME%\logs",
+            "WAYANG_PLUGINS_DIR=%WAYANG_HOME%\plugins",
+            "WAYANG_SECRETS_DIR=%WAYANG_HOME%\secrets",
+            "WAYANG_GOLLEK_HOME=%WAYANG_HOME%\gollek",
+            "; Legacy fallback if WAYANG_GOLLEK_HOME cannot be used:",
+            "; GOLLEK_HOME=%USERPROFILE%\.gollek"
+          ) | Set-Content "$wayangHome\config\wayang.env.example"
           Copy-Item "artifacts/${{ matrix.asset_name }}" "$wayangHome\bin\${{ matrix.asset_name }}"
           Copy-Item "artifacts/${{ matrix.asset_name }}" "$wayangHome\bin\wayang.exe"
           New-Item -ItemType Directory -Force -Path "$bundleRoot\scripts\service\windows" | Out-Null
           Copy-Item -Path "scripts\service\windows\*" -Destination "$bundleRoot\scripts\service\windows" -Recurse -Force
           Copy-Item "scripts\INSTALL.md" "$bundleRoot\INSTALL.md"
-          $bundleEntries = @("$wayangHome", "$bundleRoot\scripts", "$bundleRoot\INSTALL.md")
-          Compress-Archive -LiteralPath $bundleEntries -DestinationPath "artifacts/${{ matrix.service_bundle_name }}.zip" -Force
+          Push-Location $bundleRoot
+          try {
+            $bundleEntries = @(".wayang", "scripts", "INSTALL.md")
+            Compress-Archive -LiteralPath $bundleEntries -DestinationPath "..\${{ matrix.service_bundle_name }}.zip" -Force
+          } finally {
+            Pop-Location
+          }
 
       - name: Upload native artifact
         uses: actions/upload-artifact@v4

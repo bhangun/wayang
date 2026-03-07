@@ -87,6 +87,10 @@ public class StandaloneExecutionTimelineService {
             }
             if (event instanceof NodeCompletedEvent completed && completed.output() != null) {
                 metadata.put("output", completed.output());
+                Map<String, Object> telemetry = extractTelemetry(completed.output());
+                if (!telemetry.isEmpty()) {
+                    metadata.put("telemetry", telemetry);
+                }
             }
             payload.put("metadata", metadata);
 
@@ -149,6 +153,42 @@ public class StandaloneExecutionTimelineService {
             return failed.attempt();
         }
         return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> extractTelemetry(Map<String, Object> output) {
+        if (output == null || output.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, Object> telemetry = new LinkedHashMap<>();
+
+        Object orchestrationType = output.get("orchestrationType");
+        if (orchestrationType != null) {
+            telemetry.put("orchestrationType", orchestrationType);
+        }
+        Object tasksExecuted = output.get("tasksExecuted");
+        if (tasksExecuted != null) {
+            telemetry.put("tasksExecuted", tasksExecuted);
+        }
+        Object executionMode = output.get("executionMode");
+        if (executionMode != null) {
+            telemetry.put("executionMode", executionMode);
+        }
+        Object executionOrder = output.get("executionOrder");
+        if (executionOrder != null) {
+            telemetry.put("executionOrder", executionOrder);
+        }
+
+        Object budget = output.get("budget");
+        if (budget instanceof Map<?, ?> budgetMap && !budgetMap.isEmpty()) {
+            telemetry.put("budget", new LinkedHashMap<>((Map<String, Object>) budgetMap));
+        }
+        Object outputTelemetry = output.get("telemetry");
+        if (outputTelemetry instanceof Map<?, ?> telemetryMap && !telemetryMap.isEmpty()) {
+            telemetry.put("executorTelemetry", new LinkedHashMap<>((Map<String, Object>) telemetryMap));
+        }
+
+        return telemetry;
     }
 
     private Path executionsFile() throws IOException {

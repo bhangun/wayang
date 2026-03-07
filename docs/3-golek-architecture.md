@@ -17,6 +17,7 @@ The extensions automatically set `wayang.multitenancy.enabled=true`. See `wayang
 ## Agent Inference Provider Contract (Local/Cloud + Vault)
 
 Wayang execution payload (`POST /api/v1/projects/{projectId}/executions`) supports agent configuration that explicitly selects local/cloud inference path and secret references.
+The same endpoint supports validation-only mode with `dryRun` or `validateOnly`, which validates payload/schema and coverage without starting a workflow run.
 
 This is aligned with:
 

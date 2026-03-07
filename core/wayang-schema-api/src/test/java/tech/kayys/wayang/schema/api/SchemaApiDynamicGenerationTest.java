@@ -47,9 +47,13 @@ public class SchemaApiDynamicGenerationTest {
                 .statusCode(200)
                 .body("id", notNullValue())
                 .body("schema", notNullValue())
-                .body("schema", containsString("\"orchestrationType\""))
-                .body("schema", containsString("\"coordinationStrategy\""))
-                .body("schema", containsString("\"agentTasks\""));
+                .body("schema", containsString("\"goal\""))
+                .body("schema", containsString("\"strategy\""))
+                .body("schema", containsString("\"maxIterations\""))
+                .body("schema", containsString("\"maxDelegations\""))
+                .body("schema", containsString("\"maxLatencyMs\""))
+                .body("schema", containsString("\"maxAgentLatencyMs\""))
+                .body("schema", containsString("\"maxRetriesPerDelegation\""));
     }
 
     @Test
@@ -60,8 +64,8 @@ public class SchemaApiDynamicGenerationTest {
                 .statusCode(200)
                 .body("id", notNullValue())
                 .body("schema", notNullValue())
-                // AnalyticAgentConfig fields from AgentConfig base
-                .body("schema", containsString("\"instruction\""))
+                .body("schema", containsString("\"goal\""))
+                .body("schema", containsString("\"criteria\""))
                 .body("schema", containsString("\"preferredProvider\""));
     }
 

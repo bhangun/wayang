@@ -12,8 +12,8 @@
     <artifactId>wayang-agent-common</artifactId>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
         <lombok.version>1.18.42</lombok.version>
         <hypersistence-utils.version>3.8.2</hypersistence-utils.version>
     </properties>

@@ -53,21 +53,6 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-plugin-registry</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-plugin-spi</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>tech.kayys.gamelan</groupId>
-            <artifactId>gamelan-engine</artifactId>
-            <version>${gamelan.version}</version>
-        </dependency>
-        <dependency>
             <groupId>tech.kayys.gamelan</groupId>
             <artifactId>gamelan-runtime-core</artifactId>
             <version>${gamelan.version}</version>
@@ -79,52 +64,12 @@
         </dependency>
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-vault-manager</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-schema-core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-schema-api</artifactId>
-            <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>io.quarkus</groupId>
-                    <artifactId>quarkus-resteasy</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>io.quarkus</groupId>
-                    <artifactId>quarkus-resteasy-jackson</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <!--  <dependency>
-            <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-schema-grpc</artifactId>
-            <version>${project.version}</version>
-        </dependency> -->
-        <dependency>
-            <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-control-api</artifactId>
-            <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>io.quarkus</groupId>
-                    <artifactId>quarkus-resteasy</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>io.quarkus</groupId>
-                    <artifactId>quarkus-resteasy-jackson</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-control-websocket</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-api</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

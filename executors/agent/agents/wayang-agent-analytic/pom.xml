@@ -11,8 +11,8 @@
     <artifactId>wayang-agent-analytic</artifactId>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
         <gamelan.version>1.0.0-SNAPSHOT</gamelan.version>
     </properties>
 

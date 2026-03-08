@@ -19,7 +19,7 @@
     <description>Enterprise-grade workflow engine for agentic AI and business automation</description>
 
     <properties>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <quarkus.platform.version>3.15.1</quarkus.platform.version>
         <grpc.version>1.60.0</grpc.version>

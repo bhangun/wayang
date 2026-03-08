@@ -6,6 +6,7 @@ import tech.kayys.wayang.eip.schema.EIPSchema;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
 @QuarkusTest
@@ -89,5 +90,42 @@ public class SchemaApiDynamicGenerationTest {
                 // Nested configs
                 .body("schema", containsString("\"escalationConfig\""))
                 .body("schema", containsString("\"notificationConfig\""));
+    }
+
+    @Test
+    public void testDynamicSubWorkflowSchema() {
+        given()
+                .when().get("/v1/schema/catalog/" + "sub-workflow")
+                .then()
+                .statusCode(200)
+                .body("id", notNullValue())
+                .body("schema", notNullValue())
+                .body("schema", containsString("\"projectId\""))
+                .body("schema", containsString("\"invokeMode\""))
+                .body("schema", containsString("\"inputs\""))
+                .body("schema", containsString("\"parameters\""))
+                .body("schema", containsString("\"inputBindings\""))
+                .body("schema", containsString("\"exposedOutput\""))
+                .body("schema", containsString("\"wayangSpec\""))
+                .body("schema", containsString("\"workflowSpec\""))
+                .body("schema", containsString("\"maxDepth\""));
+    }
+
+    @Test
+    public void testWorkflowAliasAndWorkflowSpecSchemaAreEquivalent() {
+        String workflowSchema = given()
+                .when().get("/v1/schema/catalog/workflow")
+                .then()
+                .statusCode(200)
+                .body("id", equalTo("workflow"))
+                .extract()
+                .path("schema");
+
+        given()
+                .when().get("/v1/schema/catalog/workflow-spec")
+                .then()
+                .statusCode(200)
+                .body("id", equalTo("workflow-spec"))
+                .body("schema", equalTo(workflowSchema));
     }
 }

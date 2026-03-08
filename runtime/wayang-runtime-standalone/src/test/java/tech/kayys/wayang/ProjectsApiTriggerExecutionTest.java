@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -97,6 +98,160 @@ class ProjectsApiTriggerExecutionTest {
                 .body("[1].type", equalTo("EXECUTION_STARTED"))
                 .body("[0].metadata.requestId", equalTo(REQUEST_ID))
                 .body("[1].metadata.requestId", equalTo(REQUEST_ID));
+    }
+
+    @Test
+    void shouldExposeExecutionContextCorrelationInStatusEventsAndTelemetry() {
+        String projectId = given()
+                .contentType("application/json")
+                .body(Map.of(
+                        "projectName", "Correlation Context Project",
+                        "description", "verify parent-child execution context"))
+                .when()
+                .post("/api/v1/projects")
+                .then()
+                .statusCode(201)
+                .body("projectId", notNullValue())
+                .extract()
+                .path("projectId");
+
+        String parentExecutionId = "parent-exec-001";
+        String parentProjectId = "parent-project-001";
+        String parentNodeId = "custom-agent-node-1";
+
+        String executionId = given()
+                .contentType("application/json")
+                .header("X-Tenant-Id", "community")
+                .header("X-Request-Id", "req-correlation-001")
+                .body(Map.of(
+                        "name", "correlated-subworkflow-run",
+                        "parentExecutionId", parentExecutionId,
+                        "parentProjectId", parentProjectId,
+                        "parentNodeId", parentNodeId,
+                        "correlationId", "corr-123",
+                        "relationType", "subworkflow",
+                        "spec", Map.of(
+                                "specVersion", "1.0.0",
+                                "canvas", Map.of(
+                                        "nodes", java.util.List.of(Map.of(
+                                                "id", "trigger-node-1",
+                                                "type", "trigger-manual",
+                                                "label", "Manual Trigger",
+                                                "config", Map.of())),
+                                        "edges", java.util.List.of()))))
+                .when()
+                .post("/api/v1/projects/{projectId}/executions", projectId)
+                .then()
+                .statusCode(202)
+                .body("executionContext.relationType", equalTo("subworkflow"))
+                .body("executionContext.parentExecutionId", equalTo(parentExecutionId))
+                .body("executionContext.parentProjectId", equalTo(parentProjectId))
+                .body("executionContext.parentNodeId", equalTo(parentNodeId))
+                .body("executionContext.childProjectId", equalTo(projectId))
+                .body("executionContext.correlationId", equalTo("corr-123"))
+                .extract()
+                .path("executionId");
+
+        given()
+                .when()
+                .get("/api/v1/projects/{projectId}/executions/{executionId}", projectId, executionId)
+                .then()
+                .statusCode(200)
+                .body("executionContext.relationType", equalTo("subworkflow"))
+                .body("executionContext.parentExecutionId", equalTo(parentExecutionId))
+                .body("executionContext.parentProjectId", equalTo(parentProjectId))
+                .body("executionContext.parentNodeId", equalTo(parentNodeId))
+                .body("executionContext.childProjectId", equalTo(projectId))
+                .body("executionContext.correlationId", equalTo("corr-123"));
+
+        given()
+                .when()
+                .get("/api/v1/projects/{projectId}/executions/{executionId}/events", projectId, executionId)
+                .then()
+                .statusCode(200)
+                .body("[0].metadata.executionContext.relationType", equalTo("subworkflow"))
+                .body("[0].metadata.executionContext.parentExecutionId", equalTo(parentExecutionId))
+                .body("[0].metadata.executionContext.parentProjectId", equalTo(parentProjectId))
+                .body("[0].metadata.executionContext.parentNodeId", equalTo(parentNodeId))
+                .body("[0].metadata.executionContext.childProjectId", equalTo(projectId))
+                .body("[0].metadata.executionContext.correlationId", equalTo("corr-123"));
+
+        given()
+                .when()
+                .get("/api/v1/projects/{projectId}/executions/{executionId}/telemetry", projectId, executionId)
+                .then()
+                .statusCode(200)
+                .body("executionContext.relationType", equalTo("subworkflow"))
+                .body("executionContext.parentExecutionId", equalTo(parentExecutionId))
+                .body("executionContext.parentProjectId", equalTo(parentProjectId))
+                .body("executionContext.parentNodeId", equalTo(parentNodeId))
+                .body("executionContext.childProjectId", equalTo(projectId))
+                .body("executionContext.correlationId", equalTo("corr-123"));
+
+        given()
+                .when()
+                .get("/api/v1/projects/{projectId}/executions/{executionId}/lineage", projectId, executionId)
+                .then()
+                .statusCode(200)
+                .body("executionId", equalTo(executionId))
+                .body("include[0]", equalTo("executionContext"))
+                .body("include[1]", equalTo("subWorkflowResolution"))
+                .body("include[2]", equalTo("status"))
+                .body("include[3]", equalTo("updatedAt"))
+                .body("executionContext.parentExecutionId", equalTo(parentExecutionId))
+                .body("trace", notNullValue())
+                .body("traceCount", greaterThanOrEqualTo(0));
+
+        given()
+                .queryParam("view", "compact")
+                .queryParam("nodeId", parentNodeId)
+                .when()
+                .get("/api/v1/projects/{projectId}/executions/{executionId}/lineage", projectId, executionId)
+                .then()
+                .statusCode(200)
+                .body("view", equalTo("compact"))
+                .body("nodeId", equalTo(parentNodeId))
+                .body("include[0]", equalTo("executionContext"))
+                .body("trace", notNullValue())
+                .body("traceCount", greaterThanOrEqualTo(0))
+                .body("totalTraceCount", greaterThanOrEqualTo(0));
+
+        given()
+                .queryParam("view", "compact")
+                .queryParam("nodeId", parentNodeId)
+                .queryParam("sort", "depth:desc")
+                .queryParam("limit", 1)
+                .queryParam("offset", 0)
+                .queryParam("fields", "depth,parentNodeId,unknown,childId")
+                .when()
+                .get("/api/v1/projects/{projectId}/executions/{executionId}/lineage", projectId, executionId)
+                .then()
+                .statusCode(200)
+                .body("view", equalTo("compact"))
+                .body("nodeId", equalTo(parentNodeId))
+                .body("sort", equalTo("depth:desc"))
+                .body("limit", equalTo(1))
+                .body("offset", equalTo(0))
+                .body("fields[0]", equalTo("childId"))
+                .body("fields[1]", equalTo("parentNodeId"))
+                .body("fields[2]", equalTo("depth"))
+                .body("ignoredFields[0]", equalTo("unknown"))
+                .body("traceCount", greaterThanOrEqualTo(0))
+                .body("filteredTraceCount", greaterThanOrEqualTo(0))
+                .body("trace", notNullValue());
+
+        given()
+                .queryParam("view", "compact")
+                .queryParam("include", "updatedAt,status,unknown")
+                .when()
+                .get("/api/v1/projects/{projectId}/executions/{executionId}/lineage", projectId, executionId)
+                .then()
+                .statusCode(200)
+                .body("include[0]", equalTo("status"))
+                .body("include[1]", equalTo("updatedAt"))
+                .body("ignoredIncludes[0]", equalTo("unknown"))
+                .body("status", notNullValue())
+                .body("updatedAt", notNullValue());
     }
 
     @Test
@@ -729,5 +884,323 @@ class ProjectsApiTriggerExecutionTest {
                 System.setProperty("wayang.runtime.standalone.execution.rate-limit.per-minute", originalLimit);
             }
         }
+    }
+
+    @Test
+    void shouldExecuteCrossTenantCallableSubWorkflowEndToEnd() {
+        String childProjectId = given()
+                .contentType("application/json")
+                .body(Map.of(
+                        "tenantId", "tenant-a",
+                        "createdBy", "alice",
+                        "projectName", "Callable Shared Child",
+                        "metadata", Map.of(
+                                "access", Map.of(
+                                        "ownerTenantId", "tenant-a",
+                                        "ownerUserId", "alice",
+                                        "visibility", "explicit",
+                                        "sharedWithTenants", java.util.List.of("tenant-b")),
+                                "reuse", Map.of(
+                                        "enabled", true,
+                                        "mode", "callable",
+                                        "version", "v2",
+                                        "entrypoint", Map.of("type", "parameterized"),
+                                        "contract", Map.of(
+                                                "inputs", Map.of(
+                                                        "required", java.util.List.of(
+                                                                Map.of("name", "ticketId", "type", "string"))),
+                                                "output", Map.of(
+                                                        "type", "object",
+                                                        "properties", Map.of(
+                                                                "summary", Map.of("type", "string"))))),
+                                "wayangSpec", Map.of(
+                                        "specVersion", "1.0.0",
+                                        "workflow", Map.of(
+                                                "nodes", java.util.List.of(
+                                                        Map.of(
+                                                                "metadata", Map.of("id", "start"),
+                                                                "type", "trigger-manual",
+                                                                "configuration", Map.of()),
+                                                        Map.of(
+                                                                "metadata", Map.of("id", "worker"),
+                                                                "type", "agent-basic",
+                                                                "configuration", Map.of("goal", "handle ticket"))),
+                                                "connections", java.util.List.of(
+                                                        Map.of("fromNodeId", "start", "toNodeId", "worker")))))))
+                .when()
+                .post("/api/v1/projects")
+                .then()
+                .statusCode(201)
+                .body("projectId", notNullValue())
+                .extract()
+                .path("projectId");
+
+        String parentProjectId = given()
+                .contentType("application/json")
+                .body(Map.of(
+                        "tenantId", "tenant-b",
+                        "createdBy", "bob",
+                        "projectName", "Parent Consumer Project"))
+                .when()
+                .post("/api/v1/projects")
+                .then()
+                .statusCode(201)
+                .body("projectId", notNullValue())
+                .extract()
+                .path("projectId");
+
+        given()
+                .header("accept", "application/json")
+                .header("X-Tenant-Id", "tenant-b")
+                .header("X-User-Id", "bob")
+                .queryParam("mode", "callable")
+                .when()
+                .get("/api/v1/projects/shareable")
+                .then()
+                .statusCode(200)
+                .body("mode", equalTo("callable"))
+                .body("projects.projectId", hasItem(childProjectId));
+
+        given()
+                .header("accept", "application/json")
+                .header("X-Tenant-Id", "tenant-b")
+                .header("X-User-Id", "bob")
+                .when()
+                .get("/api/v1/projects/{projectId}/callable-contract", childProjectId)
+                .then()
+                .statusCode(200)
+                .body("projectId", equalTo(childProjectId))
+                .body("callable.mode", equalTo("callable"))
+                .body("callable.entrypoint.type", equalTo("parameterized"))
+                .body("callable.version", equalTo("v2"))
+                .body("callable.inputs.required[0].name", equalTo("ticketId"));
+
+        given()
+                .contentType("application/json")
+                .header("X-Tenant-Id", "tenant-b")
+                .header("X-User-Id", "bob")
+                .body(Map.of(
+                        "nodeId", "custom-agent-1",
+                        "configuration", Map.of(
+                                "projectId", childProjectId,
+                                "projectVersion", "v2",
+                                "inputs", Map.of("ticketId", "INC-42"),
+                                "outputBindings", Map.of("summary", "context.child.summary"))))
+                .when()
+                .post("/api/v1/projects/{projectId}/validate-callable", childProjectId)
+                .then()
+                .statusCode(200)
+                .body("valid", equalTo(true))
+                .body("callable.mode", equalTo("callable"));
+
+        given()
+                .contentType("application/json")
+                .header("X-Tenant-Id", "tenant-b")
+                .header("X-User-Id", "bob")
+                .body(Map.of(
+                        "name", "parent-calls-child",
+                        "dryRun", true,
+                        "spec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", java.util.List.of(
+                                                Map.of(
+                                                        "metadata", Map.of("id", "parent-start"),
+                                                        "type", "trigger-manual",
+                                                        "configuration", Map.of()),
+                                                Map.of(
+                                                        "metadata", Map.of("id", "custom-agent-1"),
+                                                        "type", "custom-agent-node",
+                                                        "configuration", Map.of(
+                                                                "projectId", childProjectId,
+                                                                "projectVersion", "v2",
+                                                                "inputs", Map.of("ticketId", "INC-42"),
+                                                                "outputBindings", Map.of("summary", "context.child.summary"))),
+                                                Map.of(
+                                                        "metadata", Map.of("id", "parent-end"),
+                                                        "type", "agent-evaluator",
+                                                        "configuration", Map.of())),
+                                        "connections", java.util.List.of(
+                                                Map.of("fromNodeId", "parent-start", "toNodeId", "custom-agent-1"),
+                                                Map.of("fromNodeId", "custom-agent-1", "toNodeId", "parent-end"))))))
+                .when()
+                .post("/api/v1/projects/{projectId}/executions", parentProjectId)
+                .then()
+                .statusCode(200)
+                .body("projectId", equalTo(parentProjectId))
+                .body("status", equalTo("DRY_RUN_VALID"))
+                .body("subWorkflowResolution.childReferences", equalTo(1))
+                .body("subWorkflowResolution.trace[0].projectId", equalTo(childProjectId))
+                .body("subWorkflowResolution.trace[0].parentNodeId", equalTo("custom-agent-1"))
+                .body("subWorkflowResolution.trace[0].parentProjectId", equalTo(parentProjectId))
+                .body("subWorkflowResolution.trace[0].callableMode", equalTo("callable"))
+                .body("subWorkflowResolution.trace[0].entrypointType", equalTo("parameterized"))
+                .body("subWorkflowResolution.trace[0].version", equalTo("v2"))
+                .body("subWorkflowResolution.trace[0].bindingSummary.inputKeys", hasItem("ticketId"))
+                .body("subWorkflowResolution.trace[0].bindingSummary.outputBindingSources", hasItem("summary"))
+                .body("subWorkflowResolution.trace[0].bindingSummary.outputBindingTargets", hasItem("context.child.summary"));
+    }
+
+    @Test
+    void shouldDenyCallableAccessWhenConsentIsRequiredAndMissing() {
+        String childProjectId = given()
+                .contentType("application/json")
+                .body(Map.of(
+                        "tenantId", "tenant-a",
+                        "createdBy", "alice",
+                        "projectName", "Consent Required Child",
+                        "metadata", Map.of(
+                                "access", Map.of(
+                                        "ownerTenantId", "tenant-a",
+                                        "ownerUserId", "alice",
+                                        "visibility", "explicit",
+                                        "requireConsent", true,
+                                        "sharedWithTenants", java.util.List.of("tenant-b")),
+                                "reuse", Map.of(
+                                        "enabled", true,
+                                        "mode", "callable",
+                                        "entrypoint", Map.of("type", "parameterized"),
+                                        "contract", Map.of(
+                                                "inputs", Map.of(
+                                                        "required", java.util.List.of(
+                                                                Map.of("name", "ticketId", "type", "string"))),
+                                                "output", Map.of(
+                                                        "type", "object",
+                                                        "properties", Map.of(
+                                                                "summary", Map.of("type", "string"))))),
+                                "wayangSpec", Map.of(
+                                        "specVersion", "1.0.0",
+                                        "workflow", Map.of(
+                                                "nodes", java.util.List.of(
+                                                        Map.of("metadata", Map.of("id", "start"), "type", "trigger-manual"),
+                                                        Map.of("metadata", Map.of("id", "worker"), "type", "agent-basic")),
+                                                "connections", java.util.List.of(
+                                                        Map.of("fromNodeId", "start", "toNodeId", "worker")))))))
+                .when()
+                .post("/api/v1/projects")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("projectId");
+
+        given()
+                .header("accept", "application/json")
+                .header("X-Tenant-Id", "tenant-b")
+                .header("X-User-Id", "bob")
+                .queryParam("mode", "callable")
+                .when()
+                .get("/api/v1/projects/shareable")
+                .then()
+                .statusCode(200)
+                .body("projects.projectId", org.hamcrest.Matchers.not(hasItem(childProjectId)));
+
+        given()
+                .header("accept", "application/json")
+                .header("X-Tenant-Id", "tenant-b")
+                .header("X-User-Id", "bob")
+                .when()
+                .get("/api/v1/projects/{projectId}/callable-contract", childProjectId)
+                .then()
+                .statusCode(400)
+                .body("message", containsString("Access denied for sub-workflow"));
+
+        given()
+                .contentType("application/json")
+                .header("X-Tenant-Id", "tenant-b")
+                .header("X-User-Id", "bob")
+                .body(Map.of(
+                        "nodeId", "custom-agent-1",
+                        "configuration", Map.of(
+                                "projectId", childProjectId,
+                                "inputs", Map.of("ticketId", "INC-99"))))
+                .when()
+                .post("/api/v1/projects/{projectId}/validate-callable", childProjectId)
+                .then()
+                .statusCode(400)
+                .body("message", containsString("Access denied for sub-workflow"));
+    }
+
+    @Test
+    void shouldPreviewOutputBindingsForConsentGrantedCallableProject() {
+        String childProjectId = given()
+                .contentType("application/json")
+                .body(Map.of(
+                        "tenantId", "tenant-a",
+                        "createdBy", "alice",
+                        "projectName", "Consent Granted Child",
+                        "metadata", Map.of(
+                                "access", Map.of(
+                                        "ownerTenantId", "tenant-a",
+                                        "ownerUserId", "alice",
+                                        "visibility", "explicit",
+                                        "requireConsent", true,
+                                        "sharedWithTenants", java.util.List.of("tenant-b"),
+                                        "consentGrants", java.util.List.of(
+                                                Map.of(
+                                                        "tenantId", "tenant-b",
+                                                        "userId", "bob",
+                                                        "permission", "execute_subworkflow"))),
+                                "reuse", Map.of(
+                                        "enabled", true,
+                                        "mode", "callable",
+                                        "entrypoint", Map.of("type", "parameterized"),
+                                        "contract", Map.of(
+                                                "inputs", Map.of(
+                                                        "required", java.util.List.of(
+                                                                Map.of("name", "ticketId", "type", "string"))),
+                                                "output", Map.of(
+                                                        "type", "object",
+                                                        "properties", Map.of(
+                                                                "summary", Map.of("type", "string"),
+                                                                "score", Map.of("type", "number"))))),
+                                "wayangSpec", Map.of(
+                                        "specVersion", "1.0.0",
+                                        "workflow", Map.of(
+                                                "nodes", java.util.List.of(
+                                                        Map.of("metadata", Map.of("id", "start"), "type", "trigger-manual"),
+                                                        Map.of("metadata", Map.of("id", "worker"), "type", "agent-basic")),
+                                                "connections", java.util.List.of(
+                                                        Map.of("fromNodeId", "start", "toNodeId", "worker")))))))
+                .when()
+                .post("/api/v1/projects")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("projectId");
+
+        given()
+                .header("accept", "application/json")
+                .header("X-Tenant-Id", "tenant-b")
+                .header("X-User-Id", "bob")
+                .queryParam("mode", "callable")
+                .when()
+                .get("/api/v1/projects/shareable")
+                .then()
+                .statusCode(200)
+                .body("projects.projectId", hasItem(childProjectId));
+
+        given()
+                .contentType("application/json")
+                .header("X-Tenant-Id", "tenant-b")
+                .header("X-User-Id", "bob")
+                .body(Map.of(
+                        "configuration", Map.of(
+                                "projectId", childProjectId,
+                                "outputBindings", Map.of(
+                                        "summary", "context.child.summary",
+                                        "score", "context.child.score",
+                                        "unknownField", "context.child.unknown"))))
+                .when()
+                .post("/api/v1/projects/{projectId}/preview-output-bindings", childProjectId)
+                .then()
+                .statusCode(200)
+                .body("projectId", equalTo(childProjectId))
+                .body("valid", equalTo(false))
+                .body("bindings.summary", equalTo("context.child.summary"))
+                .body("bindings.score", equalTo("context.child.score"))
+                .body("invalidSources", hasItem("unknownField"))
+                .body("validSources", hasItem("summary"))
+                .body("validSources", hasItem("score"))
+                .body("validSources", hasItem("*"));
     }
 }

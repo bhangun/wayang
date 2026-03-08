@@ -23,6 +23,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,7 +31,7 @@ class ProjectsResourceUnitTest {
 
     private String originalUserHome;
     private Path tempHome;
-    private ProjectsResource resource;
+    private ProjectsService resource;
     private FakeDefinitionService fakeDefinitionService;
 
     @BeforeEach
@@ -39,7 +40,7 @@ class ProjectsResourceUnitTest {
         tempHome = Files.createTempDirectory("wayang-standalone-test-home");
         System.setProperty("user.home", tempHome.toString());
 
-        resource = new ProjectsResource();
+        resource = new ProjectsService();
         fakeDefinitionService = new FakeDefinitionService();
         resource.definitionService = fakeDefinitionService;
         resource.schemaValidationService = new AllowAllSchemaValidationService();
@@ -175,6 +176,1023 @@ class ProjectsResourceUnitTest {
         assertEquals(2, events.size());
         assertEquals("EXECUTION_QUEUED", String.valueOf(events.get(0).get("type")));
         assertEquals("EXECUTION_STARTED", String.valueOf(events.get(1).get("type")));
+    }
+
+    @Test
+    void shouldExpandInlineSubWorkflowNodeIntoParentWorkflow() {
+        Response created = resource.createProject(Map.of("projectName", "Subworkflow Parent"));
+        assertEquals(201, created.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> project = (Map<String, Object>) created.getEntity();
+        String projectId = String.valueOf(project.get("projectId"));
+
+        Map<String, Object> childSpec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "child-a"),
+                                        "type", "agent-basic",
+                                        "configuration", Map.of("goal", "do work"))),
+                        "connections", List.of()));
+
+        Map<String, Object> parentSpec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of("metadata", Map.of("id", "start"), "type", "trigger-manual", "configuration", Map.of()),
+                                Map.of(
+                                        "metadata", Map.of("id", "custom-1"),
+                                        "type", "sub-workflow",
+                                        "configuration", Map.of("wayangSpec", childSpec)),
+                                Map.of("metadata", Map.of("id", "end"), "type", "agent-evaluator", "configuration", Map.of())),
+                        "connections", List.of(
+                                Map.of("fromNodeId", "start", "toNodeId", "custom-1"),
+                                Map.of("fromNodeId", "custom-1", "toNodeId", "end"))));
+
+        Response execute = resource.createExecution(projectId, "community", Map.of(
+                "name", "subworkflow-inline",
+                "spec", parentSpec));
+        assertEquals(202, execute.getStatus());
+
+        WayangSpec persisted = fakeDefinitionService.lastCreatedSpec;
+        assertNotNull(persisted);
+        assertNotNull(persisted.getWorkflow());
+        List<?> nodes = persisted.getWorkflow().getNodes();
+        assertNotNull(nodes);
+        assertFalse(nodes.isEmpty());
+        assertTrue(nodes.stream().noneMatch(node -> "sub-workflow".equals(((tech.kayys.wayang.schema.node.Node) node).getType())));
+        assertTrue(nodes.stream().anyMatch(node -> "agent-basic".equals(((tech.kayys.wayang.schema.node.Node) node).getType())));
+    }
+
+    @Test
+    void shouldRejectSubWorkflowWhenDepthLimitExceeded() {
+        Response created = resource.createProject(Map.of("projectName", "Subworkflow Depth"));
+        assertEquals(201, created.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> project = (Map<String, Object>) created.getEntity();
+        String projectId = String.valueOf(project.get("projectId"));
+
+        Map<String, Object> level4 = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(Map.of("metadata", Map.of("id", "n4"), "type", "agent-basic", "configuration", Map.of())),
+                        "connections", List.of()));
+
+        Map<String, Object> level3 = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "n3"),
+                                        "type", "sub-workflow",
+                                        "configuration", Map.of("wayangSpec", level4))),
+                        "connections", List.of()));
+
+        Map<String, Object> level2 = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "n2"),
+                                        "type", "sub-workflow",
+                                        "configuration", Map.of("wayangSpec", level3))),
+                        "connections", List.of()));
+
+        Map<String, Object> level1 = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "n1"),
+                                        "type", "sub-workflow",
+                                        "configuration", Map.of("wayangSpec", level2))),
+                        "connections", List.of()));
+
+        Response execute = resource.createExecution(projectId, "community", Map.of(
+                "name", "subworkflow-depth",
+                "maxSubWorkflowDepth", 2,
+                "spec", level1));
+        assertEquals(400, execute.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) execute.getEntity();
+        assertTrue(String.valueOf(payload.get("message")).contains("depth limit"));
+    }
+
+    @Test
+    void shouldExpandProjectReferencedSubWorkflowNode() {
+        Response childCreated = resource.createProject(Map.of(
+                "projectName", "Child Project",
+                "metadata", Map.of(
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of(
+                                                        "metadata", Map.of("id", "child-agent"),
+                                                        "type", "agent-basic",
+                                                        "configuration", Map.of("goal", "from child project"))),
+                                        "connections", List.of())))));
+        assertEquals(201, childCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> childProject = (Map<String, Object>) childCreated.getEntity();
+        String childProjectId = String.valueOf(childProject.get("projectId"));
+
+        Response parentCreated = resource.createProject(Map.of("projectName", "Parent Project"));
+        assertEquals(201, parentCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parentProject = (Map<String, Object>) parentCreated.getEntity();
+        String parentProjectId = String.valueOf(parentProject.get("projectId"));
+
+        Map<String, Object> parentSpec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of("metadata", Map.of("id", "start"), "type", "trigger-manual", "configuration", Map.of()),
+                                Map.of(
+                                        "metadata", Map.of("id", "custom-child"),
+                                        "type", "custom-agent-node",
+                                        "configuration", Map.of("projectId", childProjectId)),
+                                Map.of("metadata", Map.of("id", "end"), "type", "agent-evaluator", "configuration", Map.of())),
+                        "connections", List.of(
+                                Map.of("fromNodeId", "start", "toNodeId", "custom-child"),
+                                Map.of("fromNodeId", "custom-child", "toNodeId", "end"))));
+
+        Response execute = resource.createExecution(parentProjectId, "community", Map.of(
+                "name", "subworkflow-project-ref",
+                "spec", parentSpec));
+        assertEquals(202, execute.getStatus());
+
+        WayangSpec persisted = fakeDefinitionService.lastCreatedSpec;
+        assertNotNull(persisted);
+        assertNotNull(persisted.getWorkflow());
+        assertTrue(persisted.getWorkflow().getNodes().stream()
+                .anyMatch(node -> "agent-basic".equals(node.getType())));
+        assertTrue(persisted.getWorkflow().getNodes().stream()
+                .noneMatch(node -> "custom-agent-node".equals(node.getType())));
+    }
+
+    @Test
+    void shouldRejectSubWorkflowProjectCycle() {
+        Response projectCreated = resource.createProject(Map.of("projectName", "Cycle Project"));
+        assertEquals(201, projectCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> project = (Map<String, Object>) projectCreated.getEntity();
+        String projectId = String.valueOf(project.get("projectId"));
+
+        Map<String, Object> selfSpec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "self"),
+                                        "type", "sub-workflow",
+                                        "configuration", Map.of("projectId", projectId))),
+                        "connections", List.of()));
+
+        Response updated = resource.updateProject(projectId, Map.of(
+                "projectName", "Cycle Project",
+                "metadata", Map.of("wayangSpec", selfSpec)));
+        assertEquals(200, updated.getStatus());
+
+        Response execute = resource.createExecution(projectId, "community", Map.of(
+                "name", "cycle-test",
+                "spec", selfSpec));
+        assertEquals(400, execute.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) execute.getEntity();
+        assertTrue(String.valueOf(payload.get("message")).toLowerCase().contains("cycle"));
+    }
+
+    @Test
+    void shouldRejectSubWorkflowWhenReferencedProjectDoesNotExist() {
+        Response parentCreated = resource.createProject(Map.of("projectName", "Parent Missing Child"));
+        assertEquals(201, parentCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parentProject = (Map<String, Object>) parentCreated.getEntity();
+        String parentProjectId = String.valueOf(parentProject.get("projectId"));
+
+        Map<String, Object> spec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "missing-child"),
+                                        "type", "sub-workflow",
+                                        "configuration", Map.of("projectId", "00000000-0000-0000-0000-000000000000"))),
+                        "connections", List.of()));
+
+        Response execute = resource.createExecution(parentProjectId, "community", Map.of(
+                "name", "missing-child",
+                "spec", spec));
+        assertEquals(400, execute.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) execute.getEntity();
+        assertTrue(String.valueOf(payload.get("message")).contains("Sub-workflow project not found"));
+    }
+
+    @Test
+    void shouldExposeSubWorkflowResolutionSummaryInDryRun() {
+        Response childCreated = resource.createProject(Map.of(
+                "projectName", "Child For DryRun",
+                "metadata", Map.of(
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of(
+                                                        "metadata", Map.of("id", "child-agent"),
+                                                        "type", "agent-basic",
+                                                        "configuration", Map.of())),
+                                        "connections", List.of())))));
+        assertEquals(201, childCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> childProject = (Map<String, Object>) childCreated.getEntity();
+        String childProjectId = String.valueOf(childProject.get("projectId"));
+
+        Response parentCreated = resource.createProject(Map.of("projectName", "Parent DryRun"));
+        assertEquals(201, parentCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parentProject = (Map<String, Object>) parentCreated.getEntity();
+        String parentProjectId = String.valueOf(parentProject.get("projectId"));
+
+        Map<String, Object> spec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "custom"),
+                                        "type", "custom-agent-node",
+                                        "configuration", Map.of("projectId", childProjectId))),
+                        "connections", List.of()));
+
+        Response execute = resource.createExecution(parentProjectId, "community", Map.of(
+                "name", "dryrun-subworkflow-summary",
+                "dryRun", true,
+                "spec", spec));
+        assertEquals(200, execute.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) execute.getEntity();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> summary = (Map<String, Object>) payload.get("subWorkflowResolution");
+        assertNotNull(summary);
+        assertEquals(1, ((Number) summary.get("childReferences")).intValue());
+        assertEquals(1, ((Number) summary.get("childrenResolved")).intValue());
+        assertTrue(((Number) summary.get("expandedNodeCount")).longValue() >= 1L);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> trace = (List<Map<String, Object>>) summary.get("trace");
+        assertNotNull(trace);
+        assertEquals(1, trace.size());
+        Map<String, Object> firstTrace = trace.get(0);
+        assertEquals("custom", String.valueOf(firstTrace.get("parentNodeId")));
+        assertEquals(parentProjectId, String.valueOf(firstTrace.get("parentProjectId")));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> bindingSummary = (Map<String, Object>) firstTrace.get("bindingSummary");
+        assertNotNull(bindingSummary);
+        assertEquals(0, ((Number) bindingSummary.get("inputCount")).intValue());
+        assertEquals(0, ((Number) bindingSummary.get("outputBindingCount")).intValue());
+    }
+
+    @Test
+    void shouldExposeExecutionLineageEndpointForSubWorkflowExecution() {
+        Response childCreated = resource.createProject(Map.of(
+                "projectName", "Child For Lineage",
+                "metadata", Map.of(
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of(
+                                                        "metadata", Map.of("id", "child-agent"),
+                                                        "type", "agent-basic",
+                                                        "configuration", Map.of())),
+                                        "connections", List.of())))));
+        assertEquals(201, childCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> childProject = (Map<String, Object>) childCreated.getEntity();
+        String childProjectId = String.valueOf(childProject.get("projectId"));
+
+        Response parentCreated = resource.createProject(Map.of("projectName", "Parent For Lineage"));
+        assertEquals(201, parentCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parentProject = (Map<String, Object>) parentCreated.getEntity();
+        String parentProjectId = String.valueOf(parentProject.get("projectId"));
+
+        Map<String, Object> spec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "custom"),
+                                        "type", "custom-agent-node",
+                                        "configuration", Map.of(
+                                                "projectId", childProjectId,
+                                                "inputs", Map.of("ticketId", "INC-77")))),
+                        "connections", List.of()));
+
+        Response execute = resource.createExecution(parentProjectId, "community", Map.of(
+                "name", "lineage-subworkflow-run",
+                "spec", spec));
+        assertEquals(202, execute.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> executionPayload = (Map<String, Object>) execute.getEntity();
+        String executionId = String.valueOf(executionPayload.get("executionId"));
+        assertNotNull(executionId);
+
+        Response lineage = resource.getExecutionLineage(parentProjectId, executionId);
+        assertEquals(200, lineage.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> lineagePayload = (Map<String, Object>) lineage.getEntity();
+        assertEquals(parentProjectId, String.valueOf(lineagePayload.get("projectId")));
+        assertEquals(executionId, String.valueOf(lineagePayload.get("executionId")));
+        assertEquals(List.of("executionContext", "subWorkflowResolution", "status", "updatedAt"), lineagePayload.get("include"));
+        assertEquals(List.of(), lineagePayload.get("ignoredIncludes"));
+        assertEquals(1, ((Number) lineagePayload.get("traceCount")).intValue());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> trace = (List<Map<String, Object>>) lineagePayload.get("trace");
+        assertEquals(1, trace.size());
+        assertEquals("custom", String.valueOf(trace.get(0).get("parentNodeId")));
+
+        Response compactFiltered = resource.getExecutionLineage(
+                parentProjectId, executionId, "compact", "custom", null, null, null, null, null);
+        assertEquals(200, compactFiltered.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> compactPayload = (Map<String, Object>) compactFiltered.getEntity();
+        assertEquals("compact", String.valueOf(compactPayload.get("view")));
+        assertEquals("custom", String.valueOf(compactPayload.get("nodeId")));
+        assertEquals(List.of("executionContext"), compactPayload.get("include"));
+        assertEquals(1, ((Number) compactPayload.get("traceCount")).intValue());
+        assertEquals(1, ((Number) compactPayload.get("totalTraceCount")).intValue());
+        assertFalse(compactPayload.containsKey("subWorkflowResolution"));
+
+        Response projected = resource.getExecutionLineage(
+                parentProjectId, executionId, "compact", "custom", null, null, null, "childId,parentNodeId", null);
+        assertEquals(200, projected.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> projectedPayload = (Map<String, Object>) projected.getEntity();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> projectedTrace = (List<Map<String, Object>>) projectedPayload.get("trace");
+        assertEquals(1, projectedTrace.size());
+        assertEquals(List.of("childId", "parentNodeId"), projectedPayload.get("fields"));
+        assertEquals(List.of(), projectedPayload.get("ignoredFields"));
+        assertEquals(2, projectedTrace.get(0).size());
+        assertEquals("custom", String.valueOf(projectedTrace.get(0).get("childId")));
+        assertEquals("custom", String.valueOf(projectedTrace.get(0).get("parentNodeId")));
+
+        Response projectedWithIgnored = resource.getExecutionLineage(
+                parentProjectId, executionId, "compact", "custom", null, null, null, "parentNodeId,unknown,childId", null);
+        assertEquals(200, projectedWithIgnored.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> projectedWithIgnoredPayload = (Map<String, Object>) projectedWithIgnored.getEntity();
+        assertEquals(List.of("childId", "parentNodeId"), projectedWithIgnoredPayload.get("fields"));
+        assertEquals(List.of("unknown"), projectedWithIgnoredPayload.get("ignoredFields"));
+
+        Response includeSelected = resource.getExecutionLineage(
+                parentProjectId, executionId, "compact", "custom", null, null, null, null, "updatedAt,status,unknown");
+        assertEquals(200, includeSelected.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> includePayload = (Map<String, Object>) includeSelected.getEntity();
+        assertEquals(List.of("status", "updatedAt"), includePayload.get("include"));
+        assertEquals(List.of("unknown"), includePayload.get("ignoredIncludes"));
+        assertTrue(includePayload.containsKey("status"));
+        assertTrue(includePayload.containsKey("updatedAt"));
+        assertFalse(includePayload.containsKey("executionContext"));
+    }
+
+    @Test
+    void shouldApplyLineageSortAndPagination() {
+        Response childCreated = resource.createProject(Map.of(
+                "projectName", "Child For Pagination",
+                "metadata", Map.of(
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of(
+                                                        "metadata", Map.of("id", "child-agent"),
+                                                        "type", "agent-basic",
+                                                        "configuration", Map.of())),
+                                        "connections", List.of())))));
+        assertEquals(201, childCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> childProject = (Map<String, Object>) childCreated.getEntity();
+        String childProjectId = String.valueOf(childProject.get("projectId"));
+
+        Response parentCreated = resource.createProject(Map.of("projectName", "Parent For Pagination"));
+        assertEquals(201, parentCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parentProject = (Map<String, Object>) parentCreated.getEntity();
+        String parentProjectId = String.valueOf(parentProject.get("projectId"));
+
+        Map<String, Object> spec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "custom-a"),
+                                        "type", "custom-agent-node",
+                                        "configuration", Map.of("projectId", childProjectId)),
+                                Map.of(
+                                        "metadata", Map.of("id", "custom-b"),
+                                        "type", "custom-agent-node",
+                                        "configuration", Map.of("projectId", childProjectId))),
+                        "connections", List.of()));
+
+        Response execute = resource.createExecution(parentProjectId, "community", Map.of(
+                "name", "lineage-pagination-run",
+                "spec", spec));
+        assertEquals(202, execute.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> executionPayload = (Map<String, Object>) execute.getEntity();
+        String executionId = String.valueOf(executionPayload.get("executionId"));
+
+        Response lineage = resource.getExecutionLineage(
+                parentProjectId,
+                executionId,
+                "compact",
+                null,
+                "childId:asc",
+                1,
+                1,
+                null,
+                null);
+        assertEquals(200, lineage.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) lineage.getEntity();
+        assertEquals(2, ((Number) payload.get("totalTraceCount")).intValue());
+        assertEquals(2, ((Number) payload.get("filteredTraceCount")).intValue());
+        assertEquals(1, ((Number) payload.get("traceCount")).intValue());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> trace = (List<Map<String, Object>>) payload.get("trace");
+        assertEquals(1, trace.size());
+        assertEquals("custom-b", String.valueOf(trace.get(0).get("childId")));
+    }
+
+    @Test
+    void shouldDenyCrossTenantSubWorkflowWhenNotShared() {
+        Response childCreated = resource.createProject(Map.of(
+                "tenantId", "tenant-a",
+                "createdBy", "owner-a",
+                "projectName", "Private Child",
+                "metadata", Map.of(
+                        "access", Map.of(
+                                "ownerTenantId", "tenant-a",
+                                "ownerUserId", "owner-a",
+                                "visibility", "private"),
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of("metadata", Map.of("id", "child"), "type", "agent-basic", "configuration", Map.of())),
+                                        "connections", List.of())))));
+        assertEquals(201, childCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> childProject = (Map<String, Object>) childCreated.getEntity();
+        String childProjectId = String.valueOf(childProject.get("projectId"));
+
+        Response parentCreated = resource.createProject(Map.of(
+                "tenantId", "tenant-b",
+                "createdBy", "owner-b",
+                "projectName", "Parent B"));
+        assertEquals(201, parentCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parentProject = (Map<String, Object>) parentCreated.getEntity();
+        String parentProjectId = String.valueOf(parentProject.get("projectId"));
+
+        Map<String, Object> parentSpec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "custom"),
+                                        "type", "sub-workflow",
+                                        "configuration", Map.of("projectId", childProjectId))),
+                        "connections", List.of()));
+
+        Response execute = resource.createExecution(
+                parentProjectId,
+                "tenant-b",
+                "owner-b",
+                null,
+                null,
+                null,
+                Map.of("name", "cross-tenant-deny", "spec", parentSpec));
+        assertEquals(400, execute.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) execute.getEntity();
+        assertTrue(String.valueOf(payload.get("message")).contains("Access denied"));
+    }
+
+    @Test
+    void shouldAllowCrossTenantSubWorkflowWhenSharedByTenant() {
+        Response childCreated = resource.createProject(Map.of(
+                "tenantId", "tenant-a",
+                "createdBy", "owner-a",
+                "projectName", "Shared Child",
+                "metadata", Map.of(
+                        "access", Map.of(
+                                "ownerTenantId", "tenant-a",
+                                "ownerUserId", "owner-a",
+                                "visibility", "explicit",
+                                "sharedWithTenants", List.of("tenant-b")),
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of("metadata", Map.of("id", "child"), "type", "agent-basic", "configuration", Map.of())),
+                                        "connections", List.of())))));
+        assertEquals(201, childCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> childProject = (Map<String, Object>) childCreated.getEntity();
+        String childProjectId = String.valueOf(childProject.get("projectId"));
+
+        Response parentCreated = resource.createProject(Map.of(
+                "tenantId", "tenant-b",
+                "createdBy", "owner-b",
+                "projectName", "Parent B"));
+        assertEquals(201, parentCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parentProject = (Map<String, Object>) parentCreated.getEntity();
+        String parentProjectId = String.valueOf(parentProject.get("projectId"));
+
+        Map<String, Object> parentSpec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "custom"),
+                                        "type", "sub-workflow",
+                                        "configuration", Map.of("projectId", childProjectId))),
+                        "connections", List.of()));
+
+        Response execute = resource.createExecution(
+                parentProjectId,
+                "tenant-b",
+                "owner-b",
+                null,
+                null,
+                null,
+                Map.of("name", "cross-tenant-allow", "spec", parentSpec));
+        assertEquals(202, execute.getStatus());
+    }
+
+    @Test
+    void shouldListOnlyCallableShareableProjectsWithContract() {
+        Response callable = resource.createProject(Map.of(
+                "tenantId", "tenant-a",
+                "createdBy", "owner-a",
+                "projectName", "Callable Child",
+                "metadata", Map.of(
+                        "access", Map.of(
+                                "ownerTenantId", "tenant-a",
+                                "ownerUserId", "owner-a",
+                                "visibility", "explicit",
+                                "sharedWithTenants", List.of("tenant-b")),
+                        "reuse", Map.of(
+                                "enabled", true,
+                                "mode", "callable",
+                                "entrypoint", Map.of("type", "parameterized"),
+                                "contract", Map.of(
+                                        "inputs", Map.of(
+                                                "required", List.of(Map.of("name", "ticketId", "type", "string")),
+                                                "optional", List.of(Map.of("name", "priority", "type", "number"))),
+                                        "output", Map.of(
+                                                "type", "object",
+                                                "properties", Map.of("summary", Map.of("type", "string")),
+                                                "required", List.of("summary")))),
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of("metadata", Map.of("id", "start"), "type", "trigger-parameterized",
+                                                        "configuration", Map.of()),
+                                                Map.of("metadata", Map.of("id", "agent"), "type", "agent-basic",
+                                                        "configuration", Map.of())),
+                                        "connections", List.of(Map.of("fromNodeId", "start", "toNodeId", "agent")))))));
+        assertEquals(201, callable.getStatus());
+
+        Response autonomous = resource.createProject(Map.of(
+                "tenantId", "tenant-a",
+                "createdBy", "owner-a",
+                "projectName", "Autonomous Child",
+                "metadata", Map.of(
+                        "access", Map.of(
+                                "ownerTenantId", "tenant-a",
+                                "ownerUserId", "owner-a",
+                                "visibility", "explicit",
+                                "sharedWithTenants", List.of("tenant-b")),
+                        "reuse", Map.of("enabled", true, "mode", "autonomous"),
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of("metadata", Map.of("id", "start"), "type", "trigger-schedule",
+                                                        "configuration", Map.of("intervalSeconds", 60))),
+                                        "connections", List.of())))));
+        assertEquals(201, autonomous.getStatus());
+
+        Response response = resource.listShareableProjects("tenant-b", "bob", "callable", null);
+        assertEquals(200, response.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) response.getEntity();
+        assertEquals("callable", String.valueOf(payload.get("mode")));
+        assertEquals(1, ((Number) payload.get("count")).intValue());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> projects = (List<Map<String, Object>>) payload.get("projects");
+        assertEquals(1, projects.size());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> callableContract = (Map<String, Object>) projects.get(0).get("callable");
+        assertEquals("callable", String.valueOf(callableContract.get("mode")));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> inputs = (Map<String, Object>) callableContract.get("inputs");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> required = (List<Map<String, Object>>) inputs.get("required");
+        assertEquals("ticketId", String.valueOf(required.get(0).get("name")));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> output = (Map<String, Object>) callableContract.get("output");
+        assertEquals("object", String.valueOf(output.get("type")));
+    }
+
+    @Test
+    void shouldRejectAutonomousSubWorkflowReference() {
+        Response childCreated = resource.createProject(Map.of(
+                "tenantId", "community",
+                "createdBy", "owner",
+                "projectName", "Autonomous Child",
+                "metadata", Map.of(
+                        "reuse", Map.of("enabled", true, "mode", "autonomous"),
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of("metadata", Map.of("id", "start"), "type", "trigger-schedule",
+                                                        "configuration", Map.of("intervalSeconds", 60))),
+                                        "connections", List.of())))));
+        assertEquals(201, childCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> childProject = (Map<String, Object>) childCreated.getEntity();
+        String childProjectId = String.valueOf(childProject.get("projectId"));
+
+        Response parentCreated = resource.createProject(Map.of("projectName", "Parent Project"));
+        assertEquals(201, parentCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parentProject = (Map<String, Object>) parentCreated.getEntity();
+        String parentProjectId = String.valueOf(parentProject.get("projectId"));
+
+        Map<String, Object> parentSpec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "custom-child"),
+                                        "type", "custom-agent-node",
+                                        "configuration", Map.of("projectId", childProjectId))),
+                        "connections", List.of()));
+
+        Response execute = resource.createExecution(parentProjectId, "community", Map.of(
+                "name", "reject-autonomous-child",
+                "spec", parentSpec));
+        assertEquals(400, execute.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) execute.getEntity();
+        assertTrue(String.valueOf(payload.get("message")).contains("not callable"));
+    }
+
+    @Test
+    void shouldRejectParameterizedSubWorkflowWhenRequiredInputMissing() {
+        Response childCreated = resource.createProject(Map.of(
+                "tenantId", "community",
+                "createdBy", "owner",
+                "projectName", "Parameterized Child",
+                "metadata", Map.of(
+                        "reuse", Map.of(
+                                "enabled", true,
+                                "mode", "callable",
+                                "entrypoint", Map.of("type", "parameterized"),
+                                "contract", Map.of(
+                                        "inputs", Map.of(
+                                                "required", List.of(Map.of("name", "ticketId", "type", "string"))))),
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of("metadata", Map.of("id", "start"), "type", "trigger-parameterized",
+                                                        "configuration", Map.of()),
+                                                Map.of("metadata", Map.of("id", "agent"), "type", "agent-basic",
+                                                        "configuration", Map.of())),
+                                        "connections", List.of(Map.of("fromNodeId", "start", "toNodeId", "agent")))))));
+        assertEquals(201, childCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> childProject = (Map<String, Object>) childCreated.getEntity();
+        String childProjectId = String.valueOf(childProject.get("projectId"));
+
+        Response parentCreated = resource.createProject(Map.of("projectName", "Parent"));
+        assertEquals(201, parentCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parentProject = (Map<String, Object>) parentCreated.getEntity();
+        String parentProjectId = String.valueOf(parentProject.get("projectId"));
+
+        Map<String, Object> parentSpec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "custom-child"),
+                                        "type", "sub-workflow",
+                                        "configuration", Map.of("projectId", childProjectId))),
+                        "connections", List.of()));
+
+        Response execute = resource.createExecution(parentProjectId, "community", Map.of(
+                "name", "missing-required-input",
+                "spec", parentSpec));
+        assertEquals(400, execute.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) execute.getEntity();
+        assertTrue(String.valueOf(payload.get("message")).contains("missing required"));
+    }
+
+    @Test
+    void shouldAllowParameterizedSubWorkflowWhenRequiredInputProvided() {
+        Response childCreated = resource.createProject(Map.of(
+                "tenantId", "community",
+                "createdBy", "owner",
+                "projectName", "Parameterized Child OK",
+                "metadata", Map.of(
+                        "reuse", Map.of(
+                                "enabled", true,
+                                "mode", "callable",
+                                "entrypoint", Map.of("type", "parameterized"),
+                                "contract", Map.of(
+                                        "inputs", Map.of(
+                                                "required", List.of(Map.of("name", "ticketId", "type", "string")),
+                                                "optional", List.of(Map.of("name", "priority", "type", "number"))))),
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of("metadata", Map.of("id", "start"), "type", "trigger-parameterized",
+                                                        "configuration", Map.of()),
+                                                Map.of("metadata", Map.of("id", "agent"), "type", "agent-basic",
+                                                        "configuration", Map.of())),
+                                        "connections", List.of(Map.of("fromNodeId", "start", "toNodeId", "agent")))))));
+        assertEquals(201, childCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> childProject = (Map<String, Object>) childCreated.getEntity();
+        String childProjectId = String.valueOf(childProject.get("projectId"));
+
+        Response parentCreated = resource.createProject(Map.of("projectName", "Parent"));
+        assertEquals(201, parentCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parentProject = (Map<String, Object>) parentCreated.getEntity();
+        String parentProjectId = String.valueOf(parentProject.get("projectId"));
+
+        Map<String, Object> parentSpec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "custom-child"),
+                                        "type", "sub-workflow",
+                                        "configuration", Map.of(
+                                                "projectId", childProjectId,
+                                                "inputs", Map.of(
+                                                        "ticketId", "INC-123",
+                                                        "priority", 5)))),
+                        "connections", List.of()));
+
+        Response execute = resource.createExecution(parentProjectId, "community", Map.of(
+                "name", "with-required-input",
+                "spec", parentSpec));
+        assertEquals(202, execute.getStatus());
+    }
+
+    @Test
+    void shouldPreviewOutputBindingsForCallableProject() {
+        Response childCreated = resource.createProject(Map.of(
+                "projectName", "Output Contract Child",
+                "metadata", Map.of(
+                        "reuse", Map.of(
+                                "enabled", true,
+                                "mode", "callable",
+                                "entrypoint", Map.of("type", "manual"),
+                                "contract", Map.of(
+                                        "output", Map.of(
+                                                "type", "object",
+                                                "properties", Map.of(
+                                                        "summary", Map.of("type", "string"),
+                                                        "score", Map.of("type", "number"))))),
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of("metadata", Map.of("id", "start"), "type", "trigger-manual",
+                                                        "configuration", Map.of())),
+                                        "connections", List.of())))));
+        assertEquals(201, childCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> child = (Map<String, Object>) childCreated.getEntity();
+        String childId = String.valueOf(child.get("projectId"));
+
+        Response preview = resource.previewOutputBindings(
+                childId,
+                "community",
+                "wayang_designer",
+                Map.of(
+                        "configuration", Map.of(
+                                "projectId", childId,
+                                "outputBindings", Map.of(
+                                        "summary", "context.child.summary",
+                                        "unknown", "context.child.unknown"))));
+        assertEquals(200, preview.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) preview.getEntity();
+        assertEquals(Boolean.FALSE, payload.get("valid"));
+        @SuppressWarnings("unchecked")
+        List<String> invalid = (List<String>) payload.get("invalidSources");
+        assertTrue(invalid.contains("unknown"));
+    }
+
+    @Test
+    void shouldReturnStructuredInvalidWorkflowErrorPayload() {
+        fakeDefinitionService.throwOnCreateMessage = "Invalid workflow definition";
+        Response created = resource.createProject(Map.of("projectName", "Invalid Workflow Project"));
+        assertEquals(201, created.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> project = (Map<String, Object>) created.getEntity();
+        String projectId = String.valueOf(project.get("projectId"));
+
+        Response execute = resource.createExecution(projectId, "community", Map.of(
+                "name", "invalid-workflow",
+                "spec", Map.of("specVersion", "1.0.0", "workflow", Map.of("nodes", List.of()))));
+        assertEquals(400, execute.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) execute.getEntity();
+        assertEquals("EXECUTION_WORKFLOW_INVALID", String.valueOf(payload.get("errorCode")));
+    }
+
+    @Test
+    void shouldExposeCallableContractEndpoint() {
+        Response childCreated = resource.createProject(Map.of(
+                "tenantId", "community",
+                "createdBy", "owner",
+                "projectName", "Contract Child",
+                "metadata", Map.of(
+                        "reuse", Map.of(
+                                "enabled", true,
+                                "mode", "callable",
+                                "entrypoint", Map.of("type", "parameterized"),
+                                "version", "v1",
+                                "contract", Map.of(
+                                        "inputs", Map.of(
+                                                "required", List.of(Map.of("name", "ticketId", "type", "string"))),
+                                        "output", Map.of(
+                                                "type", "object",
+                                                "properties", Map.of("summary", Map.of("type", "string"))))),
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of("metadata", Map.of("id", "start"), "type", "trigger-parameterized",
+                                                        "configuration", Map.of())),
+                                        "connections", List.of())))));
+        assertEquals(201, childCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> child = (Map<String, Object>) childCreated.getEntity();
+        String childId = String.valueOf(child.get("projectId"));
+
+        Response contract = resource.getCallableContract(childId, "community", "owner");
+        assertEquals(200, contract.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) contract.getEntity();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> callable = (Map<String, Object>) payload.get("callable");
+        assertEquals("callable", String.valueOf(callable.get("mode")));
+        assertEquals("v1", String.valueOf(callable.get("version")));
+    }
+
+    @Test
+    void shouldValidateCallableContractEndpointWithMissingInput() {
+        Response childCreated = resource.createProject(Map.of(
+                "tenantId", "community",
+                "createdBy", "owner",
+                "projectName", "Validate Child",
+                "metadata", Map.of(
+                        "reuse", Map.of(
+                                "enabled", true,
+                                "mode", "callable",
+                                "entrypoint", Map.of("type", "parameterized"),
+                                "contract", Map.of(
+                                        "inputs", Map.of(
+                                                "required", List.of(Map.of("name", "ticketId", "type", "string"))))),
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of("metadata", Map.of("id", "start"), "type", "trigger-parameterized",
+                                                        "configuration", Map.of())),
+                                        "connections", List.of())))));
+        assertEquals(201, childCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> child = (Map<String, Object>) childCreated.getEntity();
+        String childId = String.valueOf(child.get("projectId"));
+
+        Response invalid = resource.validateCallableContract(childId, "community", "owner", Map.of(
+                "nodeId", "custom-1",
+                "configuration", Map.of("projectId", childId)));
+        assertEquals(400, invalid.getStatus());
+    }
+
+    @Test
+    void shouldRejectSubWorkflowWhenPinnedVersionMismatch() {
+        Response childCreated = resource.createProject(Map.of(
+                "tenantId", "community",
+                "createdBy", "owner",
+                "projectName", "Versioned Child",
+                "metadata", Map.of(
+                        "reuse", Map.of(
+                                "enabled", true,
+                                "mode", "callable",
+                                "version", "v2",
+                                "entrypoint", Map.of("type", "manual")),
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of("metadata", Map.of("id", "start"), "type", "trigger-manual",
+                                                        "configuration", Map.of())),
+                                        "connections", List.of())))));
+        assertEquals(201, childCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> child = (Map<String, Object>) childCreated.getEntity();
+        String childId = String.valueOf(child.get("projectId"));
+
+        Response parentCreated = resource.createProject(Map.of("projectName", "Parent"));
+        assertEquals(201, parentCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parent = (Map<String, Object>) parentCreated.getEntity();
+        String parentId = String.valueOf(parent.get("projectId"));
+
+        Map<String, Object> spec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "child"),
+                                        "type", "sub-workflow",
+                                        "configuration", Map.of(
+                                                "projectId", childId,
+                                                "projectVersion", "v1"))),
+                        "connections", List.of()));
+        Response execute = resource.createExecution(parentId, "community", Map.of("name", "version-mismatch", "spec", spec));
+        assertEquals(400, execute.getStatus());
+    }
+
+    @Test
+    void shouldRejectSubWorkflowWhenOutputBindingRefersUnknownField() {
+        Response childCreated = resource.createProject(Map.of(
+                "tenantId", "community",
+                "createdBy", "owner",
+                "projectName", "Output Child",
+                "metadata", Map.of(
+                        "reuse", Map.of(
+                                "enabled", true,
+                                "mode", "callable",
+                                "entrypoint", Map.of("type", "manual"),
+                                "contract", Map.of(
+                                        "output", Map.of(
+                                                "type", "object",
+                                                "properties", Map.of("summary", Map.of("type", "string"))))),
+                        "wayangSpec", Map.of(
+                                "specVersion", "1.0.0",
+                                "workflow", Map.of(
+                                        "nodes", List.of(
+                                                Map.of("metadata", Map.of("id", "start"), "type", "trigger-manual",
+                                                        "configuration", Map.of())),
+                                        "connections", List.of())))));
+        assertEquals(201, childCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> child = (Map<String, Object>) childCreated.getEntity();
+        String childId = String.valueOf(child.get("projectId"));
+
+        Response parentCreated = resource.createProject(Map.of("projectName", "Parent"));
+        assertEquals(201, parentCreated.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parent = (Map<String, Object>) parentCreated.getEntity();
+        String parentId = String.valueOf(parent.get("projectId"));
+
+        Map<String, Object> spec = Map.of(
+                "specVersion", "1.0.0",
+                "workflow", Map.of(
+                        "nodes", List.of(
+                                Map.of(
+                                        "metadata", Map.of("id", "child"),
+                                        "type", "sub-workflow",
+                                        "configuration", Map.of(
+                                                "projectId", childId,
+                                                "outputBindings", Map.of("unknownField", "parent.result")))),
+                        "connections", List.of()));
+        Response execute = resource.createExecution(parentId, "community", Map.of("name", "output-binding-invalid", "spec", spec));
+        assertEquals(400, execute.getStatus());
     }
 
     @Test
@@ -433,10 +1451,15 @@ class ProjectsResourceUnitTest {
         private final AtomicInteger createCalls = new AtomicInteger();
         private final AtomicInteger publishCalls = new AtomicInteger();
         private final AtomicInteger runCalls = new AtomicInteger();
+        private WayangSpec lastCreatedSpec;
+        private String throwOnCreateMessage;
 
         @Override
         public Uni<WayangDefinition> create(String tenantId, UUID projectId, String name,
                 String description, DefinitionType type, WayangSpec spec, String createdBy) {
+            if (throwOnCreateMessage != null) {
+                return Uni.createFrom().failure(new RuntimeException(throwOnCreateMessage));
+            }
             createCalls.incrementAndGet();
             WayangDefinition definition = new WayangDefinition();
             definition.definitionId = UUID.randomUUID();
@@ -446,6 +1469,7 @@ class ProjectsResourceUnitTest {
             definition.description = description;
             definition.definitionType = type;
             definition.spec = spec;
+            lastCreatedSpec = spec;
             definition.workflowDefinitionId = "wf-" + definition.definitionId;
             definition.createdBy = createdBy;
             definition.createdAt = Instant.now();

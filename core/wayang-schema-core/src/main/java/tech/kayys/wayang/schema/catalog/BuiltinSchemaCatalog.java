@@ -66,6 +66,8 @@ public final class BuiltinSchemaCatalog {
   public static final String TRIGGER_EVENT = "trigger-event";
   public static final String TRIGGER_KAFKA = "trigger-kafka";
   public static final String TRIGGER_FILE = "trigger-file";
+  public static final String SUB_WORKFLOW_NODE = "sub-workflow";
+  public static final String CUSTOM_AGENT_NODE = "custom-agent-node";
 
   private static final String PLUGIN_CONFIG_SCHEMA = """
       {
@@ -334,6 +336,35 @@ public final class BuiltinSchemaCatalog {
       }
       """;
 
+  private static final String SUB_WORKFLOW_SCHEMA = """
+      {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string" },
+          "definitionId": { "type": "string" },
+          "invokeMode": { "type": "string", "enum": ["sync", "async"] },
+          "maxDepth": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "waitForCompletion": { "type": "boolean" },
+          "inputs": { "type": "object", "additionalProperties": true },
+          "parameters": { "type": "object", "additionalProperties": true },
+          "inputBindings": { "type": "object", "additionalProperties": true },
+          "exposedOutput": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string" },
+              "properties": { "type": "object", "additionalProperties": true },
+              "required": { "type": "array", "items": { "type": "string" } }
+            },
+            "additionalProperties": true
+          },
+          "wayangSpec": { "$ref": "/v1/schema/catalog/wayang-spec" },
+          "workflowSpec": { "$ref": "/v1/schema/catalog/workflow-spec" },
+          "metadata": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": true
+      }
+      """;
+
   private static final Map<String, String> SCHEMAS = new LinkedHashMap<>();
 
   static {
@@ -374,6 +405,8 @@ public final class BuiltinSchemaCatalog {
     SCHEMAS.put(TRIGGER_EVENT, TRIGGER_EVENT_SCHEMA);
     SCHEMAS.put(TRIGGER_KAFKA, TRIGGER_KAFKA_SCHEMA);
     SCHEMAS.put(TRIGGER_FILE, TRIGGER_FILE_SCHEMA);
+    SCHEMAS.put(SUB_WORKFLOW_NODE, SUB_WORKFLOW_SCHEMA);
+    SCHEMAS.put(CUSTOM_AGENT_NODE, SUB_WORKFLOW_SCHEMA);
 
     // Discover node-provided schemas via NodeProvider SPI
     for (NodeProvider provider : ServiceLoader.load(NodeProvider.class)) {

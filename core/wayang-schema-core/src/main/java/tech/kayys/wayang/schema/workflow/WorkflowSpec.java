@@ -34,6 +34,12 @@ public class WorkflowSpec {
     @JsonProperty("exitNodeIds")
     private List<String> exitNodeIds = new ArrayList<>();
 
+    @JsonProperty("metadata")
+    private Map<String, Object> metadata = new HashMap<>();
+
+    @JsonProperty("children")
+    private List<ChildWorkflowSpec> children = new ArrayList<>();
+
     public WorkflowSpec() {
         // Default constructor for JSON deserialization
     }
@@ -71,6 +77,14 @@ public class WorkflowSpec {
         return exitNodeIds;
     }
 
+    public Map<String, Object> getMetadata() {
+        return metadata;
+    }
+
+    public List<ChildWorkflowSpec> getChildren() {
+        return children;
+    }
+
     // Setters
     public void setNodes(List<Node> nodes) {
         this.nodes = nodes;
@@ -94,5 +108,13 @@ public class WorkflowSpec {
 
     public void setExitNodeIds(List<String> exitNodeIds) {
         this.exitNodeIds = exitNodeIds;
+    }
+
+    public void setMetadata(Map<String, Object> metadata) {
+        this.metadata = metadata != null ? metadata : new HashMap<>();
+    }
+
+    public void setChildren(List<ChildWorkflowSpec> children) {
+        this.children = children != null ? children : new ArrayList<>();
     }
 }

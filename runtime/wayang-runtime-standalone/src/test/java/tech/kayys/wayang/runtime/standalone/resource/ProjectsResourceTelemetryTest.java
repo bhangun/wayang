@@ -68,7 +68,7 @@ class ProjectsResourceTelemetryTest {
                     serverLogDir.resolve("cloud-project-execution-events.json"),
                     OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(events));
 
-            ProjectsResource resource = new ProjectsResource();
+            ProjectsService resource = new ProjectsService();
             Response response = resource.getExecutionTelemetry(
                     "project-1", "exec-1", null, null, null, null, null, null, null, false);
             assertEquals(200, response.getStatus());

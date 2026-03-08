@@ -141,4 +141,4 @@ private String name;
 
 ## Relationship to UI Schema
 
-These server-side models correspond to the Dart models in the UI schema (`wayang-ui/wayang_designer/lib/schema`) and maintain structural compatibility to ensure seamless data exchange between client and server.
+These server-side models correspond to the Dart models in the UI schema (`wayang-ui/wayang_kulit/lib/schema`) and maintain structural compatibility to ensure seamless data exchange between client and server.

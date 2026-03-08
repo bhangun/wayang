@@ -53,6 +53,7 @@ public final class BuiltinSchemaCatalog {
   public static final String EIP_ENRICHER = "eip-enricher";
   public static final String EIP_RETRY = "eip-retry";
   public static final String EIP_THROTTLER = "eip-throttler";
+  public static final String EIP_DEBUG_PRINT = "eip-debug-print";
   public static final String DEAD_LETTER_CHANNEL = "dead-letter-channel";
 
   // Trigger Source Nodes
@@ -228,6 +229,20 @@ public final class BuiltinSchemaCatalog {
       }
       """;
 
+  private static final String EIP_DEBUG_PRINT_SCHEMA = """
+      {
+        "type": "object",
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "prefix": { "type": "string" },
+          "level": { "type": "string", "enum": ["trace", "debug", "info", "warn", "error"] },
+          "message": {},
+          "payload": {}
+        },
+        "additionalProperties": true
+      }
+      """;
+
   private static final String TRIGGER_BASE_SCHEMA = """
       {
         "type": "object",
@@ -394,6 +409,7 @@ public final class BuiltinSchemaCatalog {
     SCHEMAS.put(EIP_ENRICHER, EIP_GENERIC_SCHEMA);
     SCHEMAS.put(EIP_RETRY, EIP_GENERIC_SCHEMA);
     SCHEMAS.put(EIP_THROTTLER, EIP_GENERIC_SCHEMA);
+    SCHEMAS.put(EIP_DEBUG_PRINT, EIP_DEBUG_PRINT_SCHEMA);
     SCHEMAS.put(DEAD_LETTER_CHANNEL, DEAD_LETTER_CHANNEL_SCHEMA);
     SCHEMAS.put(TRIGGER_START, TRIGGER_BASE_SCHEMA);
     SCHEMAS.put(TRIGGER_MANUAL, TRIGGER_BASE_SCHEMA);

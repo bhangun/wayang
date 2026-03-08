@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 final class ProjectsExecutionFacade {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final String DEFAULT_TENANT = "community";
-    private static final String DEFAULT_OWNER_USER = "wayang_designer";
+    private static final String DEFAULT_OWNER_USER = "wayang_kulit";
     private static final String STATUS_UNKNOWN = "UNKNOWN";
     private static final String STATUS_RUNNING = "RUNNING";
     private static final String STATUS_STOPPED = "STOPPED";

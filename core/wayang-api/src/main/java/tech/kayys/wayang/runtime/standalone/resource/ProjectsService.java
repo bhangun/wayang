@@ -1,5 +1,6 @@
 package tech.kayys.wayang.runtime.standalone.resource;
 
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.core.Response;
@@ -15,6 +16,7 @@ import java.util.Map;
 /**
  * Standalone-safe projects service backed by local file storage.
  */
+@ApplicationScoped
 public class ProjectsService {
 
     @Inject

@@ -9,7 +9,7 @@ import java.util.Set;
 final class ProjectsCrudCallableFacade {
     private static final String DEFAULT_TENANT = "community";
     private static final String DEFAULT_TYPE = "INTEGRATION";
-    private static final String DEFAULT_OWNER_USER = "wayang_designer";
+    private static final String DEFAULT_OWNER_USER = "wayang_kulit";
     private static final String VISIBILITY_PRIVATE = "private";
     private static final String VISIBILITY_TENANT = "tenant";
     private static final String VISIBILITY_EXPLICIT = "explicit";

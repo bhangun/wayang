@@ -44,6 +44,7 @@
     <module>wayang-schema-api</module>
     <module>wayang-schema-grpc</module>
     <module>wayang-api</module>
+    <module>wayang-debugger</module>
     <module>wayang-control-spi</module>
     <module>wayang-control-core-local</module>
     <module>wayang-control-core-remote</module>

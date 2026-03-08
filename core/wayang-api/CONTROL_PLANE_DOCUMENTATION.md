@@ -8,7 +8,7 @@ The Wayang Control Plane provides centralized management for projects, workflows
 
 - **wayang-control-spi**: Service Provider Interface definitions
 - **wayang-control-core**: Core business logic implementations
-- **wayang-control-api**: REST API endpoints
+- **wayang-api**: REST API endpoints (centralized API module at `wayang/core/wayang-api`)
 - **wayang-control-grpc**: gRPC service implementations
 
 ## Architecture Components
@@ -37,7 +37,7 @@ The core module contains the business logic implementations:
 
 These services use reactive programming with Mutiny for asynchronous operations and integrate with the database using Hibernate Reactive.
 
-### 3. wayang-control-api (REST API)
+### 3. wayang-api (REST API)
 
 The API module provides REST endpoints for external consumption:
 
@@ -100,7 +100,7 @@ The control plane integrates with the plugin system:
 ## Module Dependencies
 
 ```
-wayang-control-api
+wayang-api
 ├── wayang-control-core
 ├── wayang-control-spi
 ├── quarkus-resteasy

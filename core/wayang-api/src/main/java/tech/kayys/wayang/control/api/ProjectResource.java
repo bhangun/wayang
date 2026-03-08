@@ -42,6 +42,7 @@ import tech.kayys.wayang.schema.WayangSpec;
 import tech.kayys.wayang.schema.catalog.BuiltinSchemaCatalog;
 import tech.kayys.wayang.schema.validator.SchemaValidationService;
 import tech.kayys.wayang.schema.validator.ValidationResult;
+import tech.kayys.wayang.runtime.standalone.resource.ProjectsService;
 
 import java.util.List;
 import java.util.Map;
@@ -75,6 +76,77 @@ public class ProjectResource {
 
     @Inject
     Event<ControlPlaneRealtimeEvent> realtimeEvents;
+    @Inject
+    ProjectsService projectsService;
+
+    @GET
+    public List<Map<String, Object>> listProjects() {
+        return projectsService.listProjects();
+    }
+
+    @GET
+    @Path("/shareable")
+    public Response listShareableProjects(
+            @HeaderParam("X-Tenant-Id") @DefaultValue("community") String tenantId,
+            @HeaderParam("X-User-Id") String userId,
+            @QueryParam("mode") @DefaultValue("callable") String mode,
+            @QueryParam("excludeProjectId") String excludeProjectId) {
+        return projectsService.listShareableProjects(tenantId, userId, mode, excludeProjectId);
+    }
+
+    @POST
+    public Response createProject(Map<String, Object> request) {
+        return projectsService.createProject(request);
+    }
+
+    @GET
+    @Path("/{projectId}")
+    public Response getProject(@PathParam("projectId") String projectId) {
+        return projectsService.getProject(projectId);
+    }
+
+    @GET
+    @Path("/{projectId}/callable-contract")
+    public Response getCallableContract(
+            @PathParam("projectId") String projectId,
+            @HeaderParam("X-Tenant-Id") @DefaultValue("community") String tenantId,
+            @HeaderParam("X-User-Id") String userId) {
+        return projectsService.getCallableContract(projectId, tenantId, userId);
+    }
+
+    @POST
+    @Path("/{projectId}/validate-callable")
+    public Response validateCallableContract(
+            @PathParam("projectId") String projectId,
+            @HeaderParam("X-Tenant-Id") @DefaultValue("community") String tenantId,
+            @HeaderParam("X-User-Id") String userId,
+            Map<String, Object> request) {
+        return projectsService.validateCallableContract(projectId, tenantId, userId, request);
+    }
+
+    @POST
+    @Path("/{projectId}/preview-output-bindings")
+    public Response previewOutputBindings(
+            @PathParam("projectId") String projectId,
+            @HeaderParam("X-Tenant-Id") @DefaultValue("community") String tenantId,
+            @HeaderParam("X-User-Id") String userId,
+            Map<String, Object> request) {
+        return projectsService.previewOutputBindings(projectId, tenantId, userId, request);
+    }
+
+    @PUT
+    @Path("/{projectId}")
+    public Response updateProject(
+            @PathParam("projectId") String projectId,
+            Map<String, Object> request) {
+        return projectsService.updateProject(projectId, request);
+    }
+
+    @DELETE
+    @Path("/{projectId}")
+    public Response deleteProject(@PathParam("projectId") String projectId) {
+        return projectsService.deleteProject(projectId);
+    }
 
     @POST
     public Uni<Response> createProject(@Valid CreateProjectRequest request) {

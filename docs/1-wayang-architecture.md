@@ -15,6 +15,15 @@
 * External Systems (APIs, DBs, Knowledge)
 * Storage + Messaging
 
+## API Module Ownership
+
+Current API ownership is centralized in `wayang/core/wayang-api` (`artifactId: wayang-api`):
+
+* Public control-plane resources (`tech.kayys.wayang.control.api.*`)
+* Standalone project execution resources/support (`tech.kayys.wayang.runtime.standalone.resource.*`)
+
+`wayang/runtime/wayang-runtime-standalone` consumes `wayang-api` and focuses on runtime bootstrap and environment-specific wiring.
+
 ## Multi-Tenancy Activation
 
 Multi-tenancy is disabled by default and enabled per component via extensions:
@@ -534,5 +543,3 @@ rate
  requested by the user, applies the rate-limiting logic, and then returns a success signal to the engine to allow the workflow to move to the next step.
 
 Does this align with your architectural vision for the Wayang platform? Let me know if you are ready to wrap up or if there is another module you want to tackle next!
-
-

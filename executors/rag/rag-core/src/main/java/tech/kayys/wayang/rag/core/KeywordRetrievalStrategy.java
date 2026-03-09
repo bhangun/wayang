@@ -1,20 +1,15 @@
 package tech.kayys.wayang.rag.core;
 
-import dev.langchain4j.data.embedding.Embedding;
-import dev.langchain4j.data.segment.TextSegment;
-import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.store.embedding.EmbeddingMatch;
-import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
-import dev.langchain4j.store.embedding.EmbeddingStore;
-import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.kayys.wayang.rag.core.store.InMemoryVectorStore;
+import tech.kayys.wayang.rag.core.store.VectorStore;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * KEYWORD RETRIEVAL STRATEGY - FULL BM25 IMPLEMENTATION
+ * KEYWORD RETRIEVAL STRATEGY - INTERNAL IMPLEMENTATION
  */
 public class KeywordRetrievalStrategy implements RetrievalStrategy {
 
@@ -23,29 +18,26 @@ public class KeywordRetrievalStrategy implements RetrievalStrategy {
     @Override
     public List<ScoredDocument> retrieve(
             String query,
-            EmbeddingStore<TextSegment> store,
+            VectorStore<RagChunk> store,
             RetrievalConfig config) {
 
         LOG.debug("Keyword retrieval (BM25) for query: {}", query);
 
         // For in-memory stores, we can iterate; for production use dedicated keyword
         // index
-        if (!(store instanceof InMemoryEmbeddingStore)) {
+        if (!(store instanceof InMemoryVectorStore)) {
             LOG.warn("Keyword search not optimized for store type: {}", store.getClass());
             return List.of();
         }
 
         try {
-            // Get all documents from store
-            EmbeddingSearchRequest request = EmbeddingSearchRequest.builder()
-                    .queryEmbedding(new Embedding(new float[1536])) // Dummy embedding
-                    .maxResults(10000)
-                    .minScore(0.0)
-                    .build();
-
-            List<TextSegment> allDocs = store.search(request).matches().stream()
-                    .map(EmbeddingMatch::embedded)
-                    .collect(Collectors.toList());
+            // Internal search for all documents (passing a large topK and 0 score to
+            // effectively scan)
+            // Note: In a real production system, this would use a proper search index
+            // (Elastic/Lucene)
+            List<RagChunk> allDocs = store.search("default", new float[1], 10000, 0.0f, Map.of()).stream()
+                    .map(hit -> hit.payload())
+                    .toList();
 
             // Calculate BM25 scores
             return calculateBM25Scores(query, allDocs, config.topK());
@@ -58,7 +50,7 @@ public class KeywordRetrievalStrategy implements RetrievalStrategy {
 
     private List<ScoredDocument> calculateBM25Scores(
             String query,
-            List<TextSegment> documents,
+            List<RagChunk> documents,
             int topK) {
 
         double k1 = 1.5;
@@ -69,14 +61,17 @@ public class KeywordRetrievalStrategy implements RetrievalStrategy {
 
         // Calculate document stats
         int totalDocs = documents.size();
+        if (totalDocs == 0)
+            return List.of();
+
         double avgDocLength = documents.stream()
                 .mapToInt(doc -> tokenize(doc.text()).size())
                 .average()
                 .orElse(0.0);
 
-        // Calculate term frequencies
+        // Calculate term frequencies across all docs for IDF
         Map<String, Integer> docFreqs = new HashMap<>();
-        for (TextSegment doc : documents) {
+        for (RagChunk doc : documents) {
             Set<String> uniqueTerms = new HashSet<>(tokenize(doc.text()));
             for (String term : uniqueTerms) {
                 docFreqs.merge(term, 1, Integer::sum);
@@ -86,7 +81,7 @@ public class KeywordRetrievalStrategy implements RetrievalStrategy {
         // Calculate BM25 score for each document
         List<ScoredDocument> scoredDocs = new ArrayList<>();
 
-        for (TextSegment doc : documents) {
+        for (RagChunk doc : documents) {
             List<String> docTerms = tokenize(doc.text());
             Map<String, Integer> termFreq = new HashMap<>();
             for (String term : docTerms) {

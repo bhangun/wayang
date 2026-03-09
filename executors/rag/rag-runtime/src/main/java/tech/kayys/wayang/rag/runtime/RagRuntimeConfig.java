@@ -1,6 +1,4 @@
 package tech.kayys.wayang.rag.runtime;
-import tech.kayys.wayang.rag.plugin.api.*;
-import tech.kayys.wayang.rag.core.*;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -544,7 +542,8 @@ public class RagRuntimeConfig {
     }
 
     public void setSloSeverityWarningByMetric(Map<String, Double> sloSeverityWarningByMetric) {
-        this.sloSeverityWarningByMetric = sloSeverityWarningByMetric == null ? Map.of() : Map.copyOf(sloSeverityWarningByMetric);
+        this.sloSeverityWarningByMetric = sloSeverityWarningByMetric == null ? Map.of()
+                : Map.copyOf(sloSeverityWarningByMetric);
     }
 
     public Map<String, Double> getSloSeverityCriticalByMetric() {
@@ -552,7 +551,8 @@ public class RagRuntimeConfig {
     }
 
     public void setSloSeverityCriticalByMetric(Map<String, Double> sloSeverityCriticalByMetric) {
-        this.sloSeverityCriticalByMetric = sloSeverityCriticalByMetric == null ? Map.of() : Map.copyOf(sloSeverityCriticalByMetric);
+        this.sloSeverityCriticalByMetric = sloSeverityCriticalByMetric == null ? Map.of()
+                : Map.copyOf(sloSeverityCriticalByMetric);
     }
 
     public boolean isSloAlertEnabled() {

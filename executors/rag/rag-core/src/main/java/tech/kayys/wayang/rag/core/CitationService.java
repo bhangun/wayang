@@ -20,7 +20,7 @@ class CitationService {
 
     public List<Citation> generateCitations(
             String response, List<String> contexts, List<Map<String, Object>> metadata) {
-
+        LOG.debug("Respons: ", response);
         List<Citation> citations = new ArrayList<>();
         Pattern citationPattern = Pattern.compile("\\[(\\d+)\\]");
         Matcher matcher = citationPattern.matcher(response);

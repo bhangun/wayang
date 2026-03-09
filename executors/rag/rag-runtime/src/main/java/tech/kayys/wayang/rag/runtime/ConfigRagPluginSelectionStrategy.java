@@ -1,6 +1,4 @@
 package tech.kayys.wayang.rag.runtime;
-import tech.kayys.wayang.rag.plugin.api.*;
-import tech.kayys.wayang.rag.core.*;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import tech.kayys.wayang.rag.plugin.api.RagPipelinePlugin;

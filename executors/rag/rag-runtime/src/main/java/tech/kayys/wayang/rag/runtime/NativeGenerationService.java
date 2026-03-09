@@ -1,11 +1,8 @@
 package tech.kayys.wayang.rag.runtime;
-import tech.kayys.wayang.rag.plugin.api.*;
-import tech.kayys.wayang.rag.core.*;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import tech.kayys.wayang.rag.core.GenerationConfig;
 import tech.kayys.wayang.rag.core.RagQuery;
-import tech.kayys.wayang.rag.core.RagResult;
 import tech.kayys.wayang.rag.core.RagScoredChunk;
 
 import java.util.List;

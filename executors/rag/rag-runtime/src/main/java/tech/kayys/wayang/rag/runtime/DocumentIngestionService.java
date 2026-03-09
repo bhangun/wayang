@@ -1,6 +1,4 @@
 package tech.kayys.wayang.rag.runtime;
-import tech.kayys.wayang.rag.plugin.api.*;
-import tech.kayys.wayang.rag.core.*;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -8,9 +6,6 @@ import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.kayys.wayang.rag.core.ChunkingConfig;
-import tech.kayys.wayang.rag.core.ChunkingStrategy;
-import tech.kayys.wayang.rag.core.RagMetrics;
-import tech.kayys.wayang.rag.*;
 import tech.kayys.wayang.rag.core.RagChunk;
 import tech.kayys.wayang.rag.core.RagDocument;
 import org.apache.pdfbox.Loader;

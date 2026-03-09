@@ -4,9 +4,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.kayys.wayang.embedding.EmbeddingService;
 
 /**
- * RETRIEVAL STRATEGY FACTORY - FULL IMPLEMENTATION
+ * RETRIEVAL STRATEGY FACTORY - INTERNAL IMPLEMENTATION
  */
 @ApplicationScoped
 public class RetrievalStrategyFactory {
@@ -14,18 +15,18 @@ public class RetrievalStrategyFactory {
     private static final Logger LOG = LoggerFactory.getLogger(RetrievalStrategyFactory.class);
 
     @Inject
-    EmbeddingModelFactory embeddingModelFactory;
+    EmbeddingService embeddingService;
 
     public RetrievalStrategy getStrategy(String strategyType) {
         LOG.debug("Creating retrieval strategy: {}", strategyType);
 
         return switch (strategyType.toLowerCase()) {
-            case "dense" -> new DenseRetrievalStrategy(embeddingModelFactory);
-            case "hybrid" -> new HybridRetrievalStrategy(embeddingModelFactory);
+            case "dense" -> new DenseRetrievalStrategy(embeddingService);
+            case "hybrid" -> new HybridRetrievalStrategy(embeddingService);
             case "keyword" -> new KeywordRetrievalStrategy();
             default -> {
                 LOG.warn("Unknown strategy: {}, using dense", strategyType);
-                yield new DenseRetrievalStrategy(embeddingModelFactory);
+                yield new DenseRetrievalStrategy(embeddingService);
             }
         };
     }

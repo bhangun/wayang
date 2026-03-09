@@ -1,19 +1,6 @@
-
 package tech.kayys.wayang.rag.core;
 
-import dev.langchain4j.data.embedding.Embedding;
-import dev.langchain4j.data.segment.TextSegment;
-import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.rag.content.Content;
-import dev.langchain4j.rag.content.retriever.ContentRetriever;
-import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
-import dev.langchain4j.rag.query.Query;
-import dev.langchain4j.store.embedding.EmbeddingMatch;
-import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
-import dev.langchain4j.store.embedding.EmbeddingSearchResult;
-import dev.langchain4j.store.embedding.EmbeddingStore;
-import dev.langchain4j.store.embedding.filter.Filter;
-import dev.langchain4j.store.embedding.filter.comparison.IsEqualTo;
+import tech.kayys.wayang.rag.core.store.VectorStore;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -34,15 +21,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * ============================================================================
- * RAG RETRIEVAL & RERANKING EXECUTOR - FULL IMPLEMENTATION
- * ============================================================================
- * 
- * Complete working implementation with real integration.
- * No placeholders - all methods fully implemented.
+ * RAG RETRIEVAL & RERANKING EXECUTOR - INTERNAL IMPLEMENTATION
  */
-@Executor(executorType = "rag-retrieval", communicationType = tech.kayys.gamelan.engine.protocol.CommunicationType.GRPC, maxConcurrentTasks = 20, supportedNodeTypes = {
-        "TASK", "RAG_RETRIEVAL" }, version = "1.0.0")
+@Executor(executorType = "rag-retrieval", communicationType = CommunicationType.GRPC, maxConcurrentTasks = 20, supportedNodeTypes = {
+        "TASK", "RAG_RETRIEVAL" }, version = "1.0.1")
 @ApplicationScoped
 public class RetrievalExecutor extends AbstractWorkflowExecutor {
 
@@ -64,10 +46,7 @@ public class RetrievalExecutor extends AbstractWorkflowExecutor {
     }
 
     @Inject
-    EmbeddingStoreRegistry storeRegistry;
-
-    @Inject
-    EmbeddingModelFactory embeddingModelFactory;
+    VectorStoreRegistry storeRegistry;
 
     @Inject
     RetrievalStrategyFactory strategyFactory;
@@ -191,7 +170,7 @@ public class RetrievalExecutor extends AbstractWorkflowExecutor {
             List<ScoredDocument> initialResults = new ArrayList<>();
 
             for (String query : queries) {
-                EmbeddingStore<TextSegment> store = storeRegistry.getStore(
+                VectorStore<RagChunk> store = storeRegistry.getStore(
                         retCtx.tenantId(),
                         retCtx.storeType());
 
@@ -251,7 +230,7 @@ public class RetrievalExecutor extends AbstractWorkflowExecutor {
                     .collect(Collectors.toList());
 
             List<Map<String, Object>> metadata = finalResults.stream()
-                    .map(doc -> new HashMap<>(doc.segment().metadata().toMap()))
+                    .map(doc -> new HashMap<>(doc.segment().metadata()))
                     .collect(Collectors.toList());
 
             // Calculate statistics
@@ -286,7 +265,7 @@ public class RetrievalExecutor extends AbstractWorkflowExecutor {
 
         return results.stream()
                 .filter(doc -> {
-                    Map<String, Object> metadata = doc.segment().metadata().toMap();
+                    Map<String, Object> metadata = doc.segment().metadata();
                     for (Map.Entry<String, Object> filter : retCtx.filters().entrySet()) {
                         Object value = metadata.get(filter.getKey());
                         if (value == null || !value.equals(filter.getValue())) {

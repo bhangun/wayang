@@ -7,7 +7,6 @@ import tech.kayys.wayang.rag.plugin.api.RagPluginExecutionContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import tech.kayys.wayang.rag.core.RagQuery;
 import tech.kayys.wayang.rag.core.RagResult;
 import tech.kayys.wayang.rag.core.RagScoredChunk;
 

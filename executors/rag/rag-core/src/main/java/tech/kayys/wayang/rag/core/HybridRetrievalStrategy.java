@@ -1,9 +1,9 @@
 package tech.kayys.wayang.rag.core;
 
-import dev.langchain4j.store.embedding.EmbeddingStore;
-import dev.langchain4j.data.segment.TextSegment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.kayys.wayang.embedding.EmbeddingService;
+import tech.kayys.wayang.rag.core.store.VectorStore;
 
 import java.util.HashMap;
 import java.util.List;
@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * HYBRID RETRIEVAL STRATEGY - FULL IMPLEMENTATION
+ * HYBRID RETRIEVAL STRATEGY - INTERNAL IMPLEMENTATION
  */
 public class HybridRetrievalStrategy implements RetrievalStrategy {
 
@@ -19,15 +19,15 @@ public class HybridRetrievalStrategy implements RetrievalStrategy {
     private final DenseRetrievalStrategy denseStrategy;
     private final KeywordRetrievalStrategy keywordStrategy;
 
-    HybridRetrievalStrategy(EmbeddingModelFactory modelFactory) {
-        this.denseStrategy = new DenseRetrievalStrategy(modelFactory);
+    HybridRetrievalStrategy(EmbeddingService embeddingService) {
+        this.denseStrategy = new DenseRetrievalStrategy(embeddingService);
         this.keywordStrategy = new KeywordRetrievalStrategy();
     }
 
     @Override
     public List<ScoredDocument> retrieve(
             String query,
-            EmbeddingStore<TextSegment> store,
+            VectorStore<RagChunk> store,
             RetrievalConfig config) {
 
         LOG.debug("Hybrid retrieval for query: {}", query);
@@ -54,7 +54,7 @@ public class HybridRetrievalStrategy implements RetrievalStrategy {
         // Process first list
         for (int i = 0; i < list1.size(); i++) {
             ScoredDocument doc = list1.get(i);
-            String key = doc.segment().text();
+            String key = doc.segment().id(); // Using ID as unique key
             rrfScores.put(key, 1.0 / (k + i + 1));
             docMap.put(key, doc);
         }
@@ -62,7 +62,7 @@ public class HybridRetrievalStrategy implements RetrievalStrategy {
         // Process second list
         for (int i = 0; i < list2.size(); i++) {
             ScoredDocument doc = list2.get(i);
-            String key = doc.segment().text();
+            String key = doc.segment().id();
             rrfScores.merge(key, 1.0 / (k + i + 1), Double::sum);
             docMap.putIfAbsent(key, doc);
         }

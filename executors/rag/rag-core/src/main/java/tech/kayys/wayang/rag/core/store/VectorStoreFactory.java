@@ -24,6 +24,10 @@ public final class VectorStoreFactory {
             return new InMemoryVectorStore<>();
         }
 
+        if ("faiss".equals(backend)) {
+            return new FaissVectorStore<>(options.dimensions());
+        }
+
         if ("pgvector".equals(backend)) {
             if (dataSource == null) {
                 throw new IllegalArgumentException("dataSource is required for pgvector backend");
@@ -57,6 +61,7 @@ public final class VectorStoreFactory {
         return switch (normalized) {
             case "memory", "inmemory", "in-memory" -> "in-memory";
             case "postgres", "postgresql", "pgvector" -> "pgvector";
+            case "faiss" -> "faiss";
             default -> normalized;
         };
     }

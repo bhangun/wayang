@@ -6,14 +6,8 @@ import org.junit.jupiter.api.Test;
 import tech.kayys.wayang.rag.core.RagChunk;
 import tech.kayys.wayang.rag.core.RagEvalDataset;
 import tech.kayys.wayang.rag.core.RagEvalQueryCase;
-import tech.kayys.wayang.rag.core.RagQuery;
-import tech.kayys.wayang.rag.core.RagResult;
 import tech.kayys.wayang.rag.core.RagScoredChunk;
 import tech.kayys.wayang.rag.runtime.NativeRagCoreService;
-import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalRequest;
-import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalResponse;
-import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalService;
-
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;

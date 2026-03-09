@@ -4,9 +4,6 @@ import org.junit.jupiter.api.Test;
 
 import jakarta.ws.rs.core.Response;
 import tech.kayys.wayang.rag.runtime.RagValidationErrorResponse;
-import tech.kayys.wayang.rag.config.RagPluginConfigValidationException;
-import tech.kayys.wayang.rag.config.RagPluginConfigValidationExceptionMapper;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class RagPluginConfigValidationExceptionMapperTest {

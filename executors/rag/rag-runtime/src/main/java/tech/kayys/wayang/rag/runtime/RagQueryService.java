@@ -1,5 +1,5 @@
 package tech.kayys.wayang.rag.runtime;
-import tech.kayys.wayang.rag.plugin.api.*;
+
 import tech.kayys.wayang.rag.core.*;
 
 import io.smallrye.mutiny.Uni;

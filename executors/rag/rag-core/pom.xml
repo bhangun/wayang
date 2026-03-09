@@ -30,6 +30,26 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>tech.kayys.gollek</groupId>
+            <artifactId>gollek-sdk-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.gollek</groupId>
+            <artifactId>gollek-sdk-java-local</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-vector-faiss</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-vault-manager</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>2.18.2</version>
@@ -56,13 +76,7 @@
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <version>${junit.jupiter.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
+            <artifactId>junit-jupiter</artifactId>
             <version>${junit.jupiter.version}</version>
             <scope>test</scope>
         </dependency>
@@ -76,21 +90,7 @@
             <artifactId>slf4j-api</artifactId>
             <version>2.0.16</version>
         </dependency>
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j</artifactId>
-            <version>0.34.0</version>
-        </dependency>
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-open-ai</artifactId>
-            <version>0.34.0</version>
-        </dependency>
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-anthropic</artifactId>
-            <version>0.34.0</version>
-        </dependency>
+
     </dependencies>
 
     <build>
@@ -105,6 +105,13 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <argLine>--enable-native-access=ALL-UNNAMED
+                        -Djava.library.path=${user.home}/.wayang/lib</argLine>
+                    <systemPropertyVariables>
+                        <wayang.faiss.lib.path>${user.home}/.wayang/lib</wayang.faiss.lib.path>
+                    </systemPropertyVariables>
+                </configuration>
             </plugin>
         </plugins>
     </build>

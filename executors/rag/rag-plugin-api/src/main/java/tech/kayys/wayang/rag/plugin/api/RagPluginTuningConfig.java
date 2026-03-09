@@ -1,5 +1,4 @@
 package tech.kayys.wayang.rag.plugin.api;
-import tech.kayys.wayang.rag.core.*;
 
 /**
  * Interface for RAG plugin tuning configuration.

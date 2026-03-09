@@ -5,11 +5,6 @@ import org.junit.jupiter.api.Test;
 
 import tech.kayys.wayang.rag.runtime.RagPluginTenantStrategyResolver;
 import tech.kayys.wayang.rag.runtime.RagRuntimeConfig;
-import tech.kayys.wayang.rag.config.RagPluginConfigAdminService;
-import tech.kayys.wayang.rag.config.RagPluginConfigStatus;
-import tech.kayys.wayang.rag.config.RagPluginConfigUpdate;
-import tech.kayys.wayang.rag.config.RagPluginConfigValidationException;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -48,6 +43,8 @@ class RagPluginConfigAdminServiceTest {
                 "tenant-a=safety-filter,normalize-query",
                 true,
                 2048,
+                "faiss",
+                1536,
                 0.45,
                 0.55,
                 false,
@@ -61,6 +58,8 @@ class RagPluginConfigAdminServiceTest {
         assertEquals("tenant-a=safety-filter,normalize-query", status.config().tenantOrderOverrides());
         assertTrue(status.config().normalizeLowercase());
         assertEquals(2048, status.config().normalizeMaxQueryLength());
+        assertEquals("faiss", status.config().vectorstoreBackend());
+        assertEquals(1536, status.config().embeddingDimension());
         assertEquals(0.45, status.config().lexicalRerankOriginalWeight());
         assertEquals(0.55, status.config().lexicalRerankLexicalWeight());
         assertFalse(status.config().lexicalRerankAnnotateMetadata());
@@ -77,6 +76,8 @@ class RagPluginConfigAdminServiceTest {
         System.setProperty("rag.runtime.rag.plugins.tenant-order", "tenant-a=safety-filter,normalize-query");
         System.setProperty("rag.runtime.rag.plugins.normalize-query.lowercase", "true");
         System.setProperty("rag.runtime.rag.plugins.normalize-query.max-query-length", "1024");
+        System.setProperty("rag.runtime.vectorstore.backend", "faiss");
+        System.setProperty("rag.runtime.embedding.dimension", "1536");
         System.setProperty("rag.runtime.rag.plugins.lexical-rerank.original-weight", "0.4");
         System.setProperty("rag.runtime.rag.plugins.lexical-rerank.lexical-weight", "0.6");
         System.setProperty("rag.runtime.rag.plugins.lexical-rerank.annotate-metadata", "false");
@@ -97,6 +98,8 @@ class RagPluginConfigAdminServiceTest {
         assertEquals("tenant-a=safety-filter,normalize-query", status.config().tenantOrderOverrides());
         assertTrue(status.config().normalizeLowercase());
         assertEquals(1024, status.config().normalizeMaxQueryLength());
+        assertEquals("faiss", status.config().vectorstoreBackend());
+        assertEquals(1536, status.config().embeddingDimension());
         assertEquals(0.4, status.config().lexicalRerankOriginalWeight());
         assertEquals(0.6, status.config().lexicalRerankLexicalWeight());
         assertFalse(status.config().lexicalRerankAnnotateMetadata());
@@ -118,6 +121,8 @@ class RagPluginConfigAdminServiceTest {
                         "normalize-query",
                         "tenant-a=normalize-query",
                         "tenant-a",
+                        null,
+                        null,
                         null,
                         null,
                         null,
@@ -149,6 +154,8 @@ class RagPluginConfigAdminServiceTest {
                 null,
                 null,
                 null,
+                null,
+                null,
                 null)));
 
         assertThrows(RagPluginConfigValidationException.class, () -> service.update(new RagPluginConfigUpdate(
@@ -157,6 +164,8 @@ class RagPluginConfigAdminServiceTest {
                 "normalize-query",
                 null,
                 "tenant-a=*",
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -176,6 +185,8 @@ class RagPluginConfigAdminServiceTest {
         RagPluginConfigValidationException ex = assertThrows(RagPluginConfigValidationException.class,
                 () -> service.update(new RagPluginConfigUpdate(
                         "unknown-strategy",
+                        null,
+                        null,
                         null,
                         null,
                         null,

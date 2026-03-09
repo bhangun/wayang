@@ -1,11 +1,6 @@
 package tech.kayys.wayang.rag.retrieval;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalGuardrailBreach;
-import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalGuardrailStatus;
-import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalMetrics;
-import tech.kayys.wayang.rag.retrieval.RagRetrievalEvalResponse;
-
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;

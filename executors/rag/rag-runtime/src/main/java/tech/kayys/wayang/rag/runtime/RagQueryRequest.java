@@ -1,6 +1,4 @@
 package tech.kayys.wayang.rag.runtime;
-import tech.kayys.wayang.rag.plugin.api.*;
-import tech.kayys.wayang.rag.core.*;
 
 import java.util.List;
 import java.util.Map;
@@ -11,12 +9,12 @@ import tech.kayys.wayang.rag.core.RetrievalConfig;
 import tech.kayys.wayang.rag.core.SearchStrategy;
 
 public record RagQueryRequest(
-                String tenantId,
-                String query,
-                RagMode ragMode,
-                SearchStrategy searchStrategy,
-                RetrievalConfig retrievalConfig,
-                GenerationConfig generationConfig,
-                List<String> collections,
-                Map<String, Object> filters) {
+        String tenantId,
+        String query,
+        RagMode ragMode,
+        SearchStrategy searchStrategy,
+        RetrievalConfig retrievalConfig,
+        GenerationConfig generationConfig,
+        List<String> collections,
+        Map<String, Object> filters) {
 }

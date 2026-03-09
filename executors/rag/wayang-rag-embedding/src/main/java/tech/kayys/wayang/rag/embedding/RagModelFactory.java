@@ -31,7 +31,8 @@ public class RagModelFactory {
     public RagEmbeddingModel createEmbeddingModel(String tenantId, String modelName) {
         LOG.debug("Creating embedding model {} for tenant {}", modelName, tenantId);
         String mappedModel = mapModel(modelName);
-        EmbeddingMetrics metrics = metricsInstance.isResolvable() ? metricsInstance.get() : EmbeddingMetrics.NOOP;
+        EmbeddingMetrics metrics = (metricsInstance != null && metricsInstance.isResolvable()) ? metricsInstance.get()
+                : EmbeddingMetrics.NOOP;
         return new OwnedEmbeddingModelAdapter(embeddingService, tenantId, mappedModel, metrics);
     }
 

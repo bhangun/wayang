@@ -13,12 +13,12 @@ import java.util.Map;
 public class RagGenerationConfig {
 
     @JsonProperty("provider")
-    @JsonPropertyDescription("LLM provider to use for response generation. E.g. openai, anthropic, google, local. Defaults to 'openai'.")
-    private String provider = "openai";
+    @JsonPropertyDescription("LLM provider to use for response generation. E.g. gollek, openai, anthropic. Defaults to 'gollek'.")
+    private String provider = "gollek";
 
     @JsonProperty("model")
-    @JsonPropertyDescription("Model identifier to use for generation. E.g. gpt-4, claude-3-sonnet. Defaults to 'gpt-4'.")
-    private String model = "gpt-4";
+    @JsonPropertyDescription("Model identifier to use for generation. E.g. Qwen/Qwen2.5-0.5B-Instruct. Defaults to 'Qwen/Qwen2.5-0.5B-Instruct'.")
+    private String model = "Qwen/Qwen2.5-0.5B-Instruct";
 
     @JsonProperty("temperature")
     @JsonPropertyDescription("Sampling temperature (0.0–2.0). Lower values give more deterministic output. Defaults to 0.7.")

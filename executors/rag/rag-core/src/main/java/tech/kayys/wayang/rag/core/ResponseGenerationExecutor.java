@@ -1,11 +1,5 @@
 package tech.kayys.wayang.rag.core;
 
-import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.SystemMessage;
-import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.output.Response;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -19,20 +13,23 @@ import tech.kayys.gamelan.sdk.executor.core.SimpleNodeExecutionResult;
 import tech.kayys.gamelan.sdk.executor.core.AbstractWorkflowExecutor;
 import tech.kayys.gamelan.engine.protocol.CommunicationType;
 import tech.kayys.gamelan.sdk.executor.core.Executor;
+import tech.kayys.gollek.sdk.core.GollekSdk;
+import tech.kayys.gollek.spi.Message;
+import tech.kayys.gollek.spi.inference.InferenceRequest;
+import tech.kayys.gollek.spi.inference.InferenceResponse;
+import tech.kayys.wayang.security.secrets.core.SecretManager;
+import tech.kayys.wayang.security.secrets.dto.RetrieveSecretRequest;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * RAG RESPONSE GENERATION EXECUTOR - FULL IMPLEMENTATION
+ * RAG RESPONSE GENERATION EXECUTOR - INTERNAL IMPLEMENTATION
  */
 @Executor(executorType = "rag-response-generation", communicationType = CommunicationType.GRPC, maxConcurrentTasks = 15, supportedNodeTypes = {
-                "TASK", "RAG_GENERATION" }, version = "1.0.0")
+                "TASK", "RAG_GENERATION" }, version = "1.0.1")
 @ApplicationScoped
 public class ResponseGenerationExecutor extends AbstractWorkflowExecutor {
 
@@ -54,7 +51,7 @@ public class ResponseGenerationExecutor extends AbstractWorkflowExecutor {
         }
 
         @Inject
-        ChatModelFactory modelFactory;
+        GollekSdk gollekSdk;
         @Inject
         PromptTemplateService promptTemplateService;
         @Inject
@@ -65,11 +62,13 @@ public class ResponseGenerationExecutor extends AbstractWorkflowExecutor {
         ResponseCacheService cacheService;
         @Inject
         GenerationMetricsCollector metricsCollector;
+        @Inject
+        SecretManager secretManager;
 
-        @ConfigProperty(name = "gamelan.rag.generation.provider", defaultValue = "openai")
+        @ConfigProperty(name = "gamelan.rag.generation.provider", defaultValue = "gollek")
         String defaultProvider;
 
-        @ConfigProperty(name = "gamelan.rag.generation.model", defaultValue = "gpt-4-turbo")
+        @ConfigProperty(name = "gamelan.rag.generation.model", defaultValue = "Qwen/Qwen2.5-0.5B-Instruct")
         String defaultModel;
 
         @ConfigProperty(name = "gamelan.rag.generation.temperature", defaultValue = "0.7")
@@ -127,7 +126,9 @@ public class ResponseGenerationExecutor extends AbstractWorkflowExecutor {
                                                 }
                                         }
 
-                                        return generateResponse(genCtx, task.runId().value())
+                                        return resolveApiKey(genCtx, task.runId().value())
+                                                        .flatMap(apiKey -> generateResponse(genCtx, apiKey,
+                                                                        task.runId().value()))
                                                         .map(result -> {
                                                                 long durationMs = Duration
                                                                                 .between(startTime, Instant.now())
@@ -178,46 +179,69 @@ public class ResponseGenerationExecutor extends AbstractWorkflowExecutor {
                                 });
         }
 
-        private Uni<GenerationResult> generateResponse(GenerationContext genCtx, String workflowRunId) {
+        private Uni<String> resolveApiKey(GenerationContext genCtx, String tenantId) {
+                if (genCtx.apiKey() != null && !genCtx.apiKey().isBlank()) {
+                        return Uni.createFrom().item(genCtx.apiKey());
+                }
+
+                String secretPath = String.format("services/%s/api-key", genCtx.config().provider());
+                LOG.debug("Resolving API key from Vault for tenant: {}, path: {}", tenantId, secretPath);
+
+                return secretManager.retrieve(RetrieveSecretRequest.latest(tenantId, secretPath))
+                                .map(secret -> secret.data().get("api_key"))
+                                .onFailure().recoverWithItem(() -> {
+                                        LOG.warn("Failed to retrieve API key from Vault for path: {}. Falling back to env.",
+                                                        secretPath);
+                                        return System.getenv("OPENAI_API_KEY");
+                                });
+        }
+
+        private Uni<GenerationResult> generateResponse(GenerationContext genCtx, String apiKey, String workflowRunId) {
                 LOG.debug("Generating response for query: '{}' using model: {}",
                                 genCtx.query(), genCtx.config().model());
 
                 return Uni.createFrom().item(() -> {
-                        ChatLanguageModel chatModel = modelFactory.createModel(
-                                        genCtx.config().provider(), genCtx.config().model(), genCtx.apiKey(),
-                                        genCtx.config().temperature(), genCtx.config().maxTokens());
+                        try {
+                                List<Message> messages = buildMessages(genCtx);
 
-                        List<ChatMessage> messages = buildMessages(genCtx);
+                                InferenceRequest request = InferenceRequest.builder()
+                                                .model(genCtx.config().model())
+                                                .preferredProvider(genCtx.config().provider())
+                                                .messages(messages)
+                                                .temperature(genCtx.config().temperature())
+                                                .maxTokens(genCtx.config().maxTokens())
+                                                .apiKey(apiKey)
+                                                .build();
 
-                        Response<AiMessage> response = chatModel.generate(messages);
-                        String responseText = response.content().text();
+                                InferenceResponse response = gollekSdk.createCompletion(request);
+                                String responseText = response.getContent();
 
-                        responseText = guardrailEngine.validateAndSanitize(responseText, genCtx.config());
+                                responseText = guardrailEngine.validateAndSanitize(responseText, genCtx.config());
 
-                        List<Citation> citations = Collections.emptyList();
-                        if (genCtx.includeCitations() && !genCtx.contexts().isEmpty()) {
-                                citations = citationService.generateCitations(
-                                                responseText, genCtx.contexts(), genCtx.contextMetadata());
+                                List<Citation> citations = Collections.emptyList();
+                                if (genCtx.includeCitations() && !genCtx.contexts().isEmpty()) {
+                                        citations = citationService.generateCitations(
+                                                        responseText, genCtx.contexts(), genCtx.contextMetadata());
+                                }
+
+                                int tokensUsed = response.getTokensUsed();
+
+                                return new GenerationResult(responseText, citations, tokensUsed);
+                        } catch (tech.kayys.gollek.sdk.exception.SdkException e) {
+                                throw new RuntimeException("Inference failed", e);
                         }
-
-                        int tokensUsed = 0;
-                        if (response.tokenUsage() != null) {
-                                tokensUsed = response.tokenUsage().totalTokenCount();
-                        }
-
-                        return new GenerationResult(responseText, citations, tokensUsed);
                 });
         }
 
-        private List<ChatMessage> buildMessages(GenerationContext genCtx) {
-                List<ChatMessage> messages = new ArrayList<>();
+        private List<Message> buildMessages(GenerationContext genCtx) {
+                List<Message> messages = new ArrayList<>();
 
                 String systemPrompt = promptTemplateService.getSystemPrompt(genCtx.config());
-                messages.add(new SystemMessage(systemPrompt));
+                messages.add(Message.system(systemPrompt));
 
                 String userPrompt = promptTemplateService.buildUserPrompt(
                                 genCtx.query(), genCtx.contexts(), genCtx.conversationHistory());
-                messages.add(new UserMessage(userPrompt));
+                messages.add(Message.user(userPrompt));
 
                 return messages;
         }

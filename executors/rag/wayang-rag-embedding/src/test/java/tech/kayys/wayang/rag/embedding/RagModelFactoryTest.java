@@ -15,12 +15,16 @@ class RagModelFactoryTest {
     @Mock
     private EmbeddingService embeddingService;
 
+    @Mock
+    private jakarta.enterprise.inject.Instance<EmbeddingMetrics> metricsInstance;
+
     private RagModelFactory modelFactory;
 
     @BeforeEach
     void setUp() {
         modelFactory = new RagModelFactory();
         modelFactory.embeddingService = embeddingService;
+        modelFactory.metricsInstance = metricsInstance;
     }
 
     @Test

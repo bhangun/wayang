@@ -1,6 +1,4 @@
 package tech.kayys.wayang.rag.runtime;
-import tech.kayys.wayang.rag.plugin.api.*;
-import tech.kayys.wayang.rag.core.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -59,12 +57,18 @@ public class RagVectorStoreProvider {
 
     private String normalizeBackend(String backend) {
         if (backend == null || backend.isBlank()) {
-            return "in-memory";
+            return "faiss"; // Default to high-performance FAISS
         }
         String normalized = backend.trim().toLowerCase();
         return switch (normalized) {
             case "postgres", "postgresql", "pgvector" -> "pgvector";
             case "memory", "inmemory", "in-memory" -> "in-memory";
+            case "faiss" -> "faiss";
+            case "redis" -> "redis";
+            case "pinecone" -> "pinecone";
+            case "chroma" -> "chroma";
+            case "qdrant" -> "qdrant";
+            case "milvus" -> "milvus";
             default -> normalized;
         };
     }

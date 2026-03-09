@@ -1,58 +1,60 @@
 package tech.kayys.wayang.rag.core;
 
-import dev.langchain4j.data.embedding.Embedding;
-import dev.langchain4j.data.segment.TextSegment;
-import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
-import dev.langchain4j.store.embedding.EmbeddingSearchResult;
-import dev.langchain4j.store.embedding.EmbeddingStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.kayys.wayang.embedding.EmbeddingRequest;
+import tech.kayys.wayang.embedding.EmbeddingService;
+import tech.kayys.wayang.rag.core.store.VectorSearchHit;
+import tech.kayys.wayang.rag.core.store.VectorStore;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * DENSE RETRIEVAL STRATEGY - FULL IMPLEMENTATION
+ * DENSE RETRIEVAL STRATEGY - INTERNAL IMPLEMENTATION
  */
 public class DenseRetrievalStrategy implements RetrievalStrategy {
 
     private static final Logger LOG = LoggerFactory.getLogger(DenseRetrievalStrategy.class);
-    private final EmbeddingModelFactory modelFactory;
+    private final EmbeddingService embeddingService;
 
-    DenseRetrievalStrategy(EmbeddingModelFactory modelFactory) {
-        this.modelFactory = modelFactory;
+    DenseRetrievalStrategy(EmbeddingService embeddingService) {
+        this.embeddingService = embeddingService;
     }
 
     @Override
     public List<ScoredDocument> retrieve(
             String query,
-            EmbeddingStore<TextSegment> store,
+            VectorStore<RagChunk> store,
             RetrievalConfig config) {
 
         LOG.debug("Dense retrieval for query: {}", query);
 
         try {
-            // Create embedding model
-            EmbeddingModel embeddingModel = modelFactory.createEmbeddingModel(
-                    "default",
-                    "text-embedding-3-small");
+            // Generate query embedding via Wayang Embedding Service
+            // For now using default model/provider as configured in the service
+            float[] queryVector = embeddingService.embed(EmbeddingRequest.single(query))
+                    .await().indefinitely()
+                    .first();
 
-            // Generate query embedding
-            Embedding queryEmbedding = embeddingModel.embed(query).content();
+            // Search in internal vector store
+            // Note: Namespace is often synonymous with tenantId in this architecture
+            String namespace = "default";
+            Map<String, Object> filters = config.metadataFilters() != null ? new HashMap<>(config.metadataFilters())
+                    : new HashMap<>();
 
-            // Search in embedding store
-            EmbeddingSearchRequest searchRequest = EmbeddingSearchRequest.builder()
-                    .queryEmbedding(queryEmbedding)
-                    .maxResults(config.topK())
-                    .minScore(config.minScore())
-                    .build();
-
-            EmbeddingSearchResult<TextSegment> searchResult = store.search(searchRequest);
+            List<VectorSearchHit<RagChunk>> hits = store.search(
+                    namespace,
+                    queryVector,
+                    config.topK(),
+                    config.minScore(),
+                    filters);
 
             // Convert to scored documents
-            return searchResult.matches().stream()
-                    .map(match -> new ScoredDocument(match.embedded(), match.score()))
+            return hits.stream()
+                    .map(hit -> new ScoredDocument(hit.payload(), hit.score()))
                     .collect(Collectors.toList());
 
         } catch (Exception e) {

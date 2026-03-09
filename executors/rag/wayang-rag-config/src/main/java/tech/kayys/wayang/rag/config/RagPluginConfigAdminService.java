@@ -73,6 +73,12 @@ public class RagPluginConfigAdminService {
         if (update.normalizeMaxQueryLength() != null) {
             config.setRagPluginNormalizeMaxQueryLength(update.normalizeMaxQueryLength());
         }
+        if (update.vectorstoreBackend() != null) {
+            config.setVectorstoreBackend(update.vectorstoreBackend());
+        }
+        if (update.embeddingDimension() != null) {
+            config.setEmbeddingDimension(update.embeddingDimension());
+        }
         if (update.lexicalRerankOriginalWeight() != null) {
             config.setRagPluginRerankOriginalWeight(update.lexicalRerankOriginalWeight());
         }
@@ -116,6 +122,14 @@ public class RagPluginConfigAdminService {
                 mp,
                 "rag.runtime.rag.plugins.normalize-query.max-query-length",
                 config.getRagPluginNormalizeMaxQueryLength()));
+        config.setVectorstoreBackend(readString(
+                mp,
+                "rag.runtime.vectorstore.backend",
+                config.getVectorstoreBackend()));
+        config.setEmbeddingDimension(readInt(
+                mp,
+                "rag.runtime.embedding.dimension",
+                config.getEmbeddingDimension()));
         config.setRagPluginRerankOriginalWeight(readDouble(
                 mp,
                 "rag.runtime.rag.plugins.lexical-rerank.original-weight",
@@ -148,6 +162,8 @@ public class RagPluginConfigAdminService {
                 config.getRagPluginTenantOrderOverrides(),
                 config.isRagPluginNormalizeLowercase(),
                 config.getRagPluginNormalizeMaxQueryLength(),
+                config.getVectorstoreBackend(),
+                config.getEmbeddingDimension(),
                 config.getRagPluginRerankOriginalWeight(),
                 config.getRagPluginRerankLexicalWeight(),
                 config.isRagPluginRerankAnnotateMetadata(),

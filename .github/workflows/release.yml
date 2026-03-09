@@ -86,8 +86,11 @@ jobs:
             'WAYANG_PLUGINS_DIR=$WAYANG_HOME/plugins' \
             'WAYANG_SECRETS_DIR=$WAYANG_HOME/secrets' \
             'WAYANG_GOLLEK_HOME=$WAYANG_HOME/gollek' \
-            '# Legacy fallback if WAYANG_GOLLEK_HOME cannot be used:' \
+            'GOLLEK_HOME=$WAYANG_GOLLEK_HOME' \
+            '# If your runtime cannot use WAYANG_GOLLEK_HOME, set fallback:' \
             '# GOLLEK_HOME=$HOME/.gollek' \
+            'WAYANG_GOLLEK_MODELS_DIR=$WAYANG_GOLLEK_HOME/models' \
+            'WAYANG_GOLLEK_STORAGE_DIR=$WAYANG_GOLLEK_HOME/storage' \
             > "${wayang_home}/config/wayang.env.example"
           cp "artifacts/${{ matrix.asset_name }}" "${wayang_home}/bin/${{ matrix.asset_name }}"
           cp "artifacts/${{ matrix.asset_name }}" "${wayang_home}/bin/wayang"
@@ -132,8 +135,11 @@ jobs:
             "WAYANG_PLUGINS_DIR=%WAYANG_HOME%\plugins",
             "WAYANG_SECRETS_DIR=%WAYANG_HOME%\secrets",
             "WAYANG_GOLLEK_HOME=%WAYANG_HOME%\gollek",
-            "; Legacy fallback if WAYANG_GOLLEK_HOME cannot be used:",
-            "; GOLLEK_HOME=%USERPROFILE%\.gollek"
+            "GOLLEK_HOME=%WAYANG_GOLLEK_HOME%",
+            "; If your runtime cannot use WAYANG_GOLLEK_HOME, set fallback:",
+            "; GOLLEK_HOME=%USERPROFILE%\.gollek",
+            "WAYANG_GOLLEK_MODELS_DIR=%WAYANG_GOLLEK_HOME%\models",
+            "WAYANG_GOLLEK_STORAGE_DIR=%WAYANG_GOLLEK_HOME%\storage"
           ) | Set-Content "$wayangHome\config\wayang.env.example"
           Copy-Item "artifacts/${{ matrix.asset_name }}" "$wayangHome\bin\${{ matrix.asset_name }}"
           Copy-Item "artifacts/${{ matrix.asset_name }}" "$wayangHome\bin\wayang.exe"
@@ -269,4 +275,4 @@ jobs:
             Service/runtime default paths:
             - `WAYANG_HOME` => `~/.wayang`
             - `WAYANG_GOLLEK_HOME` => `~/.wayang/gollek`
-            - fallback => `~/.gollek`
+            - `GOLLEK_HOME` => `~/.wayang/gollek` (set fallback to `~/.gollek` if needed)

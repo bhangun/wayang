@@ -14,6 +14,7 @@ public final class EIPSchema {
   public static final String EIP_ENRICHER = "eip-enricher";
   public static final String EIP_RETRY = "eip-retry";
   public static final String EIP_THROTTLER = "eip-throttler";
+  public static final String EIP_DEBUG_PRINT = "eip-debug-print";
 
   private EIPSchema() {
   }

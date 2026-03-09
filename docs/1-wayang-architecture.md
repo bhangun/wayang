@@ -43,7 +43,7 @@ Person(user, "User / Developer", "Designs and runs agentic workflows")
 
 System_Boundary(wayang, "Wayang Platform") {
 
-    Container(ui, "Wayang Designer UI", "Flutter/Web", "Low-code workflow & agent designer")
+    Container(ui, "Wayang Kulit UI", "Flutter/Web", "Low-code workflow & agent designer")
 
     Container(control, "Wayang Control Plane", "Quarkus", "Manages projects, plugins, secrets, and workflow definitions")
 
@@ -286,7 +286,7 @@ Person(user, "User / Developer", "Designs and runs workflows locally")
 
 System_Boundary(jvm, "Single JVM Runtime (Standalone Mode)") {
 
-    Container(ui, "Wayang Designer UI", "Flutter/Desktop or WebView", "Local workflow & agent designer")
+    Container(ui, "Wayang Kulit UI", "Flutter/Desktop or WebView", "Local workflow & agent designer")
 
     Container(core, "Wayang Core", "Java (Quarkus)", "Control plane, plugins, secrets, schemas")
 
@@ -373,7 +373,7 @@ Person(user, "User / Developer", "Designs and runs agentic workflows")
 
 System_Boundary(wayang, "Wayang Platform") {
 
-    Container(ui, "Wayang Designer UI", "Flutter/Web", "Low-code workflow & agent designer")
+    Container(ui, "Wayang Kulit UI", "Flutter/Web", "Low-code workflow & agent designer")
 
     Container(control, "Wayang Control Plane", "Quarkus", "Manages projects, plugins, secrets, and workflow definitions")
 

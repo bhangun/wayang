@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * ============================================================================
@@ -291,7 +290,8 @@ public final class PromptTemplate {
     }
 
     public boolean hasCondition() {
-        // Return false by default - templates may have conditions in a real implementation
+        // Return false by default - templates may have conditions in a real
+        // implementation
         return false;
     }
 
@@ -315,7 +315,7 @@ public final class PromptTemplate {
     // -----------------------------------------------------------------------
     // Renderer-helper methods (extract from activeVersion)
     // -----------------------------------------------------------------------
-    
+
     /**
      * Extracts all placeholder names from the active version's body.
      */
@@ -328,7 +328,8 @@ public final class PromptTemplate {
     }
 
     /**
-     * Converts variable definitions to VariableDescriptor objects for compatibility.
+     * Converts variable definitions to VariableDescriptor objects for
+     * compatibility.
      */
     public java.util.List<VariableDescriptor> getVariables() {
         return variableDefinitions.stream()
@@ -346,7 +347,8 @@ public final class PromptTemplate {
     }
 
     /**
-     * Converts from PromptVariableDefinition.VariableSource to VariableDescriptor.VariableSource
+     * Converts from PromptVariableDefinition.VariableSource to
+     * VariableDescriptor.VariableSource
      */
     private static VariableDescriptor.VariableSource convertVariableSource(
             PromptVariableDefinition.VariableSource source) {
@@ -375,7 +377,8 @@ public final class PromptTemplate {
         if (templateBody == null || templateBody.isEmpty()) {
             return Set.of();
         }
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\{\\{\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\}\\}");
+        java.util.regex.Pattern pattern = java.util.regex.Pattern
+                .compile("\\{\\{\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\}\\}");
         java.util.Set<String> placeholders = new java.util.LinkedHashSet<>();
         java.util.regex.Matcher matcher = pattern.matcher(templateBody);
         while (matcher.find()) {

@@ -9,7 +9,6 @@ import tech.kayys.wayang.error.ErrorCode;
 import tech.kayys.wayang.error.ErrorResponse;
 import tech.kayys.wayang.error.WayangException;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -65,7 +64,7 @@ public class PromptTemplateResource {
         @POST
         public Uni<Response> createTemplate(PromptTemplate template) {
                 String tenantId = getTenantId();
-
+                LOG.debug("Creating template for tenant: " + tenantId);
                 // Inject tenant into the template
                 PromptTemplate scoped = new PromptTemplate(
                                 template.getTemplateId(),

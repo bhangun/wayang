@@ -88,7 +88,6 @@ public class CelConditionEvaluator implements PromptChain.ConditionEvaluator {
      *
      * Replace this method body with real cel-java compilation when available.
      */
-    @SuppressWarnings("unchecked")
     private boolean evaluateInternal(String condition, Map<String, Object> bindings) {
         String expr = condition.trim();
 
@@ -138,7 +137,6 @@ public class CelConditionEvaluator implements PromptChain.ConditionEvaluator {
      * Resolves a dotted path like {@code "explicit.taskMode"} or
      * {@code "context.ragResult"} against the bindings map.
      */
-    @SuppressWarnings("unchecked")
     private static Object resolvePath(String path, Map<String, Object> bindings) {
         String[] segments = path.split("\\.", 2);
         Object root = bindings.get(segments[0]);

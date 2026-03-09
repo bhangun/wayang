@@ -10,9 +10,9 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>tech.kayys.wayang</groupId>
+
     <artifactId>wayang-agent-parent</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+
     <packaging>pom</packaging>
 
     <name>Wayang Agent</name>
@@ -29,8 +29,8 @@
     </properties>
 
     <modules>
-        <module>core</module>
-        <module>agents</module>
+       <module>wayang-agent-core</module>
+        <module>wayang-agent-core-executor</module>
     </modules>
 
     <dependencyManagement>

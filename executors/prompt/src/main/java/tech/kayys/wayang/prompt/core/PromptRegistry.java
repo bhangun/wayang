@@ -5,9 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 import tech.kayys.wayang.prompt.core.PromptTemplate.TemplateStatus;
-import tech.kayys.wayang.prompt.store.PromptTemplateRepository;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

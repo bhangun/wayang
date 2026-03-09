@@ -171,7 +171,7 @@ wayang.schema.validation.enabled=true
 - `GET /q/health` - Server health endpoint used by runtime monitor UI
 
 ### Designer Runtime Monitor
-- `wayang-ui/wayang_designer` includes a **Runtime Monitor** dialog in the top toolbar (`heart monitor` icon).
+- `wayang-ui/wayang_kulit` includes a **Runtime Monitor** dialog in the top toolbar (`heart monitor` icon).
 - It reads:
   - `GET /q/health` for server health
   - `GET /api/runtime/status` for component readiness

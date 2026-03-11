@@ -17,6 +17,7 @@
         <module>wayang-vector-pgvector</module>
         <module>wayang-vector-qdrant</module>
         <module>wayang-vector-milvus</module>
+        <module>wayang-vector-faiss</module>
         <!--  <module>wayang-vector-tablestore</module> -->
         <module>wayang-vector-chroma</module>
         <module>wayang-vector-pinecone</module>

@@ -5,6 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import tech.kayys.wayang.vector.VectorStore;
+import tech.kayys.wayang.vector.faiss.FaissVectorStore;
 
 /**
  * Factory and producer for VectorStore implementations.
@@ -12,7 +13,7 @@ import tech.kayys.wayang.vector.VectorStore;
 @ApplicationScoped
 public class VectorStoreProvider {
 
-    @ConfigProperty(name = "wayang.vector.store.type", defaultValue = "in-memory")
+    @ConfigProperty(name = "wayang.vector.store.type", defaultValue = "faiss")
     String vectorStoreType;
 
     private volatile VectorStore vectorStore;
@@ -30,6 +31,15 @@ public class VectorStoreProvider {
         return vectorStore;
     }
 
+    @ConfigProperty(name = "wayang.vector.faiss.dimension", defaultValue = "768")
+    int faissDimension;
+
+    @ConfigProperty(name = "wayang.vector.faiss.index.type", defaultValue = "Flat")
+    String faissIndexType;
+
+    @ConfigProperty(name = "wayang.vector.faiss.index.path", defaultValue = "")
+    String faissIndexPath;
+
     private VectorStore createVectorStore(String type) {
         switch (type.toLowerCase()) {
             case "in-memory":
@@ -45,6 +55,9 @@ public class VectorStoreProvider {
                 return new ChromaVectorStore();
             case "pinecone":
                 return new PineconeVectorStore();
+            case "faiss":
+                return new FaissVectorStore(faissDimension, faissIndexType,
+                        faissIndexPath.isEmpty() ? null : faissIndexPath);
             default:
                 throw new IllegalArgumentException("Unknown vector store type: " + type);
         }

@@ -37,7 +37,9 @@ public class BuiltInSkillLoader {
             "skills/planner.json",
             "skills/analytics.json",
             "skills/evaluator.json",
-            "skills/orchestrator.json");
+            "skills/orchestrator.json",
+            // internal assistant skill – provides platform knowledge and project generation
+            "skills/wayang-assistant.json");
 
     @Inject
     SkillRegistry skillRegistry;

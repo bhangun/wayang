@@ -19,13 +19,13 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Service to manage agent memory.
+ * Default implementation of AgentMemoryManager.
  * Wraps the generic VectorMemoryStore to provide agent-specific memory
  * operations.
  */
 @jakarta.enterprise.context.ApplicationScoped
-public class AgentMemoryService {
-    private static final Logger log = LoggerFactory.getLogger(AgentMemoryService.class);
+public class DefaultAgentMemoryManager implements AgentMemoryManager {
+    private static final Logger log = LoggerFactory.getLogger(DefaultAgentMemoryManager.class);
 
     private static final String DEFAULT_MEMORY_EMBEDDING_MODEL = "tfidf-512";
 

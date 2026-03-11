@@ -47,13 +47,23 @@ public class AgentConfig {
     @JsonProperty("parameters")
     private Map<String, Object> parameters;
 
+    @JsonProperty("skillId")
+    private String skillId;
+
+    @JsonProperty("instruction")
+    private String instruction;
+
+    @JsonProperty("taskType")
+    private String taskType;
+
     public AgentConfig() {
     }
 
     public AgentConfig(Metadata metadata, String model, Double temperature, Integer maxTokens,
             Double topP, Double frequencyPenalty, Double presencePenalty,
             String[] stopSequences, RateLimit rateLimit, RetryPolicy retryPolicy,
-            CircuitBreaker circuitBreaker, Map<String, Object> parameters) {
+            CircuitBreaker circuitBreaker, Map<String, Object> parameters,
+            String skillId, String instruction, String taskType) {
         this.metadata = metadata;
         this.model = model;
         this.temperature = temperature;
@@ -66,6 +76,9 @@ public class AgentConfig {
         this.retryPolicy = retryPolicy;
         this.circuitBreaker = circuitBreaker;
         this.parameters = parameters;
+        this.skillId = skillId;
+        this.instruction = instruction;
+        this.taskType = taskType;
     }
 
     public Metadata getMetadata() {
@@ -162,5 +175,29 @@ public class AgentConfig {
 
     public void setParameters(Map<String, Object> parameters) {
         this.parameters = parameters;
+    }
+
+    public String getSkillId() {
+        return skillId;
+    }
+
+    public void setSkillId(String skillId) {
+        this.skillId = skillId;
+    }
+
+    public String getInstruction() {
+        return instruction;
+    }
+
+    public void setInstruction(String instruction) {
+        this.instruction = instruction;
+    }
+
+    public String getTaskType() {
+        return taskType;
+    }
+
+    public void setTaskType(String taskType) {
+        this.taskType = taskType;
     }
 }

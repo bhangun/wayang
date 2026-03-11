@@ -153,7 +153,22 @@ public final class BuiltinSchemaCatalog {
           },
           "tools": {
             "type": "array",
-            "items": { "type": "string" }
+            "items": {
+              "type": "object",
+              "properties": {
+                "toolId": { "type": "string" },
+                "name": { "type": "string" },
+                "description": { "type": "string" },
+                "type": { "type": "string", "enum": ["WEB_SEARCH", "MCP", "FUNCTION_CALL", "API_CALL", "DATABASE_QUERY", "FILE_OPERATION", "CODE_EXECUTION", "CUSTOM"] },
+                "endpointUrl": { "type": "string" },
+                "enabled": { "type": "boolean", "default": true },
+                "serverId": { "type": "string" },
+                "parametersSchema": { "type": "string" },
+                "configuration": { "type": "object", "additionalProperties": true },
+                "metadata": { "type": "object", "additionalProperties": true }
+              },
+              "required": ["name", "type"]
+            }
           },
           "goal": { "type": "string" },
           "strategy": { "type": "string" },
@@ -165,6 +180,21 @@ public final class BuiltinSchemaCatalog {
           }
         },
         "additionalProperties": true
+      }
+      """;
+
+  private static final String BUILTIN_TOOL_SCHEMA = """
+      {
+        "type": "object",
+        "properties": {
+          "toolId": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "type": { "type": "string" },
+          "enabled": { "type": "boolean" },
+          "configuration": { "type": "object" }
+        },
+        "required": ["toolId", "name", "type"]
       }
       """;
 
@@ -423,6 +453,7 @@ public final class BuiltinSchemaCatalog {
     SCHEMAS.put(TRIGGER_FILE, TRIGGER_FILE_SCHEMA);
     SCHEMAS.put(SUB_WORKFLOW_NODE, SUB_WORKFLOW_SCHEMA);
     SCHEMAS.put(CUSTOM_AGENT_NODE, SUB_WORKFLOW_SCHEMA);
+    SCHEMAS.put("agent-tool", BUILTIN_TOOL_SCHEMA);
 
     // Discover node-provided schemas via NodeProvider SPI
     for (NodeProvider provider : ServiceLoader.load(NodeProvider.class)) {

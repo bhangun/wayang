@@ -29,6 +29,7 @@ public class EmbeddingService {
 
     @Inject
     public EmbeddingService(Instance<EmbeddingProvider> providers, EmbeddingConfigRuntime runtimeConfig) {
+
         List<EmbeddingProvider> providerList = new ArrayList<>();
         for (EmbeddingProvider provider : providers) {
             providerList.add(provider);
@@ -47,6 +48,7 @@ public class EmbeddingService {
     }
 
     public Uni<EmbeddingResponse> embed(EmbeddingRequest request) {
+        LOG.debug("Request: ", request.toString());
         return embedForTenant(null, request);
     }
 

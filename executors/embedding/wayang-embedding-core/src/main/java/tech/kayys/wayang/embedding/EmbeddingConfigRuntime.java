@@ -6,7 +6,8 @@ import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 
 /**
- * Holds a reloadable embedding configuration snapshot backed by MicroProfile config.
+ * Holds a reloadable embedding configuration snapshot backed by MicroProfile
+ * config.
  */
 @ApplicationScoped
 public class EmbeddingConfigRuntime {
@@ -33,8 +34,8 @@ public class EmbeddingConfigRuntime {
 
     private synchronized void refreshIfChanged() {
         Config config = ConfigProvider.getConfig();
-        String defaultProvider = read(config, "wayang.embedding.default-provider", "hash");
-        String defaultModel = read(config, "wayang.embedding.default-model", "hash-384");
+        String defaultProvider = read(config, "wayang.embedding.default-provider", "gollek");
+        String defaultModel = read(config, "wayang.embedding.default-model", "Qwen/Qwen2.5-0.5B-Instruct");
         String version = read(config, "wayang.embedding.version", "v1");
         String normalize = read(config, "wayang.embedding.normalize", "true");
         String cacheEnabled = read(config, "wayang.embedding.cache.enabled", "true");

@@ -23,10 +23,10 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 
 @ExtendWith(MockitoExtension.class)
-class AgentMemoryServiceTest {
+class DefaultAgentMemoryManagerTest {
 
     @InjectMocks
-    AgentMemoryService memoryService;
+    DefaultAgentMemoryManager memoryManager;
 
     @Mock
     VectorMemoryStore vectorStore;
@@ -40,7 +40,7 @@ class AgentMemoryServiceTest {
                 .thenReturn(Uni.createFrom().item(new EmbeddingResponse(List.of(new float[512]), 512, "tfidf", "tfidf-512")));
         Mockito.when(vectorStore.store(any(Memory.class))).thenReturn(Uni.createFrom().item("mem-123"));
 
-        String id = memoryService.storeMemory("agent-1", "some content", Map.of("role", "user"))
+        String id = memoryManager.storeMemory("agent-1", "some content", Map.of("role", "user"))
                 .await().indefinitely();
 
         Assertions.assertEquals("mem-123", id);
@@ -61,7 +61,7 @@ class AgentMemoryServiceTest {
         Mockito.when(vectorStore.search(any(), anyInt(), anyDouble(), anyMap()))
                 .thenReturn(Uni.createFrom().item(List.of(scored1)));
 
-        String context = memoryService.retrieveContext("agent-1", "query", 5)
+        String context = memoryManager.retrieveContext("agent-1", "query", 5)
                 .await().indefinitely();
 
         Assertions.assertNotNull(context);

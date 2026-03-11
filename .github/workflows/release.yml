@@ -202,6 +202,20 @@ jobs:
           set -euo pipefail
           release_version="${RELEASE_TAG#v}"
           mkdir -p artifacts/service-assets/scripts/service
+          mkdir -p artifacts/service-assets/.wayang/config artifacts/service-assets/.wayang/logs artifacts/service-assets/.wayang/plugins artifacts/service-assets/.wayang/secrets artifacts/service-assets/.wayang/gollek/models artifacts/service-assets/.wayang/gollek/storage
+          printf '%s\n' \
+            'WAYANG_HOME=$HOME/.wayang' \
+            'WAYANG_CONFIG_DIR=$WAYANG_HOME/config' \
+            'WAYANG_LOG_DIR=$WAYANG_HOME/logs' \
+            'WAYANG_PLUGINS_DIR=$WAYANG_HOME/plugins' \
+            'WAYANG_SECRETS_DIR=$WAYANG_HOME/secrets' \
+            'WAYANG_GOLLEK_HOME=$WAYANG_HOME/gollek' \
+            'GOLLEK_HOME=$WAYANG_GOLLEK_HOME' \
+            '# If your runtime cannot use WAYANG_GOLLEK_HOME, set fallback:' \
+            '# GOLLEK_HOME=$HOME/.gollek' \
+            'WAYANG_GOLLEK_MODELS_DIR=$WAYANG_GOLLEK_HOME/models' \
+            'WAYANG_GOLLEK_STORAGE_DIR=$WAYANG_GOLLEK_HOME/storage' \
+            > artifacts/service-assets/.wayang/config/wayang.env.example
           cp -R scripts/service/linux artifacts/service-assets/scripts/service/
           cp -R scripts/service/macos artifacts/service-assets/scripts/service/
           cp -R scripts/service/windows artifacts/service-assets/scripts/service/

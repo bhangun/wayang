@@ -5,7 +5,6 @@ import tech.kayys.wayang.memory.model.*;
 
 
 import io.smallrye.mutiny.Uni;
-import jakarta.enterprise.context.ApplicationScoped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +16,6 @@ import java.util.stream.Collectors;
 /**
  * In-memory implementation of VectorMemoryStore for development and testing
  */
-@ApplicationScoped
 public class InMemoryVectorStore implements VectorMemoryStore {
     private static final Logger LOG = LoggerFactory.getLogger(InMemoryVectorStore.class);
 

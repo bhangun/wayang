@@ -15,6 +15,8 @@ import tech.kayys.gollek.spi.inference.InferenceRequest;
 import tech.kayys.gollek.spi.inference.InferenceResponse;
 import tech.kayys.gollek.spi.stream.StreamChunk;
 import tech.kayys.gollek.spi.tool.ToolDefinition;
+import tech.kayys.gollek.sdk.mcp.McpServerSummary;
+import tech.kayys.gollek.sdk.mcp.McpToolModel;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -49,7 +51,7 @@ public class GollekInferenceService {
     GollekSdk gollekClient;
 
     @Inject
-    tech.kayys.wayang.agent.core.memory.AgentMemoryService memoryService;
+    tech.kayys.wayang.agent.core.memory.AgentMemoryManager memoryService;
 
     @Inject
     tech.kayys.wayang.agent.core.tool.ToolRegistry toolRegistry;
@@ -410,16 +412,43 @@ public class GollekInferenceService {
     // ==================== Internal Helpers ====================
 
     /**
-     * Returns tools from the agent request. MCP tools are not merged here —
-     * they are handled by the Gollek engine at inference time based on registered
-     * MCP servers.
+     * Resolve tools for the inference request.
+     * Merges explicit tools from the request with discovered tools from enabled MCP servers.
      */
     private List<ToolDefinition> resolveTools(AgentInferenceRequest request) {
-        List<ToolDefinition> requestTools = request.getTools();
-        if (requestTools == null || requestTools.isEmpty()) {
-            return null;
+        List<ToolDefinition> tools = new ArrayList<>();
+
+        // 1. Add tools explicitly requested (if any)
+        if (request.getTools() != null && !request.getTools().isEmpty()) {
+            tools.addAll(request.getTools());
         }
-        return requestTools;
+
+        // 2. Discover and bridge MCP tools from enabled servers
+        try {
+            List<McpServerSummary> servers = gollekClient.mcpRegistry().list();
+            for (McpServerSummary server : servers) {
+                if (server.enabled()) {
+                    log.debug("Bridging tools from MCP server: {}", server.name());
+                    try {
+                        List<McpToolModel> mcpTools = gollekClient.mcpRegistry().listTools(server.name());
+                        for (McpToolModel mcpTool : mcpTools) {
+                            tools.add(ToolDefinition.fromMCPSchema(
+                                    mcpTool.name(),
+                                    mcpTool.description(),
+                                    mcpTool.inputSchema()));
+                        }
+                    } catch (Exception e) {
+                        log.warn("Failed to list tools for MCP server {}: {}", server.name(), e.getMessage());
+                    }
+                }
+            }
+        } catch (UnsupportedOperationException e) {
+            log.trace("MCP bridging not supported by current GollekSdk implementation");
+        } catch (Exception e) {
+            log.warn("MCP tool bridging failed: {}", e.getMessage());
+        }
+
+        return tools.isEmpty() ? null : tools;
     }
 
     /**

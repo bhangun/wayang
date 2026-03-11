@@ -51,6 +51,7 @@
     <module>wayang-control-websocket</module>
     <module>wayang-project-api</module>
     <module>wayang-project-core</module>
+    <!-- <module>wayang-chat</module> - removed locally since directory is missing -->
   </modules>
 
 

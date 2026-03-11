@@ -11,5 +11,9 @@ public class AgentTool {
     public String description;
     public ToolType type;
     public String endpointUrl;
+    public boolean enabled = true;
+    public String serverId; // For MCP
+    public String parametersSchema; // For Functions (JSON Schema)
     public Map<String, String> configuration;
+    public Map<String, String> metadata;
 }

@@ -4,6 +4,7 @@ import tech.kayys.wayang.vector.VectorStore;
 import tech.kayys.wayang.vector.runtime.VectorStoreProvider;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.enterprise.inject.Produces;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,8 @@ public class VectorStoreFactory {
     /**
      * Get configured vector store
      */
+    @Produces
+    @ApplicationScoped
     public VectorMemoryStore getVectorStore() {
         LOG.info("Using vector store type: {}", storeType);
 

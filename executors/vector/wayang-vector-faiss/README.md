@@ -113,6 +113,30 @@ Agent Memory Manager → VectorMemoryStore → VectorStoreAdapter → VectorStor
                                                         ~/.wayang/vendor/faiss
 ```
 
+```mermaid
+graph TD
+    A["Agent Memory Manager"] --> B["VectorMemoryStore SPI"]
+    B --> C["VectorStoreAdapter"]
+    C --> D["VectorStore SPI"]
+    D --> E["FaissVectorStore"]
+    E --> F["FaissIndex"]
+    F --> G["FaissIndexBindings"]
+    G --> H["FaissNative<br/>SymbolLookup + Linker"]
+    H --> I["libfaiss_c.dylib/.so"]
+    I --> J["~/.wayang/vendor/faiss"]
+    
+    K["FaissIVFBindings"] --> H
+    L["FaissHNSWBindings"] --> H
+    M["FaissClusteringBindings"] --> H
+    N["FaissIOBindings"] --> H
+    O["FaissTransformBindings"] --> H
+    P["FaissAutoTuneBindings"] --> H
+    Q["FaissBinaryIndexBindings"] --> H
+    R["FaissMetaIndexBindings"] --> H
+    S["FaissScalarQuantizerBindings"] --> H
+    T["FaissIndexFlatBindings"] --> H
+```
+
 ## FFM Binding Classes
 
 | Class | FAISS C Header | Coverage |

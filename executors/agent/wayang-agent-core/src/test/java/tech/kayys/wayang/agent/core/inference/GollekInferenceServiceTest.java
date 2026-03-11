@@ -12,7 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tech.kayys.gollek.sdk.core.GollekSdk;
 import tech.kayys.gollek.spi.inference.InferenceRequest;
 import tech.kayys.gollek.spi.inference.InferenceResponse;
-import tech.kayys.wayang.agent.core.memory.AgentMemoryService;
+import tech.kayys.wayang.agent.core.memory.AgentMemoryManager;
 import tech.kayys.wayang.agent.core.tool.ToolRegistry;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -31,7 +31,7 @@ class GollekInferenceServiceTest {
         GollekSdk gollekClient;
 
         @Mock
-        AgentMemoryService memoryService;
+        AgentMemoryManager memoryService;
 
         @Mock
         ToolRegistry toolRegistry;

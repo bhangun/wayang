@@ -23,6 +23,8 @@ import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotNull;
 import tech.kayys.wayang.tool.dto.CapabilityLevel;
 import tech.kayys.wayang.tool.dto.ToolType;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * MCP Tool - Represents an executable tool derived from OpenAPI
@@ -67,15 +69,18 @@ public class McpTool extends PanacheEntityBase {
     private CapabilityLevel capabilityLevel;
 
     // JSON Schema for input validation
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "input_schema", columnDefinition = "jsonb")
     private Map<String, Object> inputSchema;
 
     // JSON Schema for output validation
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "output_schema", columnDefinition = "jsonb")
     private Map<String, Object> outputSchema;
 
     // HTTP execution configuration
     @Embedded
+    @jakarta.persistence.AttributeOverride(name = "timeoutMs", column = @jakarta.persistence.Column(name = "execution_timeout_ms"))
     private HttpExecutionConfig executionConfig;
 
     // Authentication reference
@@ -84,6 +89,7 @@ public class McpTool extends PanacheEntityBase {
 
     // Safety & guardrails
     @Embedded
+    @jakarta.persistence.AttributeOverride(name = "timeoutMs", column = @Column(name = "guardrails_timeout_ms"))
     private ToolGuardrails guardrails;
 
     // Operational metadata

@@ -4,6 +4,8 @@ import tech.kayys.wayang.memory.model.ResponseType;
 import tech.kayys.wayang.memory.model.ResponseStatus;
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -32,10 +34,8 @@ public class ExecutionResultEntity extends PanacheEntityBase {
     @Column(name = "status")
     public ResponseStatus status;
     
-    @ElementCollection
-    @CollectionTable(name = "execution_metadata", joinColumns = @JoinColumn(name = "execution_id"))
-    @MapKeyColumn(name = "metadata_key")
-    @Column(name = "metadata_value")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata", columnDefinition = "jsonb")
     public Map<String, String> metadata;
     
     @ElementCollection

@@ -2,6 +2,8 @@ package tech.kayys.wayang.memory.entity;
 
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -22,10 +24,8 @@ public class ConversationMemoryEntity extends PanacheEntityBase {
     @Column(name = "content", columnDefinition = "TEXT")
     public String content;
     
-    @ElementCollection
-    @CollectionTable(name = "memory_metadata", joinColumns = @JoinColumn(name = "memory_id"))
-    @MapKeyColumn(name = "metadata_key")
-    @Column(name = "metadata_value")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata", columnDefinition = "jsonb")
     public Map<String, String> metadata;
     
     @ElementCollection

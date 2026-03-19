@@ -13,6 +13,7 @@ import tech.kayys.wayang.agent.AgentType;
 import tech.kayys.wayang.agent.core.inference.AgentInferenceRequest;
 import tech.kayys.wayang.agent.core.inference.AgentInferenceResponse;
 import tech.kayys.wayang.agent.core.inference.GollekInferenceService;
+import tech.kayys.wayang.agent.gollek.GollekIntegrationService;
 import tech.kayys.wayang.agent.skill.SkillDefinition;
 import tech.kayys.wayang.agent.skill.SkillPromptRenderer;
 import tech.kayys.wayang.agent.skill.SkillRegistry;
@@ -67,6 +68,9 @@ public class SkillBasedAgentExecutor extends AbstractAgentExecutor {
 
     @Inject
     GollekInferenceService inferenceService;
+
+    @Inject
+    GollekIntegrationService gollekIntegration;
 
     @Inject
     SkillRegistry skillRegistry;

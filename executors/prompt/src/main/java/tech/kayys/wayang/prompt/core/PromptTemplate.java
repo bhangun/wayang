@@ -1,5 +1,8 @@
 package tech.kayys.wayang.prompt.core;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
@@ -84,21 +87,22 @@ public final class PromptTemplate {
     // -----------------------------------------------------------------------
     // Canonical constructor — enforces every invariant at construction time.
     // -----------------------------------------------------------------------
+    @JsonCreator
     public PromptTemplate(
-            String templateId,
-            String name,
-            String description,
-            String tenantId,
-            String activeVersion,
-            TemplateStatus status,
-            List<String> tags,
-            List<PromptVersion> versions,
-            List<PromptVariableDefinition> variableDefinitions,
-            String createdBy,
-            Instant createdAt,
-            String updatedBy,
-            Instant updatedAt,
-            Map<String, String> metadata) {
+            @JsonProperty("templateId") String templateId,
+            @JsonProperty("name") String name,
+            @JsonProperty("description") String description,
+            @JsonProperty("tenantId") String tenantId,
+            @JsonProperty("activeVersion") String activeVersion,
+            @JsonProperty("status") TemplateStatus status,
+            @JsonProperty("tags") List<String> tags,
+            @JsonProperty("versions") List<PromptVersion> versions,
+            @JsonProperty("variableDefinitions") List<PromptVariableDefinition> variableDefinitions,
+            @JsonProperty("createdBy") String createdBy,
+            @JsonProperty("createdAt") Instant createdAt,
+            @JsonProperty("updatedBy") String updatedBy,
+            @JsonProperty("updatedAt") Instant updatedAt,
+            @JsonProperty("metadata") Map<String, String> metadata) {
 
         Objects.requireNonNull(templateId, "templateId must not be null");
         Objects.requireNonNull(name, "name must not be null");
@@ -283,33 +287,90 @@ public final class PromptTemplate {
     // Validation methods (expected by registry)
     // -----------------------------------------------------------------------
 
+    /**
+     * Checks for common template issues and returns warnings.
+     * Validates that all declared required variables have corresponding
+     * placeholders in the active version body, and vice versa.
+     */
     public List<ValidationWarning> getValidationWarnings() {
-        // For now, return an empty list - in a real implementation this would check for
-        // mismatches between declared variables and placeholders in the template body
-        return List.of();
+        java.util.List<ValidationWarning> warnings = new java.util.ArrayList<>();
+        java.util.Optional<PromptVersion> activeVer = resolveActiveVersion();
+
+        if (activeVer.isEmpty() && status == TemplateStatus.PUBLISHED) {
+            warnings.add(new ValidationWarning(
+                    ValidationWarningType.MISSING_ACTIVE_VERSION,
+                    null,
+                    "Template is PUBLISHED but has no active version"));
+            return warnings;
+        }
+
+        if (activeVer.isPresent()) {
+            Set<String> placeholders = extractPlaceholders(activeVer.get().getTemplateBody());
+            Set<String> declaredNames = new java.util.HashSet<>();
+            for (PromptVariableDefinition varDef : variableDefinitions) {
+                declaredNames.add(varDef.getName());
+            }
+
+            // Placeholders in body with no declaration
+            for (String placeholder : placeholders) {
+                if (!declaredNames.contains(placeholder)) {
+                    warnings.add(new ValidationWarning(
+                            ValidationWarningType.UNDECLARED_VARIABLE,
+                            placeholder,
+                            "Placeholder '{{" + placeholder + "}}' has no variable definition"));
+                }
+            }
+
+            // Required declarations missing from body
+            for (PromptVariableDefinition varDef : variableDefinitions) {
+                if (varDef.isRequired() && !placeholders.contains(varDef.getName())) {
+                    warnings.add(new ValidationWarning(
+                            ValidationWarningType.UNUSED_VARIABLE,
+                            varDef.getName(),
+                            "Required variable '" + varDef.getName() + "' is not referenced in the template body"));
+                }
+            }
+        }
+
+        return warnings;
     }
 
+    /**
+     * Returns true if the active version has a system prompt configured.
+     */
     public boolean hasCondition() {
-        // Return false by default - templates may have conditions in a real
-        // implementation
-        return false;
+        return resolveActiveVersion()
+                .map(v -> v.getSystemPrompt() != null && !v.getSystemPrompt().isBlank())
+                .orElse(false);
     }
 
+    /**
+     * Returns the active version's system prompt, or null if not set.
+     */
     public String getCondition() {
-        // Return null by default
-        return null;
+        return resolveActiveVersion()
+                .map(PromptVersion::getSystemPrompt)
+                .orElse(null);
     }
 
+    /**
+     * Returns the prompt role — defaults to USER. When a system prompt is
+     * present in the active version, returns SYSTEM.
+     */
     public PromptRole getRole() {
-        // Return USER by default - in a real implementation this would return the role
-        // of the active version
-        return PromptRole.USER;
+        return resolveActiveVersion()
+                .map(v -> v.getSystemPrompt() != null && !v.getSystemPrompt().isBlank()
+                        ? PromptRole.SYSTEM
+                        : PromptRole.USER)
+                .orElse(PromptRole.USER);
     }
 
+    /**
+     * Extracts all variable names from the active version's template body
+     * by finding all {@code {{variableName}}} patterns.
+     */
     public java.util.Set<String> getExtractedVariableNames() {
-        // Return an empty set by default - in a real implementation this would extract
-        // variable names from the template body
-        return Set.of();
+        return getPlaceholders();
     }
 
     // -----------------------------------------------------------------------

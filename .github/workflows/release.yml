@@ -260,6 +260,63 @@ jobs:
         run: |
           set -euo pipefail
           ls -lah release-assets
+          expected_assets=(
+            "wayang-standalone-linux-x86_64"
+            "wayang-standalone-osx-x86_64"
+            "wayang-standalone-osx-aarch_64"
+            "wayang-standalone-windows-x86_64.exe"
+            "wayang-service-bundle-linux-x86_64.zip"
+            "wayang-service-bundle-osx-x86_64.zip"
+            "wayang-service-bundle-osx-aarch_64.zip"
+            "wayang-service-bundle-windows-x86_64.zip"
+          )
+          for asset in "${expected_assets[@]}"; do
+            test -e "release-assets/${asset}"
+          done
+
+      - name: Verify service bundle layouts
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundles=(
+            "wayang-service-bundle-linux-x86_64.zip"
+            "wayang-service-bundle-osx-x86_64.zip"
+            "wayang-service-bundle-osx-aarch_64.zip"
+            "wayang-service-bundle-windows-x86_64.zip"
+          )
+          for bundle in "${bundles[@]}"; do
+            listing="$(unzip -Z1 "release-assets/${bundle}")"
+            printf '%s\n' "${listing}" | grep -q '^\.wayang/bin/'
+            printf '%s\n' "${listing}" | grep -q '^\.wayang/config/'
+            printf '%s\n' "${listing}" | grep -q '^\.wayang/logs/'
+            printf '%s\n' "${listing}" | grep -q '^\.wayang/gollek/models/'
+            printf '%s\n' "${listing}" | grep -q '^\.wayang/gollek/storage/'
+            printf '%s\n' "${listing}" | grep -q '^\.wayang/config/wayang.env.example$'
+            printf '%s\n' "${listing}" | grep -q '^scripts/service/'
+            printf '%s\n' "${listing}" | grep -q '^INSTALL.md$'
+          done
+
+          env_checks_file="$(mktemp)"
+          unzip -p release-assets/wayang-service-bundle-linux-x86_64.zip .wayang/config/wayang.env.example > "${env_checks_file}"
+          grep -q '^WAYANG_HOME=\$HOME/\.wayang$' "${env_checks_file}"
+          grep -q '^WAYANG_GOLLEK_HOME=\$WAYANG_HOME/gollek$' "${env_checks_file}"
+          grep -q '^GOLLEK_HOME=\$WAYANG_GOLLEK_HOME$' "${env_checks_file}"
+          grep -q '^# GOLLEK_HOME=\$HOME/\.gollek$' "${env_checks_file}"
+
+      - name: Verify service assets archive layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          service_assets_zip="$(ls -1 release-assets/wayang-service-assets-*.zip | head -n1)"
+          test -n "${service_assets_zip}"
+          listing="$(unzip -Z1 "${service_assets_zip}")"
+          printf '%s\n' "${listing}" | grep -q '^\.wayang/config/wayang.env.example$'
+          printf '%s\n' "${listing}" | grep -q '^\.wayang/logs/'
+          printf '%s\n' "${listing}" | grep -q '^\.wayang/gollek/models/'
+          printf '%s\n' "${listing}" | grep -q '^\.wayang/gollek/storage/'
+          printf '%s\n' "${listing}" | grep -q '^scripts/service/linux/'
+          printf '%s\n' "${listing}" | grep -q '^scripts/service/macos/'
+          printf '%s\n' "${listing}" | grep -q '^scripts/service/windows/'
 
       - name: Create/Update GitHub release
         uses: softprops/action-gh-release@v2

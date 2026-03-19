@@ -9,7 +9,7 @@ import tech.kayys.gamelan.engine.repository.WorkflowDefinitionRepository;
 import tech.kayys.wayang.agent.skill.SkillRegistry;
 import tech.kayys.wayang.agent.skill.SkillPromptRenderer;
 import tech.kayys.wayang.agent.core.tool.ToolRegistry;
-import tech.kayys.wayang.agent.core.memory.AgentMemoryService;
+import tech.kayys.wayang.agent.core.memory.AgentMemoryManager;
 import tech.kayys.wayang.agent.core.inference.GollekInferenceService;
 import tech.kayys.wayang.memory.spi.AgentMemory;
 import tech.kayys.wayang.guardrails.GuardrailsService;
@@ -102,8 +102,8 @@ public class MockProducers {
     @Produces
     @ApplicationScoped
     @Mock
-    public AgentMemoryService mockAgentMemoryService() {
-        return Mockito.mock(AgentMemoryService.class);
+    public AgentMemoryManager mockAgentMemoryManager() {
+        return Mockito.mock(AgentMemoryManager.class);
     }
 
     @Produces

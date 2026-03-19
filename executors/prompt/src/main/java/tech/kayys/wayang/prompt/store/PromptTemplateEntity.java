@@ -10,6 +10,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import tech.kayys.wayang.prompt.core.PromptTemplate;
 
@@ -59,8 +61,8 @@ public class PromptTemplateEntity {
      * This is the source of truth; the scalar columns are denormalisations
      * for query performance.
      */
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "definition", columnDefinition = "jsonb", nullable = false)
-    @Convert(converter = PromptTemplateJsonConverter.class)
     private PromptTemplate definition;
 
     @Column(name = "created_at")

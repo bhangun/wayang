@@ -10,6 +10,8 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import tech.kayys.gamelan.engine.node.NodeExecutionResult;
 import tech.kayys.gamelan.engine.node.NodeExecutionTask;
+import tech.kayys.gamelan.engine.node.NodeId;
+import tech.kayys.gamelan.engine.workflow.WorkflowRunId;
 
 import java.util.Map;
 
@@ -18,12 +20,12 @@ public class UnifiedMemoryExecutorTest {
     @InjectMocks
     UnifiedMemoryExecutor executor = new UnifiedMemoryExecutor() {
         @Override
-        protected Uni<NodeExecutionResult> executeStore(NodeExecutionTask task, Map<String, Object> context) {
+        protected Uni<NodeExecutionResult> handleStore(NodeExecutionTask task, Map<String, Object> context, String agentId) {
             return Uni.createFrom().item(createSuccessResult(task, Map.of("memoryId", "1234"), java.time.Instant.now()));
         }
 
         @Override
-        protected Uni<NodeExecutionResult> executeRetrieve(NodeExecutionTask task, Map<String, Object> context) {
+        protected Uni<NodeExecutionResult> handleRetrieve(NodeExecutionTask task, Map<String, Object> context, String agentId) {
             return Uni.createFrom().nullItem();
         }
     };
@@ -42,8 +44,8 @@ public class UnifiedMemoryExecutorTest {
     @Test
     void testExecuteSucceedsWhenTypeIsEnabled() {
         NodeExecutionTask task = Mockito.mock(NodeExecutionTask.class);
-        Mockito.when(task.runId()).thenReturn(() -> "runId");
-        Mockito.when(task.nodeId()).thenReturn(() -> "nodeId");
+        Mockito.when(task.runId()).thenReturn(WorkflowRunId.of("runId"));
+        Mockito.when(task.nodeId()).thenReturn(NodeId.of("nodeId"));
 
         // Episodic memory requested, and operation is store
         Map<String, Object> context = Map.of(
@@ -65,8 +67,8 @@ public class UnifiedMemoryExecutorTest {
     @Test
     void testExecuteFailsWhenTypeIsDisabled() {
         NodeExecutionTask task = Mockito.mock(NodeExecutionTask.class);
-        Mockito.when(task.runId()).thenReturn(() -> "runId");
-        Mockito.when(task.nodeId()).thenReturn(() -> "nodeId");
+        Mockito.when(task.runId()).thenReturn(WorkflowRunId.of("runId"));
+        Mockito.when(task.nodeId()).thenReturn(NodeId.of("nodeId"));
 
         // Disable episodic memory for this test
         executor.episodicEnabled = false;
@@ -85,14 +87,14 @@ public class UnifiedMemoryExecutorTest {
 
         // Must fail because semantic is disabled
         Assertions.assertEquals(tech.kayys.gamelan.engine.node.NodeExecutionStatus.FAILED, result.status());
-        Assertions.assertTrue(result.errorMessage().contains("is disabled"));
+        Assertions.assertEquals("Memory type 'episodic' is disabled.", result.getError().getMessage());
     }
 
     @Test
     void testExecuteDefaultsToSemanticWhenNoTypeProvided() {
         NodeExecutionTask task = Mockito.mock(NodeExecutionTask.class);
-        Mockito.when(task.runId()).thenReturn(() -> "runId");
-        Mockito.when(task.nodeId()).thenReturn(() -> "nodeId");
+        Mockito.when(task.runId()).thenReturn(WorkflowRunId.of("runId"));
+        Mockito.when(task.nodeId()).thenReturn(NodeId.of("nodeId"));
 
         // No memoryType provided in context, operation is store
         Map<String, Object> context = Map.of(
@@ -118,6 +120,6 @@ public class UnifiedMemoryExecutorTest {
                 .getItem();
 
         Assertions.assertEquals(tech.kayys.gamelan.engine.node.NodeExecutionStatus.FAILED, failResult.status());
-        Assertions.assertTrue(failResult.errorMessage().contains("semantic' is disabled"));
+        Assertions.assertEquals("Memory type 'semantic' is disabled.", failResult.getError().getMessage());
     }
 }

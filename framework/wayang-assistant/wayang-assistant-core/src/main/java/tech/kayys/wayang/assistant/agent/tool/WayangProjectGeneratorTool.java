@@ -3,7 +3,7 @@ package tech.kayys.wayang.assistant.agent.tool;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import io.smallrye.mutiny.Uni;
-import tech.kayys.wayang.assistant.agent.WayangAssistantService;
+import tech.kayys.wayang.assistant.agent.project.ProjectGeneratorService;
 import tech.kayys.wayang.project.api.ProjectDescriptor;
 import tech.kayys.wayang.tool.spi.Tool;
 
@@ -12,13 +12,15 @@ import java.util.Map;
 
 /**
  * Tool for generating Wayang projects from high-level intent.
+ *
+ * <p>Injects {@link ProjectGeneratorService} directly (not WayangAssistantService)
+ * to avoid a circular CDI dependency chain.
  */
 @ApplicationScoped
 public class WayangProjectGeneratorTool implements Tool {
 
     @Inject
-    public WayangAssistantService service; // made public for test injection
-
+    public ProjectGeneratorService projectGenerator;
 
     @Override
     public String id() {
@@ -41,7 +43,7 @@ public class WayangProjectGeneratorTool implements Tool {
                 "type", "object",
                 "properties", Map.of(
                         "intent", Map.of(
-                                "type", "string", 
+                                "type", "string",
                                 "description", "High-level description of the project to create. Include desired capabilities like 'RAG', 'web search', 'multi-agent', 'workflow', etc."
                         ),
                         "name", Map.of(
@@ -60,19 +62,17 @@ public class WayangProjectGeneratorTool implements Tool {
     @Override
     public Uni<Map<String, Object>> execute(Map<String, Object> arguments, Map<String, Object> context) {
         String intent = (String) arguments.get("intent");
-        
+
         if (intent == null || intent.trim().isEmpty()) {
             return Uni.createFrom().failure(
                 new IllegalArgumentException("Intent parameter is required")
             );
         }
 
-        ProjectDescriptor descriptor = service.generateProject(intent);
-        // return the descriptor object directly so callers can inspect it
+        ProjectDescriptor descriptor = projectGenerator.generateProject(intent);
         return Uni.createFrom().item(Map.of(
                 "success", true,
                 "project", descriptor
         ));
     }
-
 }

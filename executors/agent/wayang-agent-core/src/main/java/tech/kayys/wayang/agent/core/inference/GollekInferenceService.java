@@ -10,9 +10,9 @@ import org.slf4j.LoggerFactory;
 
 import tech.kayys.gollek.sdk.core.GollekSdk;
 import tech.kayys.gollek.sdk.exception.SdkException;
-import tech.kayys.gollek.spi.Message;
 import tech.kayys.gollek.spi.inference.InferenceRequest;
 import tech.kayys.gollek.spi.inference.InferenceResponse;
+import tech.kayys.gollek.spi.inference.Message;
 import tech.kayys.gollek.spi.stream.StreamChunk;
 import tech.kayys.gollek.spi.tool.ToolDefinition;
 import tech.kayys.gollek.sdk.mcp.McpServerSummary;
@@ -91,13 +91,16 @@ public class GollekInferenceService {
     /**
      * Perform inference with a ReAct-style tool execution loop.
      *
-     * <p>Flow:
+     * <p>
+     * Flow:
      * <ol>
-     *   <li>Send messages + tools to LLM</li>
-     *   <li>If LLM returns tool_calls → execute each tool via {@code ToolRegistry}</li>
-     *   <li>Append assistant message (with tool_calls) + tool result messages</li>
-     *   <li>Re-call LLM with updated messages</li>
-     *   <li>Repeat until LLM returns a STOP finish_reason or max iterations reached</li>
+     * <li>Send messages + tools to LLM</li>
+     * <li>If LLM returns tool_calls → execute each tool via
+     * {@code ToolRegistry}</li>
+     * <li>Append assistant message (with tool_calls) + tool result messages</li>
+     * <li>Re-call LLM with updated messages</li>
+     * <li>Repeat until LLM returns a STOP finish_reason or max iterations
+     * reached</li>
      * </ol>
      *
      * @param request Agent inference request (with tools and maxToolIterations)
@@ -250,7 +253,8 @@ public class GollekInferenceService {
      * Perform streaming inference. Returns a reactive {@link Multi} of
      * {@link StreamChunk} objects that can be consumed as they arrive.
      *
-     * <p>This is useful for real-time UI updates, progressive rendering,
+     * <p>
+     * This is useful for real-time UI updates, progressive rendering,
      * and scenarios where low latency to first token matters.
      *
      * @param request Agent inference request
@@ -332,8 +336,10 @@ public class GollekInferenceService {
 
     /**
      * Discover enabled MCP servers from the Gollek SDK.
-     * The actual MCP tool execution is handled by the inference engine at request time
-     * when MCP servers are registered. This method returns the list of enabled server names
+     * The actual MCP tool execution is handled by the inference engine at request
+     * time
+     * when MCP servers are registered. This method returns the list of enabled
+     * server names
      * so they can be included in request metadata for the engine to activate.
      *
      * @return list of enabled MCP server names
@@ -413,7 +419,8 @@ public class GollekInferenceService {
 
     /**
      * Resolve tools for the inference request.
-     * Merges explicit tools from the request with discovered tools from enabled MCP servers.
+     * Merges explicit tools from the request with discovered tools from enabled MCP
+     * servers.
      */
     private List<ToolDefinition> resolveTools(AgentInferenceRequest request) {
         List<ToolDefinition> tools = new ArrayList<>();
@@ -738,13 +745,20 @@ public class GollekInferenceService {
             return "";
         }
         String normalized = providerId.toLowerCase(Locale.ROOT);
-        if (normalized.contains("openai")) return "openai";
-        if (normalized.contains("anthropic")) return "anthropic";
-        if (normalized.contains("gemini") || normalized.contains("google")) return "gemini";
-        if (normalized.contains("mistral")) return "mistral";
-        if (normalized.contains("cerebras")) return "cerebras";
-        if (normalized.contains("azure")) return "azure";
-        if (normalized.contains("ollama")) return "ollama";
+        if (normalized.contains("openai"))
+            return "openai";
+        if (normalized.contains("anthropic"))
+            return "anthropic";
+        if (normalized.contains("gemini") || normalized.contains("google"))
+            return "gemini";
+        if (normalized.contains("mistral"))
+            return "mistral";
+        if (normalized.contains("cerebras"))
+            return "cerebras";
+        if (normalized.contains("azure"))
+            return "azure";
+        if (normalized.contains("ollama"))
+            return "ollama";
         return normalized;
     }
 

@@ -16,8 +16,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import tech.kayys.gollek.core.execution.ExecutionContext;
-import tech.kayys.gollek.spi.Message;
 import tech.kayys.gollek.spi.inference.InferenceRequest;
+import tech.kayys.gollek.spi.inference.Message;
 import tech.kayys.gollek.spi.plugin.PluginContext;
 import tech.kayys.wayang.memory.impl.VectorAgentMemory;
 import tech.kayys.wayang.memory.spi.MemoryEntry;

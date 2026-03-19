@@ -27,7 +27,7 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-arc</artifactId>
-            <version>3.15.1</version>
+            
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -80,36 +80,36 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-hibernate-reactive-panache</artifactId>
-            <version>3.15.1</version>
+            <version>3.32.2</version>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-hibernate-validator</artifactId>
-            <version>3.15.1</version>
+            <version>3.32.2</version>
         </dependency>
 
         <!-- REST API -->
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-resteasy-reactive</artifactId>
-            <version>3.15.1</version>
+            <artifactId>quarkus-rest</artifactId>
+            <version>3.32.2</version>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-rest-jackson</artifactId>
-            <version>3.15.1</version>
+            <version>3.32.2</version>
         </dependency>
 
         <!-- HTTP Clients -->
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-rest-client-reactive</artifactId>
-            <version>3.15.1</version>
+            <artifactId>quarkus-rest-client</artifactId>
+            <version>3.32.2</version>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-rest-client-reactive-jackson</artifactId>
-            <version>3.15.1</version>
+            <artifactId>quarkus-rest-client-jackson</artifactId>
+            <version>3.32.2</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
@@ -121,31 +121,31 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-vertx</artifactId>
-            <version>3.15.1</version>
+            <version>3.32.2</version>
         </dependency>
         <dependency>
             <groupId>io.smallrye.reactive</groupId>
             <artifactId>smallrye-mutiny-vertx-web-client</artifactId>
-            <version>3.15.1</version>
+            
         </dependency>
 
         <!-- OpenAPI -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-smallrye-openapi</artifactId>
-            <version>3.15.1</version>
+            <version>3.32.2</version>
         </dependency>
 
         <!-- Security -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-security</artifactId>
-            <version>3.15.1</version>
+            <version>3.32.2</version>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-scheduler</artifactId>
-            <version>3.15.1</version>
+            <version>3.32.2</version>
         </dependency>
 
         <!-- JSON Schema & Utils -->
@@ -169,20 +169,20 @@
 
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-junit5</artifactId>
-            <version>3.15.1</version>
+            <artifactId>quarkus-junit</artifactId>
+            <version>3.32.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-junit5-mockito</artifactId>
-            <version>3.15.1</version>
+            <artifactId>quarkus-junit-mockito</artifactId>
+            <version>3.32.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-test-security</artifactId>
-            <version>3.15.1</version>
+            <version>3.32.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -205,7 +205,7 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-reactive-pg-client</artifactId>
-            <version>3.15.1</version>
+            <version>3.32.2</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

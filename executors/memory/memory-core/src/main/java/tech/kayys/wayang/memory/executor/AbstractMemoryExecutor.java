@@ -528,17 +528,14 @@ public abstract class AbstractMemoryExecutor implements ExecutorPlugin {
      */
     protected NodeExecutionResult createFailureResult(NodeExecutionTask task, String message, Instant startedAt) {
         logger.error("Memory operation failed: {}", message);
-        return tech.kayys.gamelan.sdk.executor.core.SimpleNodeExecutionResult.success(
+        return tech.kayys.gamelan.sdk.executor.core.SimpleNodeExecutionResult.failure(
                 task.runId(),
                 task.nodeId(),
                 task.attempt(),
-                Map.of(
-                        "success", false,
-                        "error", message,
+                new tech.kayys.gamelan.engine.error.ErrorInfo("MEMORY_ERROR", message, null, Map.of(
                         "operation", resolveOperation(task.context()).getValue()
-                ),
-                task.token(),
-                Duration.between(startedAt, Instant.now())
+                )),
+                task.token()
         );
     }
 
@@ -547,17 +544,22 @@ public abstract class AbstractMemoryExecutor implements ExecutorPlugin {
      */
     protected NodeExecutionResult createFailureResult(NodeExecutionTask task, Throwable error, Instant startedAt) {
         logger.error("Memory operation failed with exception", error);
-        return tech.kayys.gamelan.sdk.executor.core.SimpleNodeExecutionResult.success(
+        
+        java.io.StringWriter sw = new java.io.StringWriter();
+        error.printStackTrace(new java.io.PrintWriter(sw));
+        String stackTrace = sw.toString();
+
+        return tech.kayys.gamelan.sdk.executor.core.SimpleNodeExecutionResult.failure(
                 task.runId(),
                 task.nodeId(),
                 task.attempt(),
-                Map.of(
-                        "success", false,
-                        "error", error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName(),
-                        "operation", resolveOperation(task.context()).getValue()
+                new tech.kayys.gamelan.engine.error.ErrorInfo(
+                        error.getClass().getSimpleName(), 
+                        error.getMessage() != null ? error.getMessage() : "Unknown error", 
+                        stackTrace,
+                        Map.of("operation", resolveOperation(task.context()).getValue())
                 ),
-                task.token(),
-                Duration.between(startedAt, Instant.now())
+                task.token()
         );
     }
 

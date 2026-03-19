@@ -13,7 +13,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <quarkus.platform.version>3.15.1</quarkus.platform.version>
+        <quarkus.platform.version>3.32.2</quarkus.platform.version>
     </properties>
 
     <modules>
@@ -28,6 +28,8 @@
         <module>wayang-rag-config</module>
         <module>wayang-rag-embedding</module>
         <module>wayang-rag-slo</module>
+        <module>rag-memory-integration</module>
+        <module>rag-graph-integration</module>
     </modules>
 
     <dependencyManagement>

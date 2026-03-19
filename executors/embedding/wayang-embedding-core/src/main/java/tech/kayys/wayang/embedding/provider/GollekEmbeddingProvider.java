@@ -1,7 +1,7 @@
 package tech.kayys.wayang.embedding.provider;
 
 import tech.kayys.gollek.sdk.core.GollekSdk;
-import tech.kayys.gollek.spi.inference.EmbeddingRequest;
+import tech.kayys.gollek.spi.embedding.EmbeddingRequest;
 import tech.kayys.wayang.embedding.EmbeddingProvider;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -48,7 +48,7 @@ public class GollekEmbeddingProvider implements EmbeddingProvider {
                 Collections.emptyMap());
 
         try {
-            tech.kayys.gollek.spi.inference.EmbeddingResponse response = sdk.createEmbedding(request);
+            tech.kayys.gollek.spi.embedding.EmbeddingResponse response = sdk.createEmbedding(request);
             return response.embeddings();
         } catch (tech.kayys.gollek.sdk.exception.SdkException e) {
             throw new tech.kayys.wayang.embedding.EmbeddingException("Gollek embedding failed: " + e.getMessage());

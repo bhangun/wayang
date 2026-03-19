@@ -447,15 +447,13 @@ Fallback Allowed?
   - `gollek-spi` — Service Provider Interfaces: `ModelFormat`, `BatchScheduler`, `BatchStrategy`, `BatchConfig`
   - `gollek-engine` — Core inference orchestration, `DefaultBatchScheduler`, `InferenceService`
   - `gollek-provider-core` — Provider abstraction layer
-  - `gollek-kv-cache` — Paged KV-cache manager
+  - `gollek-ext-kv-cache` — Paged KV-cache manager
   - `gollek-ext-flash-attention` — Flash Attention 3 CPU/GPU kernel
   - `gollek-ext-paged-attention` — Paged attention CPU fallback
 * **Kernel Extensions** → `inference-gollek/extension/kernel/`
-  - `gguf/gollek-ext-format-gguf` — GGUF / llama.cpp adapter (local inference)
-  - `libtorch/gollek-ext-format-libtorch` — LibTorch / TorchScript runner
-  - `tflite/gollek-ext-format-tflite` — LiteRT (.tflite) adapter
-  - `djl/` — Deep Java Library adapter
-  - `transformers/` — HuggingFace Transformers adapter
+  - `gguf/gollek-ext-runner-gguf` — GGUF / llama.cpp adapter (local inference)
+  - `libtorch/gollek-ext-runner-libtorch` — LibTorch / TorchScript runner
+  - `tflite/gollek-ext-runner-tflite` — LiteRT (.tflite) adapter
 * **Cloud Providers** → `inference-gollek/extension/cloud/`
   - `gollek-ext-cloud-ollama` — Ollama integration
   - `gollek-ext-cloud-gemini` — Google Gemini integration

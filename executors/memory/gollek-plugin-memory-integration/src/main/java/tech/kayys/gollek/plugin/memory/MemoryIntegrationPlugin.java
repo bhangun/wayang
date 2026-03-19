@@ -14,10 +14,10 @@ import org.jboss.logging.Logger;
 
 import tech.kayys.gollek.core.execution.ExecutionContext;
 import tech.kayys.gollek.core.plugin.InferencePhasePlugin;
-import tech.kayys.gollek.spi.Message;
 import tech.kayys.gollek.spi.context.EngineContext;
 import tech.kayys.gollek.spi.inference.InferencePhase;
 import tech.kayys.gollek.spi.inference.InferenceRequest;
+import tech.kayys.gollek.spi.inference.Message;
 import tech.kayys.gollek.spi.plugin.PluginContext;
 import tech.kayys.gollek.spi.plugin.PluginException;
 import tech.kayys.wayang.memory.impl.VectorAgentMemory;

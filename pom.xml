@@ -18,14 +18,14 @@
     <module>bom</module>
     <module>core</module>
     <module>executors</module>
+    <module>framework/wayang-assistant</module>
     <module>runtime/wayang-runtime-standalone</module>
   </modules>
 
   <properties>
-    <maven.compiler.source>25</maven.compiler.source>
-    <maven.compiler.target>25</maven.compiler.target>
+    <maven.compiler.release>25</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <quarkus.platform.version>3.32.1</quarkus.platform.version>
+    <quarkus.platform.version>3.32.2</quarkus.platform.version>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
   </properties>
@@ -39,7 +39,107 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <!-- Ensure build-time tools (ASM) understand Java 25 class files -->
+      <dependency>
+        <groupId>org.ow2.asm</groupId>
+        <artifactId>asm</artifactId>
+        <version>9.9</version>
+      </dependency>
+      <dependency>
+        <groupId>org.ow2.asm</groupId>
+        <artifactId>asm-tree</artifactId>
+        <version>9.9</version>
+      </dependency>
+      <dependency>
+        <groupId>org.ow2.asm</groupId>
+        <artifactId>asm-commons</artifactId>
+        <version>9.9</version>
+      </dependency>
+      <dependency>
+        <groupId>org.ow2.asm</groupId>
+        <artifactId>asm-util</artifactId>
+        <version>9.9</version>
+      </dependency>
+      <dependency>
+        <groupId>net.bytebuddy</groupId>
+        <artifactId>byte-buddy</artifactId>
+        <version>1.17.5</version>
+      </dependency>
+      <dependency>
+        <groupId>net.bytebuddy</groupId>
+        <artifactId>byte-buddy-agent</artifactId>
+        <version>1.17.5</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.4.1</version>
+        <executions>
+          <execution>
+            <id>enforce-java-25</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <fail>true</fail>
+              <rules>
+                <requireJavaVersion>
+                  <version>[25,26)</version>
+                  <message>Wayang builds require JDK 25. Please set JAVA_HOME to a JDK 25
+                    installation.</message>
+                </requireJavaVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.6.3</version>
+        <configuration>
+          <destDir>javadoc</destDir>
+          <reportOutputDirectory>${session.executionRootDirectory}/website/wayang.github.io/javadoc</reportOutputDirectory>
+          <encoding>UTF-8</encoding>
+          <docencoding>UTF-8</docencoding>
+          <charset>UTF-8</charset>
+          <doctitle>Wayang AI Platform API ${project.version}</doctitle>
+          <windowtitle>Wayang AI Platform API ${project.version}</windowtitle>
+          <author>true</author>
+          <version>true</version>
+          <use>true</use>
+          <links>
+            <link>https://docs.oracle.com/en/java/javase/25/docs/api/</link>
+          </links>
+          <source>25</source>
+          <quiet>true</quiet>
+          <failOnError>false</failOnError>
+          <failOnWarnings>false</failOnWarnings>
+          <skip>false</skip>
+          <excludePackageNames>
+            tech.kayys.wayang.agent.orchestrator:tech.kayys.wayang.agent.dto:tech.kayys.wayang.agent.core
+          </excludePackageNames>
+          <additionalJOptions>
+            <additionalJOption>-Xdoclint:none</additionalJOption>
+            <additionalJOption>-notimestamp</additionalJOption>
+          </additionalJOptions>
+        </configuration>
+        <executions>
+          <execution>
+            <id>aggregate</id>
+            <goals>
+              <goal>aggregate-no-fork</goal>
+            </goals>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>

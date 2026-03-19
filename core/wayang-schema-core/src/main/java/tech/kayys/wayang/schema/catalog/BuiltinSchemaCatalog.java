@@ -31,6 +31,10 @@ public final class BuiltinSchemaCatalog {
   public static final String VECTOR_SEARCH = "vector-search-node";
   public static final String VECTOR_UPSERT = "vector-upsert-node";
 
+  // Graph Executor
+  public static final String GRAPH_QUERY = "graph-query-node";
+  public static final String GRAPH_UPSERT = "graph-upsert-node";
+
   // Agent
   public static final String AGENT_CONFIG = "agent-config";
   public static final String AGENT_ORCHESTRATOR = "agent-orchestrator";

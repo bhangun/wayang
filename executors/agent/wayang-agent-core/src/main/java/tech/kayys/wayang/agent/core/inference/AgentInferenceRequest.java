@@ -5,13 +5,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import tech.kayys.gollek.spi.Message;
+import tech.kayys.gollek.spi.inference.Message;
 import tech.kayys.gollek.spi.tool.ToolDefinition;
 
 /**
  * Agent-specific inference request wrapper.
  *
- * <p>Supports:
+ * <p>
+ * Supports:
  * <ul>
  * <li>Single-shot inference (systemPrompt + userPrompt)</li>
  * <li>Multi-turn conversation (conversationHistory)</li>

@@ -130,7 +130,7 @@ wayang --version
 | `WAYANG_INSTALL_DIR` | Installation directory | `~/.wayang` |
 | `WAYANG_BIN_DIR` | Binary directory (symlink) | `~/.local/bin` |
 | `WAYANG_GOLLEK_HOME` | Gollek data directory | `~/.wayang/gollek` |
-| `GOLLEK_HOME` | Alternate Gollek data directory | `~/.gollek` |
+| `GOLLEK_HOME` | Legacy Gollek data directory override | `~/.gollek` |
 
 ## Troubleshooting
 

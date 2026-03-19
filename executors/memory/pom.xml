@@ -22,16 +22,18 @@
         <module>golek-memory-working</module>
         <module>gollek-plugin-memory-integration</module>
         <module>memory-runtime</module>
+        <module>vector-memory-integration</module>
+        <module>graph-memory-integration</module>
     </modules>
 
     <properties>
-        <quarkus.platform.version>3.15.1</quarkus.platform.version>
+        <quarkus.platform.version>3.32.2</quarkus.platform.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>io.quarkus</groupId>
+                <groupId>io.quarkus.platform</groupId>
                 <artifactId>quarkus-bom</artifactId>
                 <version>${quarkus.platform.version}</version>
                 <type>pom</type>

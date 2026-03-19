@@ -154,9 +154,9 @@ flowchart TB
 4. Add streaming (token chunks) + cancel support
 
 ### 4) Suggested Paths (Repo)
-* GGUF adapter module: `inference-gollek/adapter/gollek-ext-format-gguf/`
-* Binding: `inference-gollek/adapter/gollek-ext-format-gguf/src/main/java/tech/kayys/gollek/inference/gguf/LlamaCppBinding.java`
-* Runner: `inference-gollek/adapter/gollek-ext-format-gguf/src/main/java/tech/kayys/gollek/inference/gguf/LlamaCppRunner.java`
+* GGUF adapter module: `inference-gollek/adapter/gollek-ext-runner-gguf/`
+* Binding: `inference-gollek/adapter/gollek-ext-runner-gguf/src/main/java/tech/kayys/gollek/inference/gguf/LlamaCppBinding.java`
+* Runner: `inference-gollek/adapter/gollek-ext-runner-gguf/src/main/java/tech/kayys/gollek/inference/gguf/LlamaCppRunner.java`
 
 ---
 

@@ -34,6 +34,7 @@
   <modules>
     <module>wayang-assistant-core</module>
     <module>wayang-assistant-api</module>
+    <module>wayang-assistant-websocket</module>
   </modules>
 
 

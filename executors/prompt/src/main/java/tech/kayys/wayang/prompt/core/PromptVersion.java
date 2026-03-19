@@ -1,5 +1,8 @@
 package tech.kayys.wayang.prompt.core;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
@@ -84,18 +87,19 @@ public final class PromptVersion {
     // -----------------------------------------------------------------------
     // Constructor
     // -----------------------------------------------------------------------
+    @JsonCreator
     public PromptVersion(
-            String version,
-            String templateBody,
-            String systemPrompt,
-            RenderingStrategy renderingStrategy,
-            Integer maxOutputTokens,
-            Integer maxContextTokens,
-            VersionStatus status,
-            String bodyHash,
-            String createdBy,
-            Instant createdAt,
-            Map<String, String> metadata) {
+            @JsonProperty("version") String version,
+            @JsonProperty("templateBody") String templateBody,
+            @JsonProperty("systemPrompt") String systemPrompt,
+            @JsonProperty("renderingStrategy") RenderingStrategy renderingStrategy,
+            @JsonProperty("maxOutputTokens") Integer maxOutputTokens,
+            @JsonProperty("maxContextTokens") Integer maxContextTokens,
+            @JsonProperty("status") VersionStatus status,
+            @JsonProperty("bodyHash") String bodyHash,
+            @JsonProperty("createdBy") String createdBy,
+            @JsonProperty("createdAt") Instant createdAt,
+            @JsonProperty("metadata") Map<String, String> metadata) {
 
         Objects.requireNonNull(version, "version must not be null");
         Objects.requireNonNull(templateBody, "templateBody must not be null");

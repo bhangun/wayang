@@ -15,7 +15,7 @@
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <quarkus.platform.version>3.15.1</quarkus.platform.version>
+        <quarkus.platform.version>3.32.2</quarkus.platform.version>
         <lombok.version>1.18.42</lombok.version>
         <jandex.version>3.2.7</jandex.version>
         <assertj.version>3.26.3</assertj.version>
@@ -26,6 +26,7 @@
         <module>agent</module>
         <module>eip</module>
         <module>embedding</module>
+        <module>graph</module>
         <module>guardrails</module>
         <module>hitl</module>
         <module>prompt</module>

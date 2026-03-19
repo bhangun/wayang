@@ -5,6 +5,8 @@ import io.vertx.mutiny.core.Vertx;
 import io.vertx.mutiny.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import jakarta.enterprise.inject.Alternative;
+import jakarta.annotation.Priority;
 import jakarta.inject.Singleton;
 
 @ApplicationScoped
@@ -12,6 +14,8 @@ public class WebClientProducer {
 
     @Produces
     @Singleton
+    @Alternative
+    @Priority(1)
     public WebClient mutinyWebClient(Vertx vertx) {
         return WebClient.create(vertx, new WebClientOptions()
                 .setFollowRedirects(true)

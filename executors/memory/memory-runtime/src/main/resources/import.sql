@@ -24,17 +24,17 @@ CREATE TABLE IF NOT EXISTS conversation_memories (
 -- Memory Metadata Table
 CREATE TABLE IF NOT EXISTS memory_metadata (
     memory_id VARCHAR(255) NOT NULL REFERENCES conversation_memories(id) ON DELETE CASCADE,
-    key VARCHAR(255) NOT NULL,
-    value TEXT,
-    PRIMARY KEY (memory_id, key)
+    metadata_key VARCHAR(255) NOT NULL,
+    metadata_value TEXT,
+    PRIMARY KEY (memory_id, metadata_key)
 );
 
 -- Session Metadata Table
 CREATE TABLE IF NOT EXISTS session_metadata (
     session_id VARCHAR(255) NOT NULL REFERENCES memory_sessions(session_id) ON DELETE CASCADE,
-    key VARCHAR(255) NOT NULL,
-    value TEXT,
-    PRIMARY KEY (session_id, key)
+    metadata_key VARCHAR(255) NOT NULL,
+    metadata_value TEXT,
+    PRIMARY KEY (session_id, metadata_key)
 );
 
 -- Execution Results Table
@@ -51,9 +51,9 @@ CREATE TABLE IF NOT EXISTS execution_results (
 -- Execution Metadata Table
 CREATE TABLE IF NOT EXISTS execution_metadata (
     execution_id VARCHAR(255) NOT NULL REFERENCES execution_results(id) ON DELETE CASCADE,
-    key VARCHAR(255) NOT NULL,
-    value TEXT,
-    PRIMARY KEY (execution_id, key)
+    metadata_key VARCHAR(255) NOT NULL,
+    metadata_value TEXT,
+    PRIMARY KEY (execution_id, metadata_key)
 );
 
 -- Execution Tool Calls Table

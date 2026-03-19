@@ -2,6 +2,8 @@ package tech.kayys.wayang.memory.entity;
 
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -17,10 +19,8 @@ public class MemorySessionEntity extends PanacheEntityBase {
     @Column(name = "user_id", nullable = false)
     public String userId;
     
-    @ElementCollection
-    @CollectionTable(name = "session_metadata", joinColumns = @JoinColumn(name = "session_id"))
-    @MapKeyColumn(name = "metadata_key")
-    @Column(name = "metadata_value")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata", columnDefinition = "jsonb")
     public Map<String, String> metadata;
     
     @Column(name = "created_at", nullable = false)

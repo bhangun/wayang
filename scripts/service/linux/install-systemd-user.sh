@@ -3,7 +3,7 @@ set -euo pipefail
 
 SERVICE_NAME="wayang"
 WAYANG_HOME="${WAYANG_HOME:-$HOME/.wayang}"
-WAYANG_GOLLEK_HOME="${WAYANG_GOLLEK_HOME:-$WAYANG_HOME/gollek}"
+WAYANG_GOLLEK_HOME="${WAYANG_GOLLEK_HOME:-${GOLLEK_HOME:-$WAYANG_HOME/gollek}}"
 LEGACY_GOLLEK_HOME="${GOLLEK_HOME:-$HOME/.gollek}"
 WAYANG_BIN="${WAYANG_BIN:-}"
 SYSTEMD_USER_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
@@ -37,9 +37,15 @@ if [ -z "$WAYANG_BIN" ] || [ ! -x "$WAYANG_BIN" ]; then
 fi
 
 mkdir -p "$WAYANG_HOME" "$WAYANG_HOME/config" "$WAYANG_HOME/logs" "$WAYANG_HOME/plugins" "$WAYANG_HOME/secrets"
-if ! mkdir -p "$WAYANG_GOLLEK_HOME/models" "$WAYANG_GOLLEK_HOME/storage"; then
-  WAYANG_GOLLEK_HOME="$LEGACY_GOLLEK_HOME"
-  mkdir -p "$WAYANG_GOLLEK_HOME/models" "$WAYANG_GOLLEK_HOME/storage"
+if ! mkdir -p "$WAYANG_GOLLEK_HOME/models" "$WAYANG_GOLLEK_HOME/storage" 2>/dev/null; then
+  if [ "$WAYANG_GOLLEK_HOME" != "$LEGACY_GOLLEK_HOME" ]; then
+    echo "Unable to use $WAYANG_GOLLEK_HOME, falling back to $LEGACY_GOLLEK_HOME"
+    WAYANG_GOLLEK_HOME="$LEGACY_GOLLEK_HOME"
+    mkdir -p "$WAYANG_GOLLEK_HOME/models" "$WAYANG_GOLLEK_HOME/storage"
+  else
+    echo "Unable to create Gollek directories at $WAYANG_GOLLEK_HOME" >&2
+    exit 1
+  fi
 fi
 mkdir -p "$SYSTEMD_USER_DIR"
 

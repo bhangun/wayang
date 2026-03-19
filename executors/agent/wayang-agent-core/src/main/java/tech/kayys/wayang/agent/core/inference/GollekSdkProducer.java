@@ -1,8 +1,10 @@
 package tech.kayys.wayang.agent.core.inference;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.Produces;
+import jakarta.enterprise.inject.Alternative;
+import jakarta.enterprise.inject.Default;
+import jakarta.annotation.Priority;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,13 +41,29 @@ public class GollekSdkProducer {
      */
     @Produces
     @Singleton
-    public GollekSdk gollekSdk(Instance<GollekSdk> existingInstances) {
+    @Default
+    @Alternative
+    @Priority(1)
+    public GollekSdk gollekSdk(jakarta.enterprise.inject.spi.BeanManager beanManager) {
         // 1. If a CDI-managed implementation exists (e.g. LocalGollekSdk @ApplicationScoped),
         //    use it directly — no factory needed.
-        if (!existingInstances.isUnsatisfied() && !existingInstances.isAmbiguous()) {
-            GollekSdk sdk = existingInstances.get();
-            log.info("Using CDI-managed GollekSdk: {}", sdk.getClass().getSimpleName());
-            return sdk;
+        // We use BeanManager here instead of Instance<GollekSdk> to avoid infinite recursion
+        // during bean resolution.
+        java.util.Set<jakarta.enterprise.inject.spi.Bean<?>> beans = beanManager.getBeans(GollekSdk.class, 
+                new jakarta.enterprise.util.AnnotationLiteral<jakarta.enterprise.inject.Any>() {});
+        
+        for (jakarta.enterprise.inject.spi.Bean<?> bean : beans) {
+            // Skip this producer itself to avoid recursion
+            if (bean.getBeanClass() == GollekSdkProducer.class) {
+                continue;
+            }
+
+            // Also skip if it's another producer in this class or if we are in a test and it's not a mock
+            // But generally, any other bean is preferred over the ServiceLoader fallback.
+            
+            log.info("Using CDI-managed GollekSdk bean: {}", bean.getBeanClass().getSimpleName());
+            jakarta.enterprise.context.spi.CreationalContext<?> ctx = beanManager.createCreationalContext(bean);
+            return (GollekSdk) beanManager.getReference(bean, GollekSdk.class, ctx);
         }
 
         // 2. Fall back to ServiceLoader discovery

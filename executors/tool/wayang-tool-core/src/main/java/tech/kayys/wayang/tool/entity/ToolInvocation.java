@@ -17,6 +17,8 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import tech.kayys.wayang.error.ErrorCode;
 import tech.kayys.wayang.tool.dto.InvocationStatus;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Tool invocation record for audit and billing
@@ -53,6 +55,7 @@ public class ToolInvocation extends PanacheEntityBase {
     private String userId;
 
     // Request data
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "arguments", columnDefinition = "jsonb")
     private Map<String, Object> arguments;
 
@@ -60,6 +63,7 @@ public class ToolInvocation extends PanacheEntityBase {
     private Integer requestSizeBytes;
 
     // Response data
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "result", columnDefinition = "jsonb")
     private Map<String, Object> result;
 

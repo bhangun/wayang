@@ -21,7 +21,12 @@
     <dependencies>
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-assistant</artifactId>
+            <artifactId>wayang-assistant-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-project-api</artifactId>
             <version>${project.version}</version>
         </dependency>
         

@@ -1,5 +1,8 @@
 package tech.kayys.wayang.prompt.core;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Objects;
 
 /**
@@ -71,16 +74,17 @@ public final class PromptVariableDefinition {
     // -----------------------------------------------------------------------
     // Constructor
     // -----------------------------------------------------------------------
+    @JsonCreator
     public PromptVariableDefinition(
-            String name,
-            String displayName,
-            String description,
-            VariableType type,
-            VariableSource source,
-            boolean required,
-            String defaultValue,
-            Integer maxLength,
-            boolean sensitive) {
+            @JsonProperty("name") String name,
+            @JsonProperty("displayName") String displayName,
+            @JsonProperty("description") String description,
+            @JsonProperty("type") VariableType type,
+            @JsonProperty("source") VariableSource source,
+            @JsonProperty("required") boolean required,
+            @JsonProperty("defaultValue") String defaultValue,
+            @JsonProperty("maxLength") Integer maxLength,
+            @JsonProperty("sensitive") boolean sensitive) {
 
         Objects.requireNonNull(name, "name must not be null");
         Objects.requireNonNull(type, "type must not be null");

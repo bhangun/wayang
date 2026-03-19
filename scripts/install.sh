@@ -74,7 +74,7 @@ Environment Variables:
     WAYANG_INSTALL_DIR    Installation directory
     WAYANG_BIN_DIR        Binary directory
     WAYANG_GOLLEK_HOME    Gollek data directory (defaults to ~/.wayang/gollek)
-    GOLLEK_HOME           Alternate Gollek data directory (e.g. ~/.gollek)
+    GOLLEK_HOME           Legacy Gollek data directory override (e.g. ~/.gollek)
 EOF
 }
 
@@ -118,8 +118,9 @@ install_with_curl() {
     
     local artifact_name="wayang-standalone-${os}-${arch}"
     local download_url="https://github.com/$GITHUB_REPO/releases/download/${version}/${artifact_name}"
-    local gollek_dir="${WAYANG_GOLLEK_HOME:-${GOLLEK_HOME:-$INSTALL_DIR/gollek}}"
+    local preferred_gollek_dir="${WAYANG_GOLLEK_HOME:-${GOLLEK_HOME:-$INSTALL_DIR/gollek}}"
     local legacy_gollek_dir="${GOLLEK_HOME:-$HOME/.gollek}"
+    local gollek_dir="$preferred_gollek_dir"
     
     if [[ "$os" == "windows" ]]; then
         artifact_name="${artifact_name}.exe"
@@ -130,10 +131,14 @@ install_with_curl() {
     mkdir -p "$INSTALL_DIR"
     mkdir -p "$BIN_DIR"
     mkdir -p "$INSTALL_DIR/config" "$INSTALL_DIR/logs" "$INSTALL_DIR/plugins" "$INSTALL_DIR/secrets"
-    if ! mkdir -p "$gollek_dir/models" "$gollek_dir/storage"; then
-        warn "Cannot use Gollek directory at $gollek_dir, falling back to $legacy_gollek_dir"
-        gollek_dir="$legacy_gollek_dir"
-        mkdir -p "$gollek_dir/models" "$gollek_dir/storage"
+    if ! mkdir -p "$gollek_dir/models" "$gollek_dir/storage" 2>/dev/null; then
+        if [[ "$gollek_dir" != "$legacy_gollek_dir" ]]; then
+            warn "Unable to create Gollek directory at $gollek_dir, falling back to $legacy_gollek_dir"
+            gollek_dir="$legacy_gollek_dir"
+            mkdir -p "$gollek_dir/models" "$gollek_dir/storage"
+        else
+            error "Unable to create Gollek directory at $gollek_dir"
+        fi
     fi
     
     # Download binary

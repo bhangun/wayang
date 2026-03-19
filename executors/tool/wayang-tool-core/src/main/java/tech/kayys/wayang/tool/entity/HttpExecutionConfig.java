@@ -10,6 +10,8 @@ import jakarta.persistence.Embeddable;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import tech.kayys.wayang.tool.dto.HttpMethod;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * HTTP execution configuration embedded in MCP Tool
@@ -28,10 +30,12 @@ public class HttpExecutionConfig {
     private String path;
 
     // Template parameters (path, query, header)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "parameters", columnDefinition = "jsonb")
     private List<ParameterMapping> parameters;
 
     // Static headers
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "headers", columnDefinition = "jsonb")
     private Map<String, String> headers;
 

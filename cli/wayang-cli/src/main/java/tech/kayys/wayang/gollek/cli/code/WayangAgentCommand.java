@@ -366,28 +366,26 @@ final class WayangAgentCommand implements Callable<Integer> {
             }
         }
 
-        // Initialize agentic-tui components
+        // Initialize interactive Peutui REPL
         try {
-            tech.kayys.wayang.tui.config.Config tuiConfig = new tech.kayys.wayang.tui.config.Config();
-            tech.kayys.wayang.tui.config.Config.Profile profile = new tech.kayys.wayang.tui.config.Config.Profile();
-            profile.name = profileId;
-            profile.model = resolvedModel;
-            profile.provider = this.providerId;
-            Object promptObj = tech.kayys.wayang.gollek.cli.WayangCodePromptComposer.systemPrompt(new tech.kayys.wayang.gollek.cli.WayangCodePromptContext(
-                    profileId,
-                    workspaceDir,
-                    resolvedModel,
-                    !noMemory,
-                    harness,
-                    maxSteps),
-                    codeExtensionDiscovery == null ? java.util.List.of() : codeExtensionDiscovery.promptAdditions());
-            profile.systemPrompt = promptObj == null ? "You are a helpful general-purpose AI assistant." : promptObj.toString();
-            // Auto-approve all tools in coding-agent mode so the agent can run
-            // tools (bash, read_file, etc.) without blocking for a keypress each time.
-            profile.autoApproveTools = true;
-            tuiConfig.profiles.add(profile);
-            tuiConfig.activeProfile = profile.name;
+            // Build system prompt
+            String systemPrompt = tech.kayys.wayang.gollek.cli.WayangCodePromptComposer.systemPrompt(
+                    new tech.kayys.wayang.gollek.cli.WayangCodePromptContext(
+                            profileId,
+                            workspaceDir,
+                            resolvedModel,
+                            !noMemory,
+                            harness,
+                            maxSteps),
+                    codeExtensionDiscovery == null
+                            ? java.util.List.of()
+                            : codeExtensionDiscovery.promptAdditions()).toString();
+            if (systemPrompt == null || systemPrompt.isBlank()) {
+                systemPrompt = "You are Wayang, a helpful general-purpose AI assistant.";
+            }
 
+
+            // Resolve provider
             String tuiApiKey = null;
             if (this.providerId != null && !this.providerId.isBlank()) {
                 try {
@@ -425,165 +423,151 @@ final class WayangAgentCommand implements Callable<Integer> {
                     .addAllTools(tech.kayys.wayang.gollek.cli.code.WayangCodeMcpAdapter.discoverMcpTools(workspaceDir))
                     .addAllTools(tech.kayys.wayang.gollek.cli.WayangMemoryAgentTools.getTools())
                     .addAllTools(tech.kayys.wayang.gollek.cli.WayangInternalAgentTools.getTools(agentCtx))
-                    .systemPrompt(profile.systemPrompt)
-                    .temperature(profile.temperature)
-                    .maxTokens(profile.maxTokens)
-                    .autoApproveTools(profile.autoApproveTools)
+                    .systemPrompt(systemPrompt)
+                    .autoApproveTools(true)
                     .workspace(workspaceDir)
                     .build();
 
             agentCtx.agent = tuiAgent;
 
-            // Interactive REPL loop
-            tech.kayys.wayang.tui.ui.ReplUi ui = new tech.kayys.wayang.tui.ui.ReplUi(tuiConfig, tuiAgent, modelManager, providerManager);
-            
-            ui.setExternalSlashHandler(cmd -> {
+
+            // ── Interactive REPL via Peutui ──────────────────────────────────────────
+            tech.kayys.wayang.gollek.cli.code.WayangPeutuiApp peutuiApp =
+                    new tech.kayys.wayang.gollek.cli.code.WayangPeutuiApp(
+                    tuiAgent,
+                    "wayang",
+                    resolvedSession,
+                    resolvedModel,
+                    this.providerId != null ? this.providerId : "local"
+            );
+
+            // Slash commands: capture output and feed back into the Peutui history.
+            // The handler also recognises special return codes "model:<id>" and
+            // "provider:<id>" that trigger a recursive call() after exit.
+            final java.util.concurrent.atomic.AtomicReference<String> exitActionRef =
+                    new java.util.concurrent.atomic.AtomicReference<>(null);
+
+            peutuiApp.setSlashHandler((cmd, outConsumer) -> {
                 try {
+                    String c = cmd.trim();
+                    if (c.equals("/models")) {
+                        java.util.List<tech.kayys.peutui.widgets.PickerComponent.PickerItem> items = new java.util.ArrayList<>();
+                        try {
+                            for (String m : sdkAdapter.listModelsStrings()) {
+                                items.add(new tech.kayys.peutui.widgets.PickerComponent.PickerItem(m, m, null));
+                            }
+                        } catch (Exception ignore) {}
+                        tech.kayys.peutui.widgets.PickerComponent picker = new tech.kayys.peutui.widgets.PickerComponent(
+                                "Select Model", items,
+                                id -> {
+                                    peutuiApp.hideModal();
+                                    exitActionRef.set("model:" + id);
+                                    peutuiApp.stop();
+                                },
+                                () -> peutuiApp.hideModal()
+                        );
+                        peutuiApp.showModal(picker);
+                        return false;
+                    } else if (c.equals("/providers")) {
+                        java.util.List<tech.kayys.peutui.widgets.PickerComponent.PickerItem> items = new java.util.ArrayList<>();
+                        try {
+                            for (var p : sdkAdapter.listAvailableProviders()) {
+                                items.add(new tech.kayys.peutui.widgets.PickerComponent.PickerItem(p.id(), p.name(), null));
+                            }
+                        } catch (Exception ignore) {}
+                        tech.kayys.peutui.widgets.PickerComponent picker = new tech.kayys.peutui.widgets.PickerComponent(
+                                "Select Provider", items,
+                                id -> {
+                                    peutuiApp.hideModal();
+                                    exitActionRef.set("provider:" + id);
+                                    peutuiApp.stop();
+                                },
+                                () -> peutuiApp.hideModal()
+                        );
+                        peutuiApp.showModal(picker);
+                        return false;
+                    } else if (c.equals("/projects")) {
+                        java.util.List<tech.kayys.peutui.widgets.PickerComponent.PickerItem> items = new java.util.ArrayList<>();
+                        if (projectStore != null) {
+                            try {
+                                for (var p : projectStore.listProjects()) {
+                                    items.add(new tech.kayys.peutui.widgets.PickerComponent.PickerItem(p.id(), p.name(), null));
+                                }
+                            } catch (Exception ignore) {}
+                        }
+                        tech.kayys.peutui.widgets.PickerComponent picker = new tech.kayys.peutui.widgets.PickerComponent(
+                                "Select Project", items,
+                                id -> {
+                                    peutuiApp.hideModal();
+                                    try {
+                                        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                                        handleSlashCommand("/project " + id, ctx, new java.io.PrintStream(baos, true, java.nio.charset.StandardCharsets.UTF_8), color, workspaceDir != null ? workspaceDir.toString() : null);
+                                        outConsumer.accept(baos.toString(java.nio.charset.StandardCharsets.UTF_8).trim());
+                                    } catch (Exception ignore) {}
+                                },
+                                () -> peutuiApp.hideModal()
+                        );
+                        peutuiApp.showModal(picker);
+                        return false;
+                    } else if (c.equals("/sessions") || c.equals("/sessions list")) {
+                        java.util.List<tech.kayys.peutui.widgets.PickerComponent.PickerItem> items = new java.util.ArrayList<>();
+                        if (projectStore != null && resolvedProjectKey != null) {
+                            try {
+                                for (String s : projectStore.listSessions(resolvedProjectKey)) {
+                                    items.add(new tech.kayys.peutui.widgets.PickerComponent.PickerItem(s, s, null));
+                                }
+                            } catch (Exception ignore) {}
+                        }
+                        tech.kayys.peutui.widgets.PickerComponent picker = new tech.kayys.peutui.widgets.PickerComponent(
+                                "Select Session", items,
+                                id -> {
+                                    peutuiApp.hideModal();
+                                    try {
+                                        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                                        handleSlashCommand("/sessions resume " + id, ctx, new java.io.PrintStream(baos, true, java.nio.charset.StandardCharsets.UTF_8), color, workspaceDir != null ? workspaceDir.toString() : null);
+                                        outConsumer.accept(baos.toString(java.nio.charset.StandardCharsets.UTF_8).trim());
+                                    } catch (Exception ignore) {}
+                                },
+                                () -> peutuiApp.hideModal()
+                        );
+                        peutuiApp.showModal(picker);
+                        return false;
+                    }
+                    
                     java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
                     java.io.PrintStream ps = new java.io.PrintStream(baos, true, java.nio.charset.StandardCharsets.UTF_8);
-                    boolean shouldExit = handleSlashCommand(cmd, ctx, ps, color, workspaceDir.toString());
+                    boolean shouldExit = handleSlashCommand(cmd, ctx, ps, color, workspaceDir != null ? workspaceDir.toString() : null);
                     ps.flush();
-                    String output = baos.toString(java.nio.charset.StandardCharsets.UTF_8);
+                    
+                    String output = baos.toString(java.nio.charset.StandardCharsets.UTF_8).trim();
+                    if (output.startsWith("SWITCH_PROVIDER:") || output.startsWith("SWITCH_MODEL:")) {
+                        exitActionRef.set(output.replace("SWITCH_PROVIDER:", "provider:")
+                                               .replace("SWITCH_MODEL:", "model:"));
+                        return true;
+                    }
                     if (!output.isEmpty()) {
-                        ui.appendBlockLines(java.util.Arrays.asList(output.split("\\r?\\n")));
+                        outConsumer.accept(output);
                     }
                     return shouldExit;
                 } catch (Exception e) {
-                    ui.appendBlockLines(java.util.Arrays.asList("\u001B[31mError executing command: " + e.getMessage() + "\u001B[0m"));
                     return false;
                 }
             });
-            ui.registerPicker("/projects", new tech.kayys.wayang.tui.ui.ReplUi.PickerCallback() {
-                public java.util.List<tech.kayys.wayang.tui.ui.GenericPickerWidget.PickerItem> getItems() {
-                    try {
-                        if (projectStore != null) {
-                            java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(java.time.ZoneId.systemDefault());
-                            return projectStore.listProjects().stream()
-                                .map(p -> new tech.kayys.wayang.tui.ui.GenericPickerWidget.PickerItem(
-                                        p.id(), p.id(), p.name(), p.directory(), 
-                                        p.updatedAt() != null ? fmt.format(p.updatedAt()) : ""))
-                                .toList();
-                        }
-                    } catch (Exception ignored) {}
-                    return java.util.List.of();
-                }
-                public void onSelect(String id) {
-                    try {
-                        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-                        java.io.PrintStream ps = new java.io.PrintStream(baos, true, java.nio.charset.StandardCharsets.UTF_8);
-                        handleSlashCommand("/project " + id, ctx, ps, color, workspaceDir.toString());
-                        ps.flush();
-                        String output = baos.toString(java.nio.charset.StandardCharsets.UTF_8);
-                        if (!output.isEmpty()) ui.appendBlockLines(java.util.Arrays.asList(output.split("\\r?\\n")));
-                    } catch (Exception ignored) {}
-                }
-            });
 
-            ui.registerPicker("/sessions", new tech.kayys.wayang.tui.ui.ReplUi.PickerCallback() {
-                public java.util.List<tech.kayys.wayang.tui.ui.GenericPickerWidget.PickerItem> getItems() {
-                    try {
-                        if (projectStore != null && resolvedProjectKey != null) {
-                            java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(java.time.ZoneId.systemDefault());
-                            tech.kayys.wayang.sdk.gollek.model.Project proj = projectStore.listProjects().stream()
-                                    .filter(p -> p.id().equals(resolvedProjectKey)).findFirst().orElse(null);
-                            if (proj != null) {
-                                return proj.sessions().stream()
-                                    .map(s -> new tech.kayys.wayang.tui.ui.GenericPickerWidget.PickerItem(
-                                            s.id(), s.id(), s.name(), "", 
-                                            s.updatedAt() != null ? fmt.format(s.updatedAt()) : ""))
-                                    .toList();
-                            } else {
-                                // fallback to listSessions if project model doesn't hold it
-                                return projectStore.listSessions(resolvedProjectKey).stream()
-                                    .map(s -> new tech.kayys.wayang.tui.ui.GenericPickerWidget.PickerItem(s, s, "", "", ""))
-                                    .toList();
-                            }
-                        }
-                    } catch (Exception ignored) {}
-                    return java.util.List.of();
-                }
-                public void onSelect(String id) {
-                    try {
-                        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-                        java.io.PrintStream ps = new java.io.PrintStream(baos, true, java.nio.charset.StandardCharsets.UTF_8);
-                        handleSlashCommand("/sessions resume " + id, ctx, ps, color, workspaceDir.toString());
-                        ps.flush();
-                        String output = baos.toString(java.nio.charset.StandardCharsets.UTF_8);
-                        if (!output.isEmpty()) ui.appendBlockLines(java.util.Arrays.asList(output.split("\\r?\\n")));
-                    } catch (Exception ignored) {}
-                }
-            });
+            peutuiApp.run();
 
-            String exitAction = ui.run();
+            // Handle model/provider switch requested while inside the TUI
+            String exitAction = exitActionRef.get();
 
             if (exitAction != null && exitAction.startsWith("provider:")) {
                 String newProvider = exitAction.substring("provider:".length());
-                java.io.Console console = System.console();
-                if (console != null) {
-                    String apiKey = console.readLine("Enter API Key for " + newProvider + " (or press Enter to skip): ");
-                    if (apiKey != null && !apiKey.isBlank()) {
-                        try {
-                            java.nio.file.Path provConfig = java.nio.file.Paths.get("./config/providers", newProvider + ".yaml");
-                            java.nio.file.Files.createDirectories(provConfig.getParent());
-                            java.nio.file.Files.writeString(provConfig, "id: " + newProvider + "\nproperties:\n  api.key: " + apiKey + "\n");
-                        } catch (Exception e) {
-                            printError(out, color, "Warning: failed to save API key to config: " + e.getMessage());
-                        }
-                    }
-                }
                 this.providerId = newProvider;
                 this.modelId = null;
-                
-                try {
-                    java.nio.file.Path cfg = java.nio.file.Paths.get(System.getProperty("user.home"), ".wayang", "config.json");
-                    if (java.nio.file.Files.exists(cfg)) {
-                        String content = java.nio.file.Files.readString(cfg);
-                        content = content.replaceAll("\"provider\"\\s*:\\s*\"[^\"]+\"", "\"provider\":\"" + newProvider + "\"");
-                        
-                        // Check if a specific model for this provider is already configured
-                        java.util.regex.Pattern pp = java.util.regex.Pattern.compile("\\\"" + newProvider + "Model\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"");
-                        java.util.regex.Matcher pm = pp.matcher(content);
-                        if (!pm.find()) {
-                            // If not, fetch the provider's default model from metadata and add it
-                            for (var p : providerManager.listProviders()) {
-                                if (p.id().equals(newProvider) && p.defaultModel() != null && !p.defaultModel().isBlank()) {
-                                    this.modelId = p.defaultModel();
-                                    break;
-                                }
-                            }
-                            if (this.modelId != null) {
-                                // Add it gracefully before the closing brace
-                                content = content.replaceFirst("\\}", ",\n  \"" + newProvider + "Model\": \"" + this.modelId + "\"\n}");
-                                out.println(color ? "\u001B[33mConfigured fallback model for " + newProvider + ": " + this.modelId + "\u001B[0m" : "Configured fallback model for " + newProvider + ": " + this.modelId);
-                            }
-                        }
-                        
-                        java.nio.file.Files.writeString(cfg, content);
-                    }
-                } catch (Exception e) {}
-                
                 return this.call();
             } else if (exitAction != null && exitAction.startsWith("model:")) {
                 String newModel = exitAction.substring("model:".length());
-                System.out.println((color ? GREEN : "") + "Switching model to " + newModel + "..." + (color ? RESET : ""));
-                
-                // If the user selects a model from /models (which lists local gollek models),
-                // we implicitly switch back to the local provider if they were using a remote one.
                 this.providerId = null;
                 this.modelId = newModel;
-                
-                try {
-                    java.nio.file.Path cfg = java.nio.file.Paths.get(System.getProperty("user.home"), ".wayang", "config.json");
-                    if (java.nio.file.Files.exists(cfg)) {
-                        String content = java.nio.file.Files.readString(cfg);
-                        // Clear the preferred provider since we are switching to a local model
-                        content = content.replaceAll("\"provider\"\\s*:\\s*\"[^\"]+\"", "\"provider\":\"\"");
-                        // Update the default model
-                        content = content.replaceAll("\"model\"\\s*:\\s*\"[^\"]+\"", "\"model\":\"" + newModel + "\"");
-                        java.nio.file.Files.writeString(cfg, content);
-                    }
-                } catch (Exception e) {}
-                
                 return this.call();
             }
 

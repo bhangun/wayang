@@ -3,15 +3,12 @@ package tech.kayys.wayang.gollek.cli;
 import tech.kayys.wayang.gollek.sdk.*;
 import tech.kayys.wayang.sdk.agent.WayangAgent;
 import tech.kayys.wayang.sdk.agent.WayangAgentBuilder;
-import tech.kayys.wayang.tui.agent.WayangSessionPersistence;
-import tech.kayys.wayang.tui.config.Config;
+import tech.kayys.wayang.sdk.agent.WayangSessionPersistence;
 import tech.kayys.wayang.sdk.provider.ChatMessage;
 import tech.kayys.wayang.sdk.provider.ContentBlock;
 import tech.kayys.wayang.sdk.provider.StreamEvent;
 import tech.kayys.wayang.sdk.provider.ToolSpec;
 import tech.kayys.wayang.sdk.provider.WayangProvider;
-import tech.kayys.wayang.tui.ui.PanelUi;
-import tech.kayys.wayang.tui.ui.ReplUi;
 import tech.kayys.gollek.sdk.core.ChatParams;
 import tech.kayys.gollek.spi.Message;
 import tech.kayys.gollek.spi.tool.ToolCall;
@@ -101,60 +98,11 @@ You are operating on a real local filesystem. All file paths are local.
 """.replace("{cwd}", System.getProperty("user.dir"));
 
 
-    public void run() throws IOException {
-        String modelId = resolveModelId();
-
-        // 1. Compose system prompt with skills + project context
-        WayangContextComposer composer = new WayangContextComposer();
-        String systemPrompt = composer.compose(BASE_SYSTEM_PROMPT, Paths.get("."));
-
-        // Build inference service (subprocess fallback if SDK unavailable)
-        WayangInferenceService inferenceService =
-                WayangInferenceServiceFactory.create(systemPrompt, modelId);
-
-        // 2. Build MCP session and register MCP tools
-        // Bridge to agentic-tui Provider interface
-        WayangProvider provider = new WayangProvider(createDelegate(inferenceService, modelId));
-
-        Config config = buildWayangConfig(modelId, systemPrompt);
-        Config.Profile profile = config.activeProfile();
-        
-        WayangAgentBuilder agentBuilder = new WayangAgentBuilder()
-                .provider(provider)
-                .systemPrompt(systemPrompt)
-                .temperature(profile.temperature)
-                .maxTokens(profile.maxTokens)
-                .autoApproveTools(profile.autoApproveTools);
-                
-        if (profile.agentMode == Config.AgentMode.AGENT) {
-            agentBuilder.registerOsTools();
-        }
-        
-        WayangAgent agent = agentBuilder.build();
-
-        // 3. Load prior session
-        WayangSessionPersistence session = new WayangSessionPersistence();
-        List<ChatMessage> priorHistory = session.load();
-        priorHistory.forEach(m -> agent.history().add(m));
-
-        // 6. Save session on exit
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            session.save(agent.history());
-        }));
-
-        // Switch between REPL and Panel modes on user request
-        Config.UiMode mode = profile.uiMode;
-        while (true) {
-            String next;
-            if (mode == Config.UiMode.PANEL) {
-                next = new PanelUi(config, agent).run();
-            } else {
-                next = new ReplUi(config, agent, null, null).run();
-            }
-            if ("panel".equals(next)) { mode = Config.UiMode.PANEL; continue; }
-            if ("repl".equals(next))  { mode = Config.UiMode.REPL;  continue; }
-            break;
-        }
+    public void run() {
+        System.out.println(
+            "\u001B[33mNote: The legacy 'tui' command has been migrated to the new Peutui framework.\u001B[0m");
+        System.out.println(
+            "Please use \u001B[36mwayang agent\u001B[0m to start the interactive assistant.");
     }
 
     // -----------------------------------------------------------------------
@@ -376,24 +324,5 @@ You are operating on a real local filesystem. All file paths are local.
     private static String resolveModelId() {
         String env = System.getenv("WAYANG_MODEL");
         return (env != null && !env.isBlank()) ? env : "default";
-    }
-
-    private static Config buildWayangConfig(String modelId, String systemPrompt) {
-        Config cfg = new Config();
-        cfg.activeProfile = "wayang";
-
-        Config.Profile profile = new Config.Profile();
-        profile.name         = "wayang";
-        profile.provider     = "wayang";
-        profile.model        = modelId;
-        profile.uiMode       = Config.UiMode.REPL;
-        profile.agentMode    = Config.AgentMode.AGENT;
-        profile.systemPrompt = systemPrompt;
-        profile.temperature  = 0.7;
-        profile.maxTokens    = 4096;
-        profile.autoApproveTools = false;
-        cfg.profiles.add(profile);
-
-        return cfg;
     }
 }

@@ -4,7 +4,7 @@ import tech.kayys.wayang.gollek.sdk.WayangInferenceService;
 import tech.kayys.wayang.gollek.sdk.WayangInferenceServiceFactory;
 import tech.kayys.gollek.spi.inference.StreamingInferenceChunk;
 import tech.kayys.wayang.sdk.provider.ChatMessage;
-import tech.kayys.wayang.tui.agent.WayangSessionPersistence;
+import tech.kayys.wayang.sdk.agent.WayangSessionPersistence;
 
 import java.util.ArrayList;
 import java.util.List;

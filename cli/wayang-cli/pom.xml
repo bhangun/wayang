@@ -12,8 +12,8 @@
     </parent>
 
     <properties>
-        <!-- Inline so the module can be built standalone without the full reactor -->
-        <tamboui.version>0.2.0</tamboui.version>
+        <!-- Peutui version -->
+        <peutui.version>0.1.1-SNAPSHOT</peutui.version>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
     </properties>
@@ -110,9 +110,41 @@
         </dependency>
 
         <dependency>
+            <groupId>tech.kayys.peutui</groupId>
+            <artifactId>peutui-widgets</artifactId>
+            <version>${peutui.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.peutui</groupId>
+            <artifactId>peutui-terminal</artifactId>
+            <version>${peutui.version}</version>
+        </dependency>
+        <!-- wayang-tui kept for transitive dependency chain (wayang-gollek-sdk → wayang-agent).
+             WayangPeutuiApp replaces ReplUi at the source level, but the JAR is still needed. -->
+        <dependency>
             <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-tui</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.peutui</groupId>
+            <artifactId>peutui-agent-api</artifactId>
+            <version>${peutui.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.peutui</groupId>
+            <artifactId>peutui-provider-api</artifactId>
+            <version>${peutui.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.peutui</groupId>
+            <artifactId>peutui-session-api</artifactId>
+            <version>${peutui.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.peutui</groupId>
+            <artifactId>peutui-project-api</artifactId>
+            <version>${peutui.version}</version>
         </dependency>
 
         <dependency>
@@ -175,16 +207,7 @@
             <version>5.1.2.Final</version>
         </dependency>
 
-        <dependency>
-            <groupId>dev.tamboui</groupId>
-            <artifactId>tamboui-toolkit</artifactId>
-            <version>${tamboui.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>dev.tamboui</groupId>
-            <artifactId>tamboui-jline3-backend</artifactId>
-            <version>${tamboui.version}</version>
-        </dependency>
+
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>

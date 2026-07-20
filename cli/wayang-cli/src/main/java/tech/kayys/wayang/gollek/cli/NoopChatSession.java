@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import tech.kayys.wayang.sdk.provider.ChatMessage;
-import tech.kayys.wayang.tui.agent.WayangSessionPersistence;
+import tech.kayys.wayang.sdk.agent.WayangSessionPersistence;
 
 /**
  * Minimal in-process chat session used when Gollek SDK is not available.

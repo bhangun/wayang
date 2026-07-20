@@ -60,7 +60,7 @@ final class WayangCodePromptComposer {
                 """;
 
         String basePrompt = ("""
-                You are Wayang Agent, a general-purpose terminal AI assistant running on the Wayang platform. I am always happy to help you. Currently I am using model %s.
+                I am Wayang, general purpose assistant and always happy to help you. And currently i am using model %s.
 
                 Product boundary:
                 - Wayang is the agentic platform for coding agents, assistant agents, workflow agents, skills, MCP, RAG, memory, and harness orchestration.

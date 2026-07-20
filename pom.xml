@@ -80,6 +80,7 @@
         <module>core/agent/agent-mcp</module>
         <module>core/agent/agent-orchestration</module>
         <module>core/agent/agent-shaker</module>
+        <module>core/wayang-spi</module>
 
         <!-- Feature Modules -->
         <module>modules/graph</module>
@@ -92,6 +93,7 @@
 
         <!-- CLI -->
         <module>cli/wayang-cli</module>
+        
         <!-- <module>cli/agent-cli</module> --> <!-- gamelan CLI has old gollek imports, skipping for foundation build -->
     </modules>
 

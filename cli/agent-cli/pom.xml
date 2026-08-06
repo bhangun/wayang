@@ -5,8 +5,9 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>tech.kayys.wayang</groupId>
-        <artifactId>agent-parent</artifactId>
+        <artifactId>wayang-agentic-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>agent-cli</artifactId>
@@ -44,7 +45,7 @@
         </dependency>
         <dependency>
             <groupId>tech.kayys.gollek</groupId>
-            <artifactId>gollek-sdk-java-local</artifactId>
+            <artifactId>gollek-sdk-local</artifactId>
             <version>${gollek.version}</version>
         </dependency>
         <dependency>
@@ -58,6 +59,24 @@
             <groupId>tech.kayys.gollek</groupId>
             <artifactId>gollek-spi</artifactId>
             <version>${gollek.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.gollek</groupId>
+            <artifactId>gollek-spi-inference</artifactId>
+            <version>${gollek.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.gollek</groupId>
+            <artifactId>gollek-spi-model</artifactId>
+            <version>${gollek.version}</version>
+        </dependency>
+
+
+        <!-- Wayang Provider -->
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-provider</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <!-- Picocli for CLI parsing -->
@@ -109,6 +128,10 @@
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+        </dependency>
 
         <!-- SLF4J logging -->
         <dependency>
@@ -126,6 +149,19 @@
         <dependency>
             <groupId>org.eclipse.microprofile.config</groupId>
             <artifactId>microprofile-config-api</artifactId>
+        </dependency>
+
+        <!-- Maven Resolver for Plugin dynamic loading -->
+        <dependency>
+            <groupId>org.apache.maven.resolver</groupId>
+            <artifactId>maven-resolver-api</artifactId>
+            <version>1.9.15</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.4</version>
         </dependency>
     </dependencies>
 

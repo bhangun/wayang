@@ -45,7 +45,7 @@ graph TD
     TUI[Wayang TUI <br> REPL & Human-in-the-Loop]
     
     %% Agent Core
-    AgentCore[Wayang Code Agent]
+    AgentCore[Wayang Agent]
     
     %% Inference Engine
     subgraph Gollek Engine

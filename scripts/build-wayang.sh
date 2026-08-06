@@ -59,7 +59,7 @@ for module in "${MODULE_ARRAY[@]}"; do
   # Map Gradle project path to filesystem path and check existence (e.g. :ui:wayang-cli -> ui/wayang-cli)
   module_path="${module#":"}"
   module_path_fs="${module_path//:/\/}"
-  if [[ -d "$ROOT_DIR/$module_path_fs" ]]; then
+  if [[ -d "$ROOT_DIR/$module_path_fs" || -d "$ROOT_DIR/../gollek/$module_path_fs" ]]; then
     SUPPORTED_MODULES+=("$module")
   else
     SKIPPED_MODULES+=("$module")

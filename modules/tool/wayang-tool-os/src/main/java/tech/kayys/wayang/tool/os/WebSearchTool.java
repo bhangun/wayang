@@ -70,10 +70,23 @@ public final class WebSearchTool implements Tool {
 
         try {
             ToolResult result = provider.search(query, numResults);
-            if (result.error() != null && result.error().contains("Telkomsel")) {
-                // Fallback to Google if DuckDuckGo is blocked
-                return new GoogleHtmlSearchProvider().search(query, numResults);
+            
+            boolean noResults = result.output().map(s -> s.contains("No results found")).orElse(false);
+            boolean isError = result.error() != null;
+            
+            if (isError || noResults) {
+                // Fallback to Google
+                result = new GoogleHtmlSearchProvider().search(query, numResults);
+                
+                noResults = result.output().map(s -> s.contains("No results found")).orElse(false);
+                isError = result.error() != null;
+                
+                if (isError || noResults) {
+                    // Fallback to Wikipedia
+                    result = new WikipediaProvider().search(query, numResults);
+                }
             }
+            
             return result;
         } catch (Exception e) {
             return ToolResult.error("Web search failed: " + e.getMessage());

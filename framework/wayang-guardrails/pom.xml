@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>tech.kayys.wayang</groupId>
+        <artifactId>wayang-agentic-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+  <artifactId>wayang-guardrails</artifactId>
+
+  <properties>
+    <maven.compiler.source>25</maven.compiler.source>
+    <maven.compiler.target>25</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <cel-java.version>0.5.0</cel-java.version>
+    <maven.test.skip>true</maven.test.skip>
+  </properties>
+
+  <dependencies>
+      <dependency>
+                <groupId>tech.kayys.wayang</groupId>
+                <artifactId>wayang-core</artifactId>
+                <version>1.0.0-SNAPSHOT</version>
+            </dependency>
+    <dependency>
+      <groupId>tech.kayys.wayang</groupId>
+      <artifactId>wayang-error-spi</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>tech.kayys.wayang</groupId>
+      <artifactId>wayang-plugin-spi</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+   
+  </dependencies>
+</project>

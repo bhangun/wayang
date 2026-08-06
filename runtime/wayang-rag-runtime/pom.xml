@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>tech.kayys.wayang</groupId>
+        <artifactId>wayang-agentic-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>wayang-rag-runtime</artifactId>
+    <name>Wayang RAG Runtime</name>
+    <description>
+        Runtime implementations of the wayang-rag SPI: in-memory vector store,
+        dense/keyword/hybrid retrieval strategies, fixed-size chunker, and the
+        default RagPipeline that wires them all together.
+    </description>
+
+    <dependencies>
+        
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-rag</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    <dependency><groupId>tech.kayys.wayang</groupId><artifactId>wayang-error-spi</artifactId><version>${project.version}</version></dependency><dependency><groupId>tech.kayys.wayang</groupId><artifactId>wayang-embedding</artifactId><version>${project.version}</version></dependency><dependency><groupId>tech.kayys.wayang</groupId><artifactId>wayang-spi</artifactId><version>${project.version}</version></dependency><dependency><groupId>tech.kayys.wayang</groupId><artifactId>wayang-vector-faiss</artifactId><version>${project.version}</version></dependency><dependency><groupId>tech.kayys.wayang</groupId><artifactId>wayang-vault-manager</artifactId><version>${project.version}</version></dependency><dependency><groupId>tech.kayys.wayang</groupId><artifactId>wayang-schema-core</artifactId><version>${project.version}</version></dependency><dependency><groupId>tech.kayys.wayang</groupId><artifactId>wayang-plugin-spi</artifactId><version>${project.version}</version></dependency><dependency><groupId>com.github.victools</groupId><artifactId>jsonschema-generator</artifactId><version>4.38.0</version></dependency><dependency><groupId>com.github.victools</groupId><artifactId>jsonschema-module-jackson</artifactId><version>4.38.0</version></dependency><dependency><groupId>org.assertj</groupId><artifactId>assertj-core</artifactId><scope>test</scope></dependency><dependency><groupId>jakarta.enterprise</groupId><artifactId>jakarta.enterprise.cdi-api</artifactId><version>4.0.1</version></dependency><dependency><groupId>org.slf4j</groupId><artifactId>slf4j-api</artifactId><version>2.0.16</version></dependency></dependencies>
+</project>

@@ -147,11 +147,8 @@
             <version>${peutui.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>tech.kayys.wayang</groupId>
-            <artifactId>agent-coder</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
+        <!-- wayang-coder and wayang-skills-builtin moved to Kindi domain agent -->
 
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
@@ -171,11 +168,7 @@
             <version>${project.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>tech.kayys.wayang</groupId>
-            <artifactId>agent-skills-builtin</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
 
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
@@ -235,8 +228,12 @@
 
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>agent-core</artifactId>
+            <artifactId>wayang-core</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
         </dependency>
     </dependencies>
 
@@ -280,7 +277,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>tech.kayys.wayang.gollek.cli.WayangGollekCli</mainClass>
+                                    <mainClass>tech.kayys.wayang.cli.WayangGollekCli</mainClass>
                                 </transformer>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>
@@ -335,7 +332,7 @@
                         </executions>
                         <configuration>
                             <imageName>wayang-cli</imageName>
-                            <mainClass>tech.kayys.wayang.gollek.cli.WayangGollekCli</mainClass>
+                            <mainClass>tech.kayys.wayang.cli.WayangGollekCli</mainClass>
                             <buildArgs>
                                 <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
                                 <buildArg>-H:+JNI</buildArg>

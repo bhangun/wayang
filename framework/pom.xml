@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>tech.kayys.wayang</groupId>
+        <artifactId>wayang-agentic-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>wayang-framework-parent</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Wayang Framework Parent</name>
+    <description>Wayang Framework Parent</description>
+
+
+    <properties>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Inherit from parent Quarkus BOM -->
+            <dependency>
+                <groupId>io.quarkus.platform</groupId>
+                <artifactId>quarkus-bom</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+
+    </dependencies>
+
+    <modules>
+
+
+
+        <module>wayang-common</module>
+        <module>wayang-agent</module>
+        <module>wayang-rag</module>
+        <module>wayang-configuration</module>
+        <module>wayang-harness</module>
+        <module>wayang-core</module>
+        <module>wayang-database</module>
+        <module>wayang-embedding</module>
+        <module>wayang-engine</module>
+        <module>wayang-error-spi</module>
+        <module>wayang-event</module>
+        <module>wayang-extension</module>
+        <module>wayang-governance</module>
+        <module>wayang-graph</module>
+        <module>wayang-guardrails</module>
+        <module>wayang-hitl</module>
+        <module>wayang-knowledge</module>
+        <module>wayang-mcp</module>
+        <module>wayang-memory</module>
+        <module>wayang-messaging</module>
+        <module>wayang-observability</module>
+        <module>wayang-orchestration</module>
+        <module>wayang-plugin</module>
+        <module>wayang-project</module>
+        <module>wayang-provider</module>
+        <module>wayang-registry</module>
+        <module>wayang-resilience</module>
+        <module>wayang-schemas</module>
+        <module>wayang-security</module>
+        <module>wayang-shaker</module>
+        <module>wayang-skill</module>
+        <module>wayang-spi</module>
+        <module>wayang-tool</module>
+        <module>wayang-util</module>
+        <module>wayang-vector</module>
+        <module>wayang-workflow</module>
+    </modules>
+</project>

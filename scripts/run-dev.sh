@@ -11,13 +11,7 @@ MAGENTA="$(printf '\033[35m')"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-for arg in "$@"; do
-  case "$arg" in
-    -h|--help|--prewarm-plan|--prewarm-plan=*|--verify-fast-only|--verify-fast-only=*|--verify-fast-m4-smoke-only)
-      exec bash "$ROOT_DIR/scripts/install-local-runtime.sh" "$@"
-      ;;
-  esac
-done
+# Removed help interception as it delegates to a broken script
 
 source "$ROOT_DIR/scripts/module-selection-current.env"
 ARCHITECTURE_VALUE="${ARCHITECTURE_TARGETS:-${ARCHITECTURE_TARGET:-native-java,binding}}"
@@ -133,7 +127,7 @@ if [[ -n "$WAYANG_FOUND_JAR" ]]; then
 fi
 
 # Prefer running already-built gollek-cli artifact (no build). If not present, refuse to build unless ALLOW_BUILD=1.
-GOLLEK_CLI_DIR="$ROOT_DIR/ui/gollek-cli"
+GOLLEK_CLI_DIR="$ROOT_DIR/../gollek/ui/gollek-cli"
 JAR_CANDIDATES=(
   "$GOLLEK_CLI_DIR/build/libs"/*-runner.jar
   "$GOLLEK_CLI_DIR/build/libs"/*-all.jar
@@ -161,7 +155,11 @@ if [[ -n "$FOUND_JAR" ]]; then
 else
   if [[ "${ALLOW_BUILD:-0}" == "1" ]]; then
     echo "No built gollek-cli artifact found; ALLOW_BUILD=1 so falling back to gradle quarkusDev (this will build)."
-    ./gradlew :ui:gollek-cli:quarkusDev --quarkus-args="$QUARKUS_ARGS" \
+    GRADLE_CMD=(./gradlew :ui:gollek-cli:quarkusDev)
+    if [[ -n "${QUARKUS_ARGS:-}" ]]; then
+      GRADLE_CMD+=("--quarkus-args=$QUARKUS_ARGS")
+    fi
+    "${GRADLE_CMD[@]}" \
       -Pwayang.backend="${RESOLVED_BACKEND_PROPERTY}" \
       -Pwayang.profile="${BUILD_PROFILE}" \
       -Pwayang.model.formats="${FORMAT_TARGETS}" \

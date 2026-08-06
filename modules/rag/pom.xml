@@ -17,8 +17,6 @@
     </properties>
 
     <modules>
-        <module>rag-plugin-api</module>
-        <module>rag-core</module>
     </modules>
 
     <dependencyManagement>

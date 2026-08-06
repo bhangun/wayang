@@ -13,18 +13,15 @@
     <artifactId>wayang-tool-parent</artifactId>
     <packaging>pom</packaging>
     <modules>
-        <module>wayang-tool-spi</module>
         <!--
         <module>wayang-tool-parser</module>
         <module>wayang-tool-mcp</module>
         <module>wayang-tool-utcp</module>
         <module>wayang-tool-http</module>
-        <module>wayang-tool-sandbox</module>
         <module>wayang-tool-os</module>
         -->
+        <module>wayang-tool-nono</module>
         <!--<module>wayang-tool-execution</module>-->
-        <!--<module>wayang-tool-registry</module>-->
-        <!--<module>wayang-tools</module>-->
     </modules>
 
     <properties>

@@ -1,0 +1,73 @@
+plugins {
+    `java-library`
+    `maven-publish`
+}
+
+group = "tech.kayys.gollek"
+version = "0.1.0-SNAPSHOT"
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    }
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    implementation(project(":spi:gollek-spi-plugin"))
+    implementation(project(":spi:gollek-spi"))
+    implementation(project(":spi:gollek-spi-inference"))
+    implementation("tech.kayys.alkhawarizm:alkhawarizm-error-code:0.1.0-SNAPSHOT")
+    implementation("tech.kayys.wayang:wayang-provider:1.0.0-SNAPSHOT")
+    implementation("tech.kayys.wayang:wayang-core:1.0.0-SNAPSHOT")
+    implementation("tech.kayys.wayang:wayang-spi:1.0.0-SNAPSHOT")
+    implementation("tech.kayys.wayang:wayang-client-schemas:1.0.0-SNAPSHOT")
+    implementation("tech.kayys.wayang:wayang-embedding:1.0.0-SNAPSHOT")
+    implementation(group = "io.quarkus", name = "quarkus-vertx")
+    implementation(group = "io.quarkus", name = "quarkus-rest-jackson")
+    implementation(group = "io.smallrye.reactive", name = "mutiny")
+    implementation(group = "com.fasterxml.jackson.core", name = "jackson-databind")
+    implementation(group = "com.fasterxml.jackson.datatype", name = "jackson-datatype-jsr310")
+    implementation(group = "jakarta.validation", name = "jakarta.validation-api")
+    compileOnly(group = "org.jetbrains", name = "annotations", version = "24.1.0")
+    testImplementation(group = "org.junit.jupiter", name = "junit-jupiter-api")
+    testImplementation(group = "org.junit.jupiter", name = "junit-jupiter-engine")
+    testImplementation(group = "org.mockito", name = "mockito-core", version = "5.10.0")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            from(components["java"])
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
+}
+
+tasks.jar {
+    manifest {
+        attributes(
+            mapOf(
+                "Plugin-Class" to "tech.kayys.gollek.provider.gemini.GeminiProvider",
+                "Plugin-Id" to "gemini-provider",
+                "Plugin-Version" to "0.1.0-SNAPSHOT"
+            )
+        )
+    }
+}
+
+val installPluginJar by tasks.registering(Copy::class) {
+    dependsOn(tasks.jar)
+    from(tasks.jar)
+    into(file("${System.getProperty("user.home")}/.wayang/plugins"))
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+}

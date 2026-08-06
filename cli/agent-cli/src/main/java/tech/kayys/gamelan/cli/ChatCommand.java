@@ -136,13 +136,19 @@ public class ChatCommand implements Runnable {
             case "/models" -> {
                 try {
                     agentLoop.getSdk().listModels()
-                            .forEach(m -> printer.listItem(m.id(),
-                                    m.format() + (m.contextWindow() > 0 ? " ctx:" + m.contextWindow() : "")));
+                            .forEach(m -> printer.listItem(m.getModelId(),
+                                    m.getFormat() + (m.getContextLength() != null && m.getContextLength() > 0 ? " ctx:" + m.getContextLength() : "")));
                 } catch (Exception e) {
                     printer.error("Cannot list models: " + e.getMessage());
                 }
             }
             case "/clear" -> { session.clear(); printer.info("Session cleared."); }
+            case "/provider", "/providers" -> {
+                printer.info("Loaded Inference Providers:");
+                tech.kayys.wayang.inference.InferenceService.getInstance().reloadProviders();
+                tech.kayys.wayang.provider.WayangPluginManager.getInstance().getLoadedProviders()
+                        .forEach(p -> printer.listItem(p.metadata().name(), p.id().toString() + " - " + p.metadata().description()));
+            }
             case "/session" -> printer.info("Session: " + session.id() + " | Turns: " + session.turnCount());
             case "/model" -> printer.info("Current model: " + model);
             case "/exit", "/quit", "/q" -> { printer.info("Goodbye! 🎶"); System.exit(0); }
@@ -156,6 +162,7 @@ public class ChatCommand implements Runnable {
               /help          Show this help
               /skills        List available skills
               /models        List local models
+              /provider      List loaded inference providers
               /clear         Clear conversation history
               /session       Show session info
               /model         Show active model

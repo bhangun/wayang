@@ -6,12 +6,12 @@
 
     <parent>
         <groupId>tech.kayys.wayang</groupId>
-        <artifactId>agent-parent</artifactId>
+        <artifactId>wayang-core-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>agent-examples</artifactId>
+    <artifactId>wayang-examples</artifactId>
     <name>Agent Examples</name>
     <description>
         Example agents and usage demonstrations showing various agent patterns and capabilities.
@@ -26,21 +26,21 @@
         <!-- SPI definitions -->
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>agent-spi</artifactId>
+            <artifactId>wayang-spi</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <!-- Core agent client -->
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>agent-core</artifactId>
+            <artifactId>wayang-core</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <!-- Built-in runtime skill examples -->
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>agent-skills-builtin</artifactId>
+            <artifactId>wayang-skills-builtin</artifactId>
             <version>${project.version}</version>
         </dependency>
 

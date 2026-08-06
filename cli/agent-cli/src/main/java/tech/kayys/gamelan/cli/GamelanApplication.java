@@ -73,6 +73,14 @@ public class GamelanApplication implements Runnable, QuarkusApplication {
 
     @Override
     public int run(String... args) throws Exception {
+        // Initialize dynamic plugins
+        try {
+            tech.kayys.wayang.inference.InferenceService.getInstance().reloadProviders();
+        } catch (Exception e) {
+            // Log and continue if plugin loading fails
+            System.err.println("Warning: Failed to load provider plugins: " + e.getMessage());
+        }
+        
         return new CommandLine(this, factory).execute(args);
     }
 }

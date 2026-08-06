@@ -8,7 +8,7 @@ import tech.kayys.gamelan.agent.SdkProvider;
 import tech.kayys.gamelan.util.AnsiPrinter;
 import tech.kayys.gollek.sdk.core.GollekSdk;
 import tech.kayys.gollek.sdk.exception.SdkException;
-import tech.kayys.gollek.spi.model.ModelInfo;
+import tech.kayys.alkhawarizm.spi.model.ModelInfo;
 
 import java.util.List;
 
@@ -55,8 +55,7 @@ public class ModelCommand implements Runnable {
             GollekSdk sdk = sdkProvider.sdk();
             try {
                 List<ModelInfo> models = format != null
-                        ? sdk.listModelsByFormat(
-                            tech.kayys.gollek.spi.model.ModelFormat.valueOf(format.toUpperCase()))
+                        ? sdk.listModelsByFormat(format.toUpperCase())
                         : sdk.listModels();
 
                 if (models.isEmpty()) {

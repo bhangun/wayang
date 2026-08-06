@@ -16,7 +16,7 @@
     <name>Wayang :: Guardrails :: Plugins</name>
 
     <modules>
-        <module>guardrails-plugin-api</module>
+        
         <module>pii-detector-plugin</module>
         <module>toxicity-detector-plugin</module>
         <module>rate-limit-policy-plugin</module>

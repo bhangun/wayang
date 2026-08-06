@@ -1,7 +1,6 @@
 package tech.kayys.gamelan.cli;
 
 import picocli.CommandLine.Command;
-import tech.kayys.gamelan.cli.diagnostic.ImportCheckCommand;
 
 /**
  * Diagnostic commands for code analysis and validation.
@@ -18,10 +17,7 @@ import tech.kayys.gamelan.cli.diagnostic.ImportCheckCommand;
 @Command(
     name = "diagnostic",
     description = "Code diagnostic and analysis tools",
-    mixinStandardHelpOptions = true,
-    subcommands = {
-        ImportCheckCommand.class
-    }
+    mixinStandardHelpOptions = true
 )
 public class DiagnosticCommand implements Runnable {
     

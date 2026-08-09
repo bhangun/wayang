@@ -1,0 +1,41 @@
+id: gollek
+properties:
+  strategy: grpc
+  grpc.host: localhost
+  grpc.port: 31013
+  
+  # Auto-start and install behavior
+  auto.start: true
+  auto.install: true
+  
+  # Download source configuration
+  install.dir: ~/.wayang/gollek
+  download.script: https://raw.githubusercontent.com/bhangun/gollek/main/scripts/install.sh
+  download.url: https://github.com/bhangun/gollek/releases/latest/download/gollek
+  
+  # Fallback behavior
+  fallback.provider: gemini
+  fail.hard: true
+  
+  default.model: hf:unsloth/gemma-4-12b-it-GGUF
+
+profiles:
+  local:
+    properties:
+      strategy: embedded
+      auto.start: false
+      auto.install: false
+  
+  development:
+    properties:
+      strategy: grpc
+      auto.start: true
+      auto.install: true
+      fail.hard: false
+      
+  production:
+    properties:
+      strategy: grpc
+      auto.start: false
+      auto.install: false
+      fail.hard: true

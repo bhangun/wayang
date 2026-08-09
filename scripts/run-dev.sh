@@ -98,13 +98,13 @@ fi
 WAYANG_CLI_DIR="$ROOT_DIR/cli/wayang-cli"
 # Prefer assembled artifact that names the CLI explicitly and avoid repackager 'original-' jars
 WAYANG_JAR_CANDIDATES=(
+  "$WAYANG_CLI_DIR/target/quarkus-app/quarkus-run.jar"
+  "$WAYANG_CLI_DIR/build/quarkus-app/quarkus-run.jar"
   "$WAYANG_CLI_DIR/target"/*wayang-cli*.jar
   "$WAYANG_CLI_DIR/build/libs"/*-runner.jar
   "$WAYANG_CLI_DIR/build/libs"/*-all.jar
   "$WAYANG_CLI_DIR/build/libs"/*.jar
   "$WAYANG_CLI_DIR/target"/*.jar
-  "$WAYANG_CLI_DIR/target/quarkus-app/quarkus-run.jar"
-  "$WAYANG_CLI_DIR/build/quarkus-app/quarkus-run.jar"
 )
 WAYANG_FOUND_JAR=""
 for cand in "${WAYANG_JAR_CANDIDATES[@]}"; do
@@ -124,49 +124,14 @@ done
 if [[ -n "$WAYANG_FOUND_JAR" ]]; then
   echo "Running Wayang CLI from artifact: $WAYANG_FOUND_JAR"
   exec java -jar "$WAYANG_FOUND_JAR" "$@"
-fi
-
-# Prefer running already-built gollek-cli artifact (no build). If not present, refuse to build unless ALLOW_BUILD=1.
-GOLLEK_CLI_DIR="$ROOT_DIR/../gollek/ui/gollek-cli"
-JAR_CANDIDATES=(
-  "$GOLLEK_CLI_DIR/build/libs"/*-runner.jar
-  "$GOLLEK_CLI_DIR/build/libs"/*-all.jar
-  "$GOLLEK_CLI_DIR/build/libs"/*.jar
-  "$GOLLEK_CLI_DIR/target/quarkus-app/quarkus-run.jar"
-  "$GOLLEK_CLI_DIR/target"/*-runner.jar
-  "$GOLLEK_CLI_DIR/target"/*gollek-cli*.jar
-  "$GOLLEK_CLI_DIR/target"/*.jar
-  "$GOLLEK_CLI_DIR/build/quarkus-app/quarkus-run.jar"
-)
-FOUND_JAR=""
-for cand in "${JAR_CANDIDATES[@]}"; do
-  # glob may remain literal if no matches; iterate expanded matches
-  for f in $cand; do
-    if [[ -f $f ]]; then
-      FOUND_JAR="$f"
-      break 2
-    fi
-  done
-done
-
-if [[ -n "$FOUND_JAR" ]]; then
-  echo "Running gollek-cli from artifact: $FOUND_JAR"
-  exec java -jar "$FOUND_JAR" "$@"
 else
   if [[ "${ALLOW_BUILD:-0}" == "1" ]]; then
-    echo "No built gollek-cli artifact found; ALLOW_BUILD=1 so falling back to gradle quarkusDev (this will build)."
-    GRADLE_CMD=(./gradlew :ui:gollek-cli:quarkusDev)
-    if [[ -n "${QUARKUS_ARGS:-}" ]]; then
-      GRADLE_CMD+=("--quarkus-args=$QUARKUS_ARGS")
-    fi
-    "${GRADLE_CMD[@]}" \
-      -Pwayang.backend="${RESOLVED_BACKEND_PROPERTY}" \
-      -Pwayang.profile="${BUILD_PROFILE}" \
-      -Pwayang.model.formats="${FORMAT_TARGETS}" \
-      -Pwayang.llm.types="${LLM_TARGETS}" \
-      -Pwayang.architecture="${ARCHITECTURE_VALUE}"
+    echo "No built wayang-cli artifact found; ALLOW_BUILD=1 so falling back to building wayang-cli via maven."
+    cd "$ROOT_DIR"
+    ./mvnw clean package -pl cli/wayang-cli -am -Dmaven.test.skip=true
+    exec ./scripts/run-dev.sh "$@"
   else
-    echo "No built gollek-cli artifact found. To avoid building, run './scripts/build-wayang.sh' first or set ALLOW_BUILD=1 to permit building here."
+    echo "No built wayang-cli artifact found. To avoid building, run './scripts/build-wayang.sh' first or set ALLOW_BUILD=1 to permit building here."
     exit 1
   fi
 fi

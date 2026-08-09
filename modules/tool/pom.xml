@@ -15,12 +15,14 @@
     <modules>
         <!--
         <module>wayang-tool-parser</module>
-        <module>wayang-tool-mcp</module>
         <module>wayang-tool-utcp</module>
         <module>wayang-tool-http</module>
         <module>wayang-tool-os</module>
         -->
+        <module>wayang-tool-registry</module>
+        <module>wayang-tool-mcp</module>
         <module>wayang-tool-nono</module>
+        <module>wayang-sandbox-docker</module>
         <!--<module>wayang-tool-execution</module>-->
     </modules>
 

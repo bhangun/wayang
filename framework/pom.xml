@@ -44,6 +44,7 @@
 
 
         <module>wayang-common</module>
+        <module>wayang-context</module>
         <module>wayang-agent</module>
         <module>wayang-rag</module>
         <module>wayang-configuration</module>
@@ -64,6 +65,7 @@
         <module>wayang-memory</module>
         <module>wayang-messaging</module>
         <module>wayang-observability</module>
+        <module>wayang-observability-otel</module>
         <module>wayang-orchestration</module>
         <module>wayang-plugin</module>
         <module>wayang-project</module>

@@ -7,6 +7,7 @@ import tech.kayys.wayang.cli.contract.WayangContractCommands;
 import tech.kayys.wayang.gollek.sdk.Wayang;
 import tech.kayys.wayang.gollek.sdk.WayangClient;
 import tech.kayys.wayang.gollek.sdk.WayangGollekSdk;
+import tech.kayys.wayang.cli.bootstrap.GollekBootstrapService;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -140,6 +141,28 @@ import java.lang.reflect.Method;
                     Matcher m = p.matcher(content);
                     if (m.find()) {
                         String provider = m.group(1).trim();
+                        
+                        // Bootstrap check if provider is gollek
+                        if ("gollek".equals(provider)) {
+                            // Determine active profile from config or system properties
+                            String profile = System.getProperty("wayang.profile", "development");
+                            try {
+                                Pattern profilePattern = Pattern.compile("\"profile\"\s*:\s*\"([^\"]+)\"");
+                                Matcher profileMatcher = profilePattern.matcher(content);
+                                if (profileMatcher.find()) {
+                                    profile = profileMatcher.group(1).trim();
+                                }
+                                GollekBootstrapService.ensureRunning(profile);
+                            } catch (Exception ex) {
+                                logToFile("Error during Gollek bootstrap: " + ex.getMessage());
+                            }
+                            // Apply fallback if bootstrap altered it
+                            String fallback = System.getProperty("wayang.fallback.provider");
+                            if (fallback != null) {
+                                provider = fallback;
+                            }
+                        }
+
                         try {
                             // Use reflection so this compiles against older SDK jars that may not
                             // have provider APIs yet.

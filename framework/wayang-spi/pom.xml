@@ -24,12 +24,22 @@
             <version>2.1.0</version>
         </dependency>
 
-        <!-- Wayang Plugin SPI -->
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-plugin-spi</artifactId>
+            <artifactId>wayang-extension</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+        </dependency>
+
+
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>

@@ -21,6 +21,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+
 /**
  * Default implementation of WayangKernel.
  * 
@@ -36,6 +39,7 @@ import java.util.logging.Logger;
  * <li>Configuration management</li>
  * </ul>
  */
+@ApplicationScoped
 public final class DefaultWayangKernel implements WayangKernel {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultWayangKernel.class.getName());
@@ -57,8 +61,58 @@ public final class DefaultWayangKernel implements WayangKernel {
     private final List<WayangKernel> children;
     private final KernelMetrics metrics;
 
+    /**
+     * CDI Constructor
+     */
+    @Inject
+    public DefaultWayangKernel(
+            RuntimeRegistry runtimeRegistry,
+            ServiceRegistry serviceRegistry,
+            CapabilityRegistry capabilityRegistry,
+            PluginManager pluginManager,
+            EventBus eventBus,
+            Configuration configuration,
+            ResourceManager resourceManager) {
+        this.id = KernelId.generate();
+        this.name = "root";
+        this.version = Version.parse("1.0.0");
+        this.parent = null;
+        this.children = new CopyOnWriteArrayList<>();
+        this.state = KernelState.CREATED;
+        this.clock = Clock.systemUTC();
+        
+        this.runtimeRegistry = runtimeRegistry;
+        this.serviceRegistry = serviceRegistry;
+        this.capabilityRegistry = capabilityRegistry;
+        this.pluginManager = pluginManager;
+        this.eventBus = eventBus;
+        this.configuration = configuration;
+        this.resourceManager = resourceManager;
+        this.executorService = Executors.newCachedThreadPool();
+        this.metrics = new KernelMetrics();
+        
+        registerCoreServices();
+        LOGGER.info("Created CDI kernel: " + name + " (version " + version + ")");
+    }
+
     public DefaultWayangKernel() {
-        this(null, "root", Version.parse("1.0.0"));
+        // Required for proxying by CDI
+        this.id = null;
+        this.name = null;
+        this.version = null;
+        this.parent = null;
+        this.children = null;
+        this.state = null;
+        this.clock = null;
+        this.runtimeRegistry = null;
+        this.serviceRegistry = null;
+        this.capabilityRegistry = null;
+        this.pluginManager = null;
+        this.eventBus = null;
+        this.configuration = null;
+        this.resourceManager = null;
+        this.executorService = null;
+        this.metrics = null;
     }
 
     public DefaultWayangKernel(DefaultWayangKernel parent, String name, Version version) {

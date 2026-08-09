@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.contextcompiler</groupId>
+        <artifactId>context-compiler-parent</artifactId>
+        <version>0.1.0</version>
+    </parent>
+
+    <artifactId>context-compiler-core</artifactId>
+    <packaging>jar</packaging>
+
+    <!-- Single dependency, deliberately -- the Java analogue of the Python
+         original leaning on nothing but ast/pathlib/dataclasses. JavaParser
+         is the closest thing the JVM ecosystem has to a stdlib AST module. -->
+    <dependencies>
+        <dependency>
+            <groupId>com.github.javaparser</groupId>
+            <artifactId>javaparser-symbol-solver-core</artifactId>
+            <version>${javaparser.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.4.1</version>
+                <configuration>
+                    <mainClass>com.contextcompiler.core.Demo</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

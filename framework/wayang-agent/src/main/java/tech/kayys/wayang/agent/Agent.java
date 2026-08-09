@@ -18,19 +18,14 @@ public interface Agent {
     void send(String userInput, WayangAgentListener listener);
 
     /**
-     * Returns the current conversation history.
+     * Returns the memory provider for this agent.
      */
-    List<ChatMessage> history();
+    tech.kayys.wayang.spi.memory.Memory<ChatMessage> getMemory();
 
     /**
-     * Clears the current conversation history.
+     * Sets the memory context for this agent.
      */
-    void clearHistory();
-
-    /**
-     * Replaces the current conversation history with the provided messages.
-     */
-    void replaceHistory(List<ChatMessage> newHistory);
+    void setMemory(tech.kayys.wayang.spi.memory.Memory<ChatMessage> memory);
 
     /**
      * Sets the provider for the agent.

@@ -20,6 +20,10 @@
 
     <dependencies>
         <!-- Parent provides common dependencies -->
-   
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-spi</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

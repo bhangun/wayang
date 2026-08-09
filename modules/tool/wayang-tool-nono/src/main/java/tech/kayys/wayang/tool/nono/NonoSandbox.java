@@ -9,9 +9,14 @@ import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.Files;
+import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import tech.kayys.wayang.spi.sandbox.Sandbox;
+import tech.kayys.wayang.spi.sandbox.SandboxExecutionResult;
 
-public class NonoSandbox implements AutoCloseable {
+public class NonoSandbox implements Sandbox {
 
     private static final Linker linker = Linker.nativeLinker();
     private static final SymbolLookup stdlib = linker.defaultLookup();
@@ -157,5 +162,41 @@ public class NonoSandbox implements AutoCloseable {
             }
         }
         arena.close();
+    }
+
+    @Override
+    public void start() throws Exception {
+        apply();
+    }
+
+    @Override
+    public void stop() throws Exception {
+        close();
+    }
+
+    @Override
+    public SandboxExecutionResult executeCommand(String command, long timeoutMillis) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder("bash", "-c", command);
+        // Nono applies to the current process and its children. 
+        // Thus, ProcessBuilder inherits the sandbox restrictions.
+        Process p = pb.start();
+        boolean finished = p.waitFor(timeoutMillis, TimeUnit.MILLISECONDS);
+        if (!finished) {
+            p.destroyForcibly();
+            return new SandboxExecutionResult(-1, "", "Command timed out");
+        }
+        String stdout = new String(p.getInputStream().readAllBytes());
+        String stderr = new String(p.getErrorStream().readAllBytes());
+        return new SandboxExecutionResult(p.exitValue(), stdout, stderr);
+    }
+
+    @Override
+    public void writeFile(String path, String content) throws Exception {
+        Files.writeString(Paths.get(path), content);
+    }
+
+    @Override
+    public String readFile(String path) throws Exception {
+        return Files.readString(Paths.get(path));
     }
 }

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.contextcompiler</groupId>
+        <artifactId>context-compiler-parent</artifactId>
+        <version>0.1.0</version>
+    </parent>
+
+    <artifactId>context-compiler-quarkus</artifactId>
+    <packaging>jar</packaging>
+
+    <!-- This module is written to be dropped into an existing Quarkus app
+         (e.g. mediapulse-backend) as a library, not run standalone -- there
+         is no quarkus-maven-plugin build/dev goal wired here on purpose. -->
+
+    <dependencies>
+        <dependency>
+            <groupId>com.contextcompiler</groupId>
+            <artifactId>context-compiler-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-resteasy-reactive-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+    </dependencies>
+</project>

@@ -1,9 +1,21 @@
 # Wayang Gollek
 
-Wayang Gollek is the backend-agnostic agentic core for the Wayang platform. It
+Wayang is a robust, modular, and extensible foundation framework and runtime for building and orchestrating autonomous AI agents. It
 keeps agent contracts, orchestration, skills, tools, memory, RAG, MCP bridges,
 guardrails, HITL, vector stores, and runtime adapters in one Maven reactor while
 keeping concrete inference and workflow engines behind SDK/SPI boundaries.
+
+## Table of Contents
+- [Installation](#installation)
+- [Architecture & Extensibility](#architecture--extensibility)
+- [Documentation](#documentation)
+- [Dependency Policy](#dependency-policy)
+- [Current Build Baseline](#current-build-baseline)
+- [Build Editions](#build-editions)
+- [HTTP Diagnostics](#http-diagnostics)
+- [CLI Command Discovery](#cli-command-discovery)
+- [SDK Skill Registry](#sdk-skill-registry)
+- [Active vs Legacy Trees](#active-vs-legacy-trees)
 
 ## Installation
 
@@ -26,7 +38,9 @@ curl -sSL https://raw.githubusercontent.com/kayys/wayang/main/install.sh | bash 
 curl -sSL https://raw.githubusercontent.com/kayys/wayang/main/install.sh | bash -s -- --version v1.0.0
 ```
 
-## Architecture
+## Architecture & Extensibility
+
+Wayang is built with a **CDI (Contexts and Dependency Injection)** kernel and a strong **SPI-first** design. This ensures that the core platform is completely decoupled from specific agent behaviors or inference models.
 
 The active reactor is organized around these layers:
 
@@ -53,9 +67,16 @@ The active reactor is organized around these layers:
 - `storage/`: Gollek model-storage plugins kept in the reactor but isolated
   behind Gollek SPI dependencies.
 
+## Documentation
+
+For comprehensive guides on how to build your own agents, integrate new inference providers, and configure the Gollek backend, please refer to the `docs/` directory:
+- [Agent Development Guide](docs/agent-development-guide.md)
+- [Inference Provider Guide](docs/inference-provider-guide.md)
+- [Gollek Integration](docs/gollek-integration.md)
+
 ## Dependency Policy
 
-Wayang Gollek must remain SDK/SPI-first:
+Wayang must remain SDK/SPI-first:
 
 - Use `gamelan-engine-spi`, `gamelan-sdk-client-core`, and
   `gamelan-sdk-executor-core` for workflow integration.

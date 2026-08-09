@@ -28,4 +28,4 @@ Notes
 
 - The shaded jar is produced during packaging; the launcher points to the module artifact under target/.
 - For system packaging, create a proper package (deb/rpm) or install the jar under /opt and symlink.
-- The REST server listens on 8080 by default; gRPC listens on 50051.
+- The REST server listens on 8080 by default; gRPC listens on 31013.

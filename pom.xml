@@ -80,6 +80,7 @@
         <module>runtime/wayang-guardrails-runtime</module>
         <module>runtime/wayang-hitl-runtime</module>
         <module>runtime/wayang-workflow-runtime</module>
+        <module>runtime/aljabr-runner</module>
 
         <!-- Feature Modules -->
         <module>modules/graph</module>

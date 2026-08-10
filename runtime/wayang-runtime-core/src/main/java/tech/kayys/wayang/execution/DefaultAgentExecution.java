@@ -80,6 +80,31 @@ public class DefaultAgentExecution implements AgentExecution {
     }
 
     @Override
+    public AgentResponse executeSync() {
+        try {
+            return execute().toCompletableFuture().join();
+        } catch (Exception e) {
+            this.status = ExecutionStatus.FAILED;
+            return AgentResponse.builder()
+                .id(id)
+                .success(false)
+                .error(e.getMessage())
+                .build();
+        }
+    }
+
+    @Override
+    public AgentResponse join() {
+        // Simple stub since execute() currently returns a completed future.
+        // In a real implementation with a state machine, this would wait
+        // on a lock or CountDownLatch until status is terminal.
+        if (this.status == ExecutionStatus.COMPLETED || this.status == ExecutionStatus.FAILED || this.status == ExecutionStatus.CANCELLED) {
+             return AgentResponse.builder().id(id).success(this.status == ExecutionStatus.COMPLETED).build();
+        }
+        return executeSync();
+    }
+
+    @Override
     public void pause() {
         this.status = ExecutionStatus.PAUSED;
         checkpointStore.save(id, agentContext);

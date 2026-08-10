@@ -31,10 +31,24 @@ public interface AgentExecution {
     ExecutionStatus status();
     
     /**
-     * Starts or resumes the execution of this agent.
+     * Starts or resumes the execution of this agent asynchronously.
      * @return A future representing the final response of the agent.
      */
     CompletionStage<AgentResponse> execute();
+    
+    /**
+     * Starts or resumes the execution of this agent synchronously.
+     * Blocks the calling thread until the execution completes.
+     * @return The final response of the agent.
+     */
+    AgentResponse executeSync();
+    
+    /**
+     * Blocks the current thread until the agent reaches a terminal state.
+     * Useful when the execution was started asynchronously via execute().
+     * @return The final response of the agent.
+     */
+    AgentResponse join();
     
     /**
      * Pauses this execution.

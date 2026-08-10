@@ -1,7 +1,7 @@
 package tech.kayys.wayang.agent.mcp;
 
 import io.smallrye.mutiny.Uni;
-import tech.kayys.wayang.spi.skill.skills.SkillRegistry;
+import tech.kayys.wayang.agent.spi.skills.SkillRegistry;
 
 import java.util.LinkedHashMap;
 import java.util.List;

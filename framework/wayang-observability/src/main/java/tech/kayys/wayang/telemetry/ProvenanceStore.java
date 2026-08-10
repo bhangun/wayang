@@ -1,7 +1,7 @@
 package tech.kayys.wayang.telemetry;
 
 import io.smallrye.mutiny.Uni;
-import tech.kayys.gollek.spi.observability.AuditPayload;
+import tech.kayys.wayang.telemetry.AuditPayload;
 
 /**
  * Interface for storing audit events in a persistent provenance store (e.g.,

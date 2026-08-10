@@ -9,8 +9,9 @@ import tech.kayys.wayang.agent.AgentRequest;
 import tech.kayys.wayang.agent.AgentResponse;
 import tech.kayys.wayang.core.AgentDefinition;
 import tech.kayys.wayang.core.runtime.WayangRuntime;
-import tech.kayys.wayang.execution.ExecutionContext;
-import tech.kayys.wayang.execution.ExecutionEngine;
+import tech.kayys.wayang.execution.AgentExecution;
+import tech.kayys.wayang.execution.AgentExecutionService;
+import tech.kayys.wayang.execution.ExecutionBudget;
 import tech.kayys.wayang.identity.ResourceId;
 import tech.kayys.wayang.resource.ResourceType;
 import tech.kayys.wayang.extension.Metadata;
@@ -29,7 +30,7 @@ public class DefaultWayangRuntime implements WayangRuntime {
     private final ResourceType type = new ResourceType.Custom("runtime");
 
     @Inject
-    ExecutionEngine executionEngine;
+    AgentExecutionService executionService;
 
     public DefaultWayangRuntime() {
         this.id = Id.random().asString();
@@ -44,26 +45,8 @@ public class DefaultWayangRuntime implements WayangRuntime {
 
     @Override
     public CompletableFuture<AgentResponse> executeAsync(AgentDefinition agent, AgentRequest request) {
-        // Create an ExecutionContext based on the incoming AgentRequest
-        ExecutionContext context = ExecutionContext.builder()
-            .id(request.id() != null ? Id.fromString(request.id()) : Id.random())
-            // Pass necessary data from request to context...
-            .build();
-
-        // Delegate to the execution engine and map the result back to AgentResponse
-        return executionEngine.executeAsync(agent, context).thenApply(result -> {
-            if (result.isSuccess()) {
-                AgentResponse.AgentResponseBuilder builder = AgentResponse.builder()
-                    .id(result.executionId())
-                    .success(true)
-                    .content("Execution completed successfully");
-                    
-                result.outputs().forEach(builder::artifact);
-                return builder.build();
-            } else {
-                return AgentResponse.failure(result.error());
-            }
-        });
+        AgentExecution execution = executionService.create(agent, request, ExecutionBudget.defaults());
+        return execution.execute().toCompletableFuture();
     }
 
     @Override

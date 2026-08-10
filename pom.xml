@@ -11,6 +11,20 @@
     <name>wayang-agentic-parent</name>
     <description>wayang Agentic</description>
 
+    <distributionManagement>
+        <!-- GitHub Packages: replace 'workkayys' and 'wayang' if your repo slug differs -->
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages — Wayang (Release)</name>
+            <url>https://maven.pkg.github.com/workkayys/wayang</url>
+        </repository>
+        <snapshotRepository>
+            <id>github</id>
+            <name>GitHub Packages — Wayang (Snapshot)</name>
+            <url>https://maven.pkg.github.com/workkayys/wayang</url>
+        </snapshotRepository>
+    </distributionManagement>
+
 
     <properties>
         <maven.compiler.source>25</maven.compiler.source>

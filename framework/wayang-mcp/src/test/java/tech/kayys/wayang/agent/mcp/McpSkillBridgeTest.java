@@ -3,10 +3,10 @@ package tech.kayys.wayang.agent.mcp;
 import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.Test;
 import tech.kayys.wayang.agent.spi.AgentSkill;
-import tech.kayys.wayang.spi.skill.skills.SkillCategory;
-import tech.kayys.wayang.spi.skill.skills.SkillDefinition;
-import tech.kayys.wayang.spi.skill.skills.SkillHealth;
-import tech.kayys.wayang.spi.skill.skills.SkillRegistry;
+import tech.kayys.wayang.agent.spi.skills.SkillCategory;
+import tech.kayys.wayang.agent.spi.skills.SkillDefinition;
+import tech.kayys.wayang.agent.spi.skills.SkillHealth;
+import tech.kayys.wayang.agent.spi.skills.SkillRegistry;
 
 import java.time.Duration;
 import java.util.ArrayList;

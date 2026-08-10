@@ -19,7 +19,25 @@
     </description>
 
     <dependencies>
-        <!-- Parent provides common dependencies -->
-   
+        <!-- Extension base: Id, Resource, BaseResource, Extension -->
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-extension</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- wayang-core: Document (tech.kayys.wayang.context) -->
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- wayang-engine: ExecutionContext -->
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-engine</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

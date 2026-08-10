@@ -2,53 +2,46 @@ package tech.kayys.wayang.telemetry;
 
 import java.time.Duration;
 
-import tech.kayys.gollek.reliability.CircuitBreaker;
-import tech.kayys.gollek.reliability.CircuitBreaker.State;
+import tech.kayys.wayang.resilience.CircuitBreaker;
+import tech.kayys.wayang.resilience.CircuitBreakerState;
 
 /**
  * Circuit breaker metrics
  */
 public record CircuitBreakerMetrics(
-                State state,
+                CircuitBreakerState state,
                 int failureCount,
                 int successCount,
                 int totalRequests,
                 double failureRate,
                 Duration timeSinceStateChange,
                 boolean callsPermitted,
-                long estimatedRecoveryTimeMs) implements CircuitBreaker.CircuitBreakerMetrics {
+                long estimatedRecoveryTimeMs) {
 
-        @Override
-        public State state() {
+        public CircuitBreakerState state() {
                 return state;
         }
 
-        @Override
         public boolean isCallPermitted() {
                 return callsPermitted;
         }
 
-        @Override
         public int getFailureCount() {
                 return failureCount;
         }
 
-        @Override
         public int getSuccessCount() {
                 return successCount;
         }
 
-        @Override
         public int getTotalRequests() {
                 return totalRequests;
         }
 
-        @Override
         public double failureRate() {
                 return failureRate;
         }
 
-        @Override
         public long estimatedRecoveryTimeMs() {
                 return estimatedRecoveryTimeMs;
         }

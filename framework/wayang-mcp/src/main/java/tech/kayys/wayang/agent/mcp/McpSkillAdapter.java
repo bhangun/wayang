@@ -2,7 +2,6 @@ package tech.kayys.wayang.agent.mcp;
 
 import io.smallrye.mutiny.Uni;
 import tech.kayys.wayang.agent.spi.AgentSkill;
-import tech.kayys.wayang.spi.skill.skills.SkillCategory;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -39,7 +38,7 @@ public final class McpSkillAdapter implements AgentSkill {
 
     @Override
     public String category() {
-        return SkillCategory.SYSTEM.name();
+        return "SYSTEM";
     }
 
     @Override

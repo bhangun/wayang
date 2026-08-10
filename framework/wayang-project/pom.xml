@@ -18,4 +18,20 @@
         <maven.compiler.target>25</maven.compiler.target>
     </properties>
 
+    <dependencies>
+        <!-- Jackson for JSON persistence -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.15.2</version>
+        </dependency>
+
+        <!-- Framework extension module providing Resource/Extension APIs -->
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-extension</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
 </project>

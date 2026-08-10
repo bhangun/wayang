@@ -13,7 +13,7 @@ import tech.kayys.wayang.resource.BaseResource;
 import java.util.List;
 import java.util.Optional;
 
-import tech.kayys.wayang.core.Principal;
+import tech.kayys.wayang.extension.Principal;
 import tech.kayys.wayang.extension.Extension;
 
 /**

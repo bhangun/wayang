@@ -18,4 +18,20 @@
         <maven.compiler.target>25</maven.compiler.target>
     </properties>
 
+    <dependencies>
+        <!-- Client-side SDK providing WayangStandardDefinition, SdkMaps, SdkText -->
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-gollek-sdk</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+
+        <!-- Alignment types (WayangStandardAlignmentDescriptor, portfolio, etc.) -->
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-contract</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
 </project>

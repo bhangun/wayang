@@ -1,5 +1,6 @@
 package tech.kayys.wayang.rate;
 
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Token Bucket Rate Limiter

@@ -1,7 +1,7 @@
 package tech.kayys.wayang.telemetry;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import tech.kayys.gollek.spi.observability.AuditPayload;
+import tech.kayys.wayang.telemetry.AuditPayload;
 import io.smallrye.mutiny.Uni;
 import io.quarkus.arc.DefaultBean;
 

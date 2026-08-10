@@ -50,16 +50,19 @@ public class OtelAgentListener implements AgentListener {
     @Override
     public void onToolStart(Agent agent, ToolInvocation invocation) {
         Span span = tracer.spanBuilder("tool.execution")
-                .setAttribute("tool.name", invocation.toolName())
+                .setAttribute("tool.name", invocation.name())
                 .startSpan();
-        toolSpans.put(invocation.toolName(), span); // Simplified for POC
+        toolSpans.put(invocation.name(), span); // Simplified for POC
     }
 
     @Override
     public void onToolResult(Agent agent, ToolInvocation invocation, ToolResult result) {
-        Span span = toolSpans.remove(invocation.toolName());
+        Span span = toolSpans.remove(invocation.name());
         if (span != null) {
-            span.setAttribute("tool.success", true); // Should evaluate result status
+            span.setAttribute("tool.success", result != null && result.isSuccess());
+            if (result != null && !result.isSuccess()) {
+                span.setAttribute("tool.error", result.getErrorMessage());
+            }
             span.end();
         }
     }

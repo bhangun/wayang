@@ -16,7 +16,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.List;
 
 /**
  * Metrics collector for agent observability with OpenTelemetry and Micrometer integration.
@@ -73,6 +75,10 @@ public class AgentMetricsCollector {
 
     // Gauges for real-time monitoring
     private final Map<String, Number> gaugeValues = new ConcurrentHashMap<>();
+    
+    // Store recent errors for observability tool inspection
+    private final ConcurrentLinkedDeque<String> recentErrors = new ConcurrentLinkedDeque<>();
+    private static final int MAX_RECENT_ERRORS = 50;
 
     @PostConstruct
     void init() {
@@ -219,6 +225,11 @@ public class AgentMetricsCollector {
      * @param tenantId tenant identifier
      */
     public void recordError(String errorType, String tenantId) {
+        String errorMsg = String.format("[%s] Error: type=%s, tenant=%s", Instant.now(), errorType, tenantId);
+        recentErrors.offerLast(errorMsg);
+        if (recentErrors.size() > MAX_RECENT_ERRORS) {
+            recentErrors.pollFirst();
+        }
         LOG.warnf("Error recorded: type=%s, tenant=%s", errorType, tenantId);
     }
 
@@ -238,7 +249,8 @@ public class AgentMetricsCollector {
             "avg_step_latency_ms", stepLatency.totalTime(TimeUnit.MILLISECONDS) /
                 Math.max(1, stepsTotal.count()),
             "total_tokens", tokensUsed.count(),
-            "active_runs", gaugeValues.get("active_runs")
+            "active_runs", gaugeValues.get("active_runs"),
+            "recent_errors", List.copyOf(recentErrors)
         );
     }
 

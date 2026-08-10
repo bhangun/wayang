@@ -18,9 +18,7 @@ import java.util.Map;
 import tech.kayys.wayang.extension.Id;
 import tech.kayys.wayang.extension.Metadata;
 import tech.kayys.wayang.extension.Reference;
-import tech.kayys.wayang.definition.WorkflowDefinition;
-import tech.kayys.wayang.definition.WorkflowStep;
-import tech.kayys.wayang.definition.WorkflowTransition;
+
 import tech.kayys.wayang.resource.ResourceType;
 
 /**

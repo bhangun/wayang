@@ -22,11 +22,6 @@
             <artifactId>quarkus-hibernate-reactive-panache</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-tool-spi</artifactId>
             <version>${project.version}</version>

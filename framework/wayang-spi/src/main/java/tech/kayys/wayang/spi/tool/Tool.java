@@ -1,12 +1,12 @@
 package tech.kayys.wayang.spi.tool;
 
-import tech.kayys.wayang.spi.plugin.ExtensionPoint;
+import tech.kayys.wayang.extension.Extension;
 
 /**
  * Tool represents a generic capability that an Agent can execute.
  * This is the base SPI for Wayang-Projects/Tools-Pool.
  */
-public interface Tool extends ExtensionPoint {
+public interface Tool extends Extension {
     
     /**
      * Gets the unique identifier of the tool.

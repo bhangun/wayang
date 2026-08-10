@@ -15,7 +15,7 @@ import java.util.List;
 
 import javax.xml.stream.EventFilter;
 
-import tech.kayys.wayang.event.CorrelationId;
+import tech.kayys.wayang.identity.ResourceId.CorrelationId;
 import tech.kayys.wayang.event.Event;
 import tech.kayys.wayang.event.EventSource;
 import tech.kayys.wayang.event.EventType;

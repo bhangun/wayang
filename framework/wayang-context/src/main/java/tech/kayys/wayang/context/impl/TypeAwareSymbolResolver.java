@@ -84,7 +84,7 @@ public final class TypeAwareSymbolResolver implements SymbolResolver {
                         Integer hop = heuristicResult.reachable().get(candidates.get(0));
                         heuristicResult.reachable().put(narrowedFile, hop != null ? hop : 1);
                     });
-                } catch (UnsolvedSymbolException | RuntimeException unresolved) {
+                } catch (RuntimeException unresolved) {
                     // Leave the heuristic collision as-is -- an unresolved call stays
                     // disclosed, it is not dropped or guessed at.
                 }

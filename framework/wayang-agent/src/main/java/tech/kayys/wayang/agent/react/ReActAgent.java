@@ -6,11 +6,15 @@ import tech.kayys.wayang.provider.Provider;
 import tech.kayys.wayang.provider.StreamEvent;
 import tech.kayys.wayang.provider.ToolSpec;
 import tech.kayys.wayang.spi.plugin.PluginRegistry;
+import tech.kayys.wayang.context.api.model.CompiledContext;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -25,21 +29,22 @@ public class ReActAgent extends BaseReActAgent {
         }
 
         List<ChatMessage> history = memory != null ? memory.getHistory() : Collections.singletonList(ChatMessage.userText(userInput));
+        String effectiveSystemPrompt = systemPromptWithCompiledContext(userInput);
         
         List<ToolSpec> toolSpecs = tools.stream()
-                .map(t -> new ToolSpec(t.name(), t.description(), t.inputSchema()))
+                .map(t -> new ToolSpec(t.descriptor().name(), t.descriptor().description(), t.descriptor().inputSchema()))
                 .collect(Collectors.toList());
 
         try {
-            provider.streamChat(history, systemPrompt, toolSpecs, 0.7, 4096, event -> {
+            provider.streamChat(history, effectiveSystemPrompt, toolSpecs, 0.7, 4096, event -> {
                 if (event instanceof StreamEvent.TextDelta textEvent) {
                     listener.onTextDelta(textEvent.text());
-                } else if (event instanceof StreamEvent.ToolCall toolCall) {
+                } else if (event instanceof StreamEvent.ToolUseStart toolCall) {
                     listener.onToolCallStart(toolCall.id(), toolCall.name());
                     // Normally the agent would execute the tool here, append to history, and re-prompt the LLM.
                     // This is a stub for the POC.
                 } else if (event instanceof StreamEvent.MessageStop stopEvent) {
-                    listener.onDone(stopEvent.stopReason());
+                    listener.onDone(stopEvent.reason());
                 }
             });
         } catch (IOException | InterruptedException e) {
@@ -47,41 +52,46 @@ public class ReActAgent extends BaseReActAgent {
         }
     }
 
-    @Override
-    public void initialize() throws Exception {
-        // Initialization logic for ReAct
+    private String systemPromptWithCompiledContext(String userInput) {
+        if (contextCompiler == null || workspace == null || tokenBudget == null) {
+            return systemPrompt;
+        }
+
+        Optional<Path> targetFile = inferTargetFile(userInput);
+        if (targetFile.isEmpty()) {
+            return systemPrompt;
+        }
+
+        try {
+            CompiledContext compiled = contextCompiler.compile(workspace, targetFile.get(), 2, tokenBudget);
+            if (compiled.entries().isEmpty()) {
+                return systemPrompt;
+            }
+            String basePrompt = systemPrompt == null ? "" : systemPrompt.stripTrailing();
+            return basePrompt
+                    + "\n\nRelevant source context:\n"
+                    + compiled.toPromptString();
+        } catch (RuntimeException contextFailure) {
+            return systemPrompt;
+        }
     }
 
-    @Override
-    public Object process(Object request) throws Exception {
-        // Non-streaming process method
-        return null;
-    }
+    private Optional<Path> inferTargetFile(String userInput) {
+        if (userInput == null || userInput.isBlank()) {
+            return Optional.empty();
+        }
 
-    @Override
-    public String getId() {
-        return "react-agent";
-    }
-
-    @Override
-    public tech.kayys.wayang.spi.agent.AgentPipeline getPipeline() {
-        return null; // Stub
-    }
-
-    @Override
-    public String id() {
-        return "react";
-    }
-
-    @Override
-    public void start() throws Exception {
-    }
-
-    @Override
-    public void stop() throws Exception {
-    }
-
-    @Override
-    public void init(PluginRegistry registry) throws Exception {
+        Path root = workspace.toAbsolutePath().normalize();
+        for (String token : userInput.split("\\s+")) {
+            String candidate = token.replaceAll("^[`'\"(<\\[]+|[`'\"),>\\].:;]+$", "");
+            if (!candidate.endsWith(".java")) {
+                continue;
+            }
+            Path path = root.resolve(candidate).normalize();
+            if (path.startsWith(root) && Files.isRegularFile(path)) {
+                return Optional.of(path);
+            }
+        }
+        return Optional.empty();
     }
 }

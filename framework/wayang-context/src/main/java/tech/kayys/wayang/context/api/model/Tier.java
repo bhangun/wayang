@@ -7,6 +7,7 @@ package tech.kayys.wayang.context.api.model;
  * ever an AI-generated summary or paraphrase, only exact source substrings.
  *
  *   FULL_SOURCE        the file actively being edited
+ *   SOURCE_CHUNK       exact line window from a large source file
  *   SKELETON           reachable file, full interface: every member's
  *                       signature + Javadoc, bodies stripped
  *   SKELETON_PRUNED     reachable file, interface narrowed to only the
@@ -21,10 +22,11 @@ package tech.kayys.wayang.context.api.model;
  */
 public enum Tier {
     FULL_SOURCE(1),
-    SKELETON(2),
-    SKELETON_PRUNED(3),
-    SIGNATURE_DIGEST(4),
-    EXCLUDED(5);
+    SOURCE_CHUNK(2),
+    SKELETON(3),
+    SKELETON_PRUNED(4),
+    SIGNATURE_DIGEST(5),
+    EXCLUDED(6);
 
     private final int level;
 

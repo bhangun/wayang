@@ -1,6 +1,6 @@
 package tech.kayys.wayang.validation;
 
-import tech.kayys.wayang.definition.AgentDefinition;
+import tech.kayys.wayang.core.AgentDefinition;
 
 /**
  * Specific Validators

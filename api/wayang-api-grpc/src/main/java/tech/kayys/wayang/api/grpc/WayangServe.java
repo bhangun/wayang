@@ -20,6 +20,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
+import io.vertx.core.Vertx;
+import tech.kayys.wayang.agent.orchestration.graph.resume.VertxAutoResumeListener;
 
 public class WayangServe {
     private static final Logger log = LoggerFactory.getLogger(WayangServe.class);
@@ -56,6 +58,11 @@ public class WayangServe {
 
         final Server[] grpcHolder = new Server[1];
         final HttpServer[] httpHolder = new HttpServer[1];
+        final Vertx vertx = Vertx.vertx();
+        
+        // Register the Auto-Resume Listener
+        VertxAutoResumeListener autoResumeListener = new VertxAutoResumeListener(vertx);
+        autoResumeListener.onStart(null);
 
         if (startGrpc) {
             Server server = null;
@@ -64,6 +71,7 @@ public class WayangServe {
                         .addService(new WayangProjectService())
                         .addService(new GrpcSessionService())
                         .addService(new GrpcSdkService())
+                        .addService(new WayangCodeService())
                         .build()
                         .start();
                 grpcHolder[0] = server;
@@ -74,6 +82,7 @@ public class WayangServe {
                         .addService(new WayangProjectService())
                         .addService(new GrpcSessionService())
                         .addService(new GrpcSdkService())
+                        .addService(new WayangCodeService())
                         .build()
                         .start();
                 grpcHolder[0] = server;
@@ -296,6 +305,22 @@ public class WayangServe {
                             return;
                         }
 
+                        // /hitl/tasks/{taskId}/approve -> mock approval endpoint
+                        if (suffix.startsWith("hitl/tasks/") && suffix.endsWith("/approve") && "POST".equalsIgnoreCase(method)) {
+                            String taskId = suffix.substring("hitl/tasks/".length(), suffix.length() - "/approve".length());
+                            io.vertx.core.json.JsonObject eventJson = new io.vertx.core.json.JsonObject().put("taskId", taskId);
+                            vertx.eventBus().publish(VertxAutoResumeListener.HITL_APPROVED_ADDRESS, eventJson);
+                            
+                            String resp = "{\"status\":\"approved\", \"taskId\":\"" + taskId + "\"}";
+                            exchange.getResponseHeaders().add("Content-Type", "application/json");
+                            byte[] out = resp.getBytes(StandardCharsets.UTF_8);
+                            exchange.sendResponseHeaders(200, out.length);
+                            try (OutputStream os = exchange.getResponseBody()) {
+                                os.write(out);
+                            }
+                            return;
+                        }
+
                         exchange.sendResponseHeaders(404, -1);
                     } catch (Exception e) {
                         log.warn("REST handler error", e);
@@ -319,6 +344,11 @@ public class WayangServe {
             try {
                 if (httpHolder[0] != null)
                     httpHolder[0].stop(0);
+            } catch (Exception ignored) {
+            }
+            try {
+                if (vertx != null)
+                    vertx.close();
             } catch (Exception ignored) {
             }
             try {

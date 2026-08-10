@@ -1,4 +1,4 @@
-package tech.kayys.wayang.definition;
+package tech.kayys.wayang.workflow;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,7 +27,7 @@ import tech.kayys.wayang.resource.ResourceType;
  * Workflow Descriptor
  */
 public record WorkflowDescriptor(
-    String id,
+    String workflowId,
     String name,
     String version,
     String description,
@@ -40,8 +40,8 @@ public record WorkflowDescriptor(
 ) implements Descriptor {
     
     @Override
-    public ResourceId resourceId() {
-        return new ResourceId.WorkflowId(Id.fromString(id));
+    public ResourceId id() {
+        return new ResourceId.WorkflowId(Id.fromString(workflowId));
     }
     
     @Override

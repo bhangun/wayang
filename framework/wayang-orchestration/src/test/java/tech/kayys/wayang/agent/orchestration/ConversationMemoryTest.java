@@ -1,7 +1,7 @@
 package tech.kayys.wayang.agent.orchestration;
 
 import org.junit.jupiter.api.Test;
-import tech.kayys.wayang.agent.spi.InferenceTypes.ChatMessage;
+import tech.kayys.wayang.provider.ChatMessage;
 
 import java.util.List;
 
@@ -19,7 +19,7 @@ class ConversationMemoryTest {
 
         List<ChatMessage> messages = memory.getMessages();
         assertThat(messages).hasSize(2);
-        assertThat(messages).extracting(ChatMessage::content)
+        assertThat(messages).extracting(ChatMessage::textOnly)
                 .containsExactly("second", "third");
     }
 
@@ -31,8 +31,10 @@ class ConversationMemoryTest {
         memory.addToolResult("call-1", largeResult);
 
         ChatMessage message = memory.getMessages().getFirst();
-        assertThat(message.role()).isEqualTo("tool");
-        assertThat(message.content()).contains("[result compressed]");
-        assertThat(message.content()).hasSizeLessThan(largeResult.length());
+        assertThat(message.role).isEqualTo(ChatMessage.Role.USER);
+        tech.kayys.wayang.provider.ContentBlock.ToolResult tr = 
+            (tech.kayys.wayang.provider.ContentBlock.ToolResult) message.content.getFirst();
+        assertThat(tr.content()).contains("[result compressed]");
+        assertThat(tr.content()).hasSizeLessThan(largeResult.length());
     }
 }

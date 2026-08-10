@@ -9,11 +9,11 @@ import tech.kayys.wayang.context.api.model.CompiledContext;
 import tech.kayys.wayang.context.api.model.ModuleIndex;
 import tech.kayys.wayang.context.api.model.ReachabilityResult;
 import tech.kayys.wayang.context.api.model.SkeletonResult;
+import tech.kayys.wayang.context.api.model.SourceChunk;
 import tech.kayys.wayang.context.api.model.Tier;
 import tech.kayys.wayang.context.api.model.TierEntry;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -36,13 +36,21 @@ public final class DefaultBudgetedContextCompiler implements BudgetedContextComp
     private final Skeletonizer skeletonizer;
     private final TokenEstimator tokenEstimator;
     private final RelevanceScorer relevanceScorer;
+    private final SourceCodeChunker sourceChunker;
 
     public DefaultBudgetedContextCompiler(SymbolResolver symbolResolver, Skeletonizer skeletonizer,
                                            TokenEstimator tokenEstimator, RelevanceScorer relevanceScorer) {
+        this(symbolResolver, skeletonizer, tokenEstimator, relevanceScorer, new SourceCodeChunker());
+    }
+
+    public DefaultBudgetedContextCompiler(SymbolResolver symbolResolver, Skeletonizer skeletonizer,
+                                           TokenEstimator tokenEstimator, RelevanceScorer relevanceScorer,
+                                           SourceCodeChunker sourceChunker) {
         this.symbolResolver = symbolResolver;
         this.skeletonizer = skeletonizer;
         this.tokenEstimator = tokenEstimator;
         this.relevanceScorer = relevanceScorer;
+        this.sourceChunker = sourceChunker;
     }
 
     @Override
@@ -56,10 +64,7 @@ public final class DefaultBudgetedContextCompiler implements BudgetedContextComp
         ReachabilityResult reachability = symbolResolver.resolve(index, target, maxHops);
 
         List<TierEntry> entries = new ArrayList<>();
-        String targetSource = readOrThrow(target);
-        long targetTokens = tokenEstimator.estimate(targetSource);
-        entries.add(new TierEntry(target, Tier.FULL_SOURCE, targetSource, targetTokens, 0));
-        long remaining = tokenBudget - targetTokens;
+        long remaining = addTargetContext(entries, target, tokenBudget);
 
         List<Path> ranked = reachability.reachable().keySet().stream()
                 .sorted(Comparator.comparingDouble(
@@ -69,31 +74,37 @@ public final class DefaultBudgetedContextCompiler implements BudgetedContextComp
         for (Path dep : ranked) {
             if (remaining <= 0) break;
 
-            String source;
+            List<SourceChunk> chunks;
             try {
-                source = Files.readString(dep);
-            } catch (IOException unreadable) {
+                chunks = sourceChunker.chunk(dep);
+            } catch (RuntimeException unreadable) {
                 continue; // same policy as an unresolved import: quietly excluded
             }
 
             Integer hop = reachability.reachable().get(dep);
             Set<String> usedMembers = reachability.usedMembers().getOrDefault(dep, Set.of());
 
-            TierEntry chosen = tryTier(dep, Tier.SKELETON,
-                    skeletonizer.skeletonize(source).skeleton(), hop, remaining);
+            TierEntry chosen = null;
+            if (chunks.size() == 1) {
+                String source = chunks.get(0).content();
+                chosen = tryTier(dep, Tier.SKELETON,
+                        skeletonizer.skeletonize(source).skeleton(), hop, remaining);
 
-            if (chosen == null && !usedMembers.isEmpty()) {
-                SkeletonResult pruned = skeletonizer.skeletonizePruned(source, usedMembers);
-                chosen = tryTier(dep, Tier.SKELETON_PRUNED, pruned.skeleton(), hop, remaining);
-            }
+                if (chosen == null && !usedMembers.isEmpty()) {
+                    SkeletonResult pruned = skeletonizer.skeletonizePruned(source, usedMembers);
+                    chosen = tryTier(dep, Tier.SKELETON_PRUNED, pruned.skeleton(), hop, remaining);
+                }
 
-            if (chosen == null) {
-                chosen = tryTier(dep, Tier.SIGNATURE_DIGEST, skeletonizer.digest(source), hop, remaining);
+                if (chosen == null) {
+                    chosen = tryTier(dep, Tier.SIGNATURE_DIGEST, skeletonizer.digest(source), hop, remaining);
+                }
             }
 
             if (chosen != null) {
                 entries.add(chosen);
                 remaining -= chosen.tokens();
+            } else {
+                remaining = addChunks(entries, chunks, hop, remaining);
             }
         }
 
@@ -113,6 +124,30 @@ public final class DefaultBudgetedContextCompiler implements BudgetedContextComp
         );
     }
 
+    private long addTargetContext(List<TierEntry> entries, Path target, long tokenBudget) {
+        List<SourceChunk> chunks = sourceChunker.chunk(target);
+        if (chunks.size() == 1) {
+            SourceChunk chunk = chunks.get(0);
+            long tokens = tokenEstimator.estimate(chunk.content());
+            if (tokens <= tokenBudget) {
+                entries.add(new TierEntry(target, Tier.FULL_SOURCE, chunk.content(), tokens, 0));
+                return tokenBudget - tokens;
+            }
+        }
+        return addChunks(entries, chunks, 0, tokenBudget);
+    }
+
+    private long addChunks(List<TierEntry> entries, List<SourceChunk> chunks, Integer hop, long remaining) {
+        for (SourceChunk chunk : chunks) {
+            if (remaining <= 0) break;
+            TierEntry entry = tryTier(chunk.path(), Tier.SOURCE_CHUNK, chunk.toPromptContent(), hop, remaining);
+            if (entry == null) break;
+            entries.add(entry);
+            remaining -= entry.tokens();
+        }
+        return remaining;
+    }
+
     private TierEntry tryTier(Path path, Tier tier, String content, Integer hop, long budgetRemaining) {
         long tokens = tokenEstimator.estimate(content);
         if (tokens > budgetRemaining) return null;
@@ -127,11 +162,4 @@ public final class DefaultBudgetedContextCompiler implements BudgetedContextComp
         }
     }
 
-    private String readOrThrow(Path file) {
-        try {
-            return Files.readString(file);
-        } catch (IOException e) {
-            throw new UncheckedIOException("could not read target file " + file, e);
-        }
-    }
 }

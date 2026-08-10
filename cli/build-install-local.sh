@@ -13,7 +13,7 @@ BINARY_NAME="wayang"
 # ---------- locate project ----------
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-CLI_PROJECT="${REPO_ROOT}/cli/wayang-gollek-cli"
+CLI_PROJECT="${REPO_ROOT}/cli/wayang-cli"
 
 # ---------- argument parsing ----------
 while [[ $# -gt 0 ]]; do

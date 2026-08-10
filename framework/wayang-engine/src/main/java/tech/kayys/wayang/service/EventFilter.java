@@ -10,7 +10,7 @@ import tech.kayys.wayang.resource.Resource;
 import tech.kayys.wayang.resource.BaseResource;
 
 
-import tech.kayys.wayang.event.CorrelationId;
+import tech.kayys.wayang.identity.ResourceId.CorrelationId;
 import tech.kayys.wayang.event.Event;
 import tech.kayys.wayang.event.EventSource;
 import tech.kayys.wayang.event.EventType;

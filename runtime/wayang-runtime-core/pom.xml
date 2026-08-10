@@ -29,7 +29,6 @@
 
     <properties>
         <gollek.version>0.1.0-SNAPSHOT</gollek.version>
-        <lombok.version>1.18.42</lombok.version>
     </properties>
 
   <dependencies>
@@ -190,12 +189,6 @@
     </dependency>
 
     <!-- Lombok -->
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <version>${lombok.version}</version>
-      <scope>provided</scope>
-    </dependency>
 
     <!-- Tool Integration -->
     <dependency>

@@ -14,6 +14,8 @@ import java.time.Instant;
 import java.util.*;
 
 import tech.kayys.wayang.identity.ResourceId.EventId;
+import tech.kayys.wayang.identity.ResourceId.CorrelationId;
+import tech.kayys.wayang.identity.ResourceId.CausationId;
 import tech.kayys.wayang.resource.Resource;
 
 /**
@@ -24,7 +26,7 @@ public interface Event extends Resource {
     
     EventId id();
     
-    EventType type();
+    EventType eventType();
     
     Instant occurredAt();
     

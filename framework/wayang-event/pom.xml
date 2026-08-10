@@ -19,7 +19,30 @@
     </description>
 
     <dependencies>
-        <!-- Parent provides common dependencies -->
-   
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-extension</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-spi</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-skill</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-workflow</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

@@ -1,4 +1,4 @@
-package tech.kayys.wayang.definition;
+package tech.kayys.wayang.core;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,6 +12,7 @@ import tech.kayys.wayang.resource.BaseResource;
 
 import java.util.*;
 
+import tech.kayys.wayang.definition.Definition;
 import tech.kayys.wayang.extension.Id;
 import tech.kayys.wayang.extension.Metadata;
 import tech.kayys.wayang.extension.Reference;

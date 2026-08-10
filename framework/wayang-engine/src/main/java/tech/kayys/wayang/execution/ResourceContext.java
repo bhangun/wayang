@@ -109,16 +109,16 @@ public final class ResourceContext {
         }
 
         public Builder resource(String key, Object value) {
-            if (this.resources == Map.of()) {
-                this.resources = new java.util.HashMap<>();
+            if (!(this.resources instanceof java.util.HashMap)) {
+                this.resources = new java.util.HashMap<>(this.resources);
             }
             this.resources.put(key, value);
             return this;
         }
 
         public Builder quota(String key, Object value) {
-            if (this.quotas == Map.of()) {
-                this.quotas = new java.util.HashMap<>();
+            if (!(this.quotas instanceof java.util.HashMap)) {
+                this.quotas = new java.util.HashMap<>(this.quotas);
             }
             this.quotas.put(key, value);
             return this;

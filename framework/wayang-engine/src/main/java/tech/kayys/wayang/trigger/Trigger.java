@@ -24,7 +24,7 @@ public interface Trigger extends Extension {
     /**
      * Get trigger type
      */
-    TriggerType type();
+    TriggerType triggerType();
     
     /**
      * Check if event is supported

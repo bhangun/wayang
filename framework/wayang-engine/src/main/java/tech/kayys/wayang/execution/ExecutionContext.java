@@ -20,11 +20,6 @@ import java.util.UUID;
 public interface ExecutionContext {
 
     /**
-     * Returns the agent session.
-     */
-    AgentSession session();
-
-    /**
      * Returns the execution graph.
      */
     ExecutionGraph graph();
@@ -38,11 +33,6 @@ public interface ExecutionContext {
      * Returns the resource context.
      */
     ResourceContext resources();
-
-    /**
-     * Returns the execution runtime.
-     */
-    ExecutionRuntime runtime();
 
     /**
      * Returns the current node being executed.

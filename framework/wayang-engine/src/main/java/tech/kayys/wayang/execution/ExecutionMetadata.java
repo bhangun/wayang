@@ -109,16 +109,16 @@ public final class ExecutionMetadata {
         }
 
         public Builder putTag(String key, Object value) {
-            if (this.tags == Map.of()) {
-                this.tags = new java.util.HashMap<>();
+            if (!(this.tags instanceof java.util.HashMap)) {
+                this.tags = new java.util.HashMap<>(this.tags);
             }
             this.tags.put(key, value);
             return this;
         }
 
         public Builder putCustom(String key, Object value) {
-            if (this.custom == Map.of()) {
-                this.custom = new java.util.HashMap<>();
+            if (!(this.custom instanceof java.util.HashMap)) {
+                this.custom = new java.util.HashMap<>(this.custom);
             }
             this.custom.put(key, value);
             return this;

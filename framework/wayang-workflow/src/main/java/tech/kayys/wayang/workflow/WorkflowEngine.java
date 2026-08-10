@@ -14,12 +14,8 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import tech.kayys.wayang.extension.Extension;
-import tech.kayys.wayang.planner.Plan;
-import tech.kayys.wayang.planner.PlanStep;
 import tech.kayys.wayang.resource.Artifact;
 import tech.kayys.wayang.extension.Metadata;
-import tech.kayys.wayang.definition.WorkflowDefinition;
-import tech.kayys.wayang.execution.ExecutionContext;
 
 
 /**
@@ -30,28 +26,21 @@ public interface WorkflowEngine extends Extension {
     /**
      * Execute a workflow
      */
-    WorkflowResult execute(WorkflowDefinition workflow, ExecutionContext context) throws Exception;
+    WorkflowResult execute(WorkflowDefinition workflow, Map<String, Object> context) throws Exception;
     
     /**
      * Execute with inputs
      */
-    default WorkflowResult execute(WorkflowDefinition workflow, ExecutionContext context, 
+    default WorkflowResult execute(WorkflowDefinition workflow, Map<String, Object> context, 
             Map<String, Object> inputs) throws Exception {
         return execute(workflow, context);
-    }
-    
-    /**
-     * Execute a plan
-     */
-    default WorkflowResult executePlan(Plan plan, ExecutionContext context) throws Exception {
-        return execute(convertPlanToWorkflow(plan), context);
     }
     
     /**
      * Execute asynchronously
      */
     default CompletableFuture<WorkflowResult> executeAsync(WorkflowDefinition workflow, 
-            ExecutionContext context) {
+            Map<String, Object> context) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 return execute(workflow, context);
@@ -61,20 +50,7 @@ public interface WorkflowEngine extends Extension {
         });
     }
     
-    /**
-     * Convert plan to workflow
-     */
-    default WorkflowDefinition convertPlanToWorkflow(Plan plan) {
-        return WorkflowDefinition.builder()
-            .metadata(Metadata.builder()
-                .name(plan.name())
-                .description(plan.description())
-                .version("1.0.0")
-                .now()
-                .build())
-            .build();
-    }
-    
+
     /**
      * Pause a workflow
      */

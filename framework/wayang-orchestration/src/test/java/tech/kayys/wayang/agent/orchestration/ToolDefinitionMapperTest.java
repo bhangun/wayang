@@ -1,7 +1,7 @@
 package tech.kayys.wayang.agent.orchestration;
 
 import org.junit.jupiter.api.Test;
-import tech.kayys.wayang.agent.spi.InferenceTypes.ToolDefinition;
+import tech.kayys.wayang.provider.ToolSpec;
 import tech.kayys.wayang.tools.spi.Tool;
 import tech.kayys.wayang.tools.spi.ToolContext;
 import tech.kayys.wayang.tools.spi.ToolResult;
@@ -14,11 +14,11 @@ class ToolDefinitionMapperTest {
 
     @Test
     void mapsCanonicalToolToAgentToolDefinition() {
-        ToolDefinition definition = ToolDefinitionMapper.fromTool(new EchoTool());
+        ToolSpec definition = ToolDefinitionMapper.fromTool(new EchoTool());
 
         assertThat(definition.name()).isEqualTo("echo");
         assertThat(definition.description()).isEqualTo("Echo input text");
-        assertThat(definition.parameters()).containsEntry("type", "object");
+        assertThat(definition.inputSchema()).containsEntry("type", "object");
     }
 
     private static final class EchoTool implements Tool {

@@ -24,7 +24,7 @@
         </dependency>
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-runtime</artifactId>
+            <artifactId>wayang-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -35,6 +35,11 @@
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-spi</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-event</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

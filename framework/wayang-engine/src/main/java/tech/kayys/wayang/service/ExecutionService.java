@@ -15,10 +15,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import tech.kayys.wayang.definition.AgentDefinition;
-import tech.kayys.wayang.definition.SkillDefinition;
-import tech.kayys.wayang.definition.WorkflowDefinition;
-import tech.kayys.wayang.event.CorrelationId;
+import tech.kayys.wayang.core.AgentDefinition;
+import tech.kayys.wayang.skill.spi.SkillDefinition;
+import tech.kayys.wayang.workflow.WorkflowDefinition;
+import tech.kayys.wayang.identity.ResourceId.CorrelationId;
 import tech.kayys.wayang.execution.ExecutionContext;
 import tech.kayys.wayang.execution.ExecutionState;
 

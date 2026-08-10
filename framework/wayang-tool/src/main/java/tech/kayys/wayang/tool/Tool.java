@@ -14,7 +14,7 @@ public interface Tool extends Extension {
     /**
      * Returns the set of capabilities (e.g., DomainScope, RequiresNetwork) exposed by this tool.
      */
-    default Collection<Capability> capabilities() {
+    default Collection<Capability> toolCapabilities() {
         return Collections.emptyList();
     }
 }

@@ -1,12 +1,12 @@
 package tech.kayys.wayang.spi.skill;
 
-import tech.kayys.wayang.spi.plugin.ExtensionPoint;
+import tech.kayys.wayang.extension.Extension;
 
 /**
- * Skill represents a modular rule, guideline, or instruction set for an Agent.
- * This is the base SPI for Wayang-Projects/Skills-Pool.
+ * Skill represents a set of related tools and behaviors.
+ * This is the base SPI for Wayang-Projects/Wayang-Skills.
  */
-public interface Skill extends ExtensionPoint {
+public interface Skill extends Extension {
     
     /**
      * Gets the unique identifier of the skill.

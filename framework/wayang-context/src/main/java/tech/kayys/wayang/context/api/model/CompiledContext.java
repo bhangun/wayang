@@ -84,6 +84,7 @@ public final class CompiledContext {
     private String tierLabel(Tier tier) {
         return switch (tier) {
             case FULL_SOURCE -> "FULL SOURCE";
+            case SOURCE_CHUNK -> "SOURCE CHUNK";
             case SKELETON -> "SKELETON";
             case SKELETON_PRUNED -> "SKELETON, PRUNED TO USED MEMBERS";
             case SIGNATURE_DIGEST -> "SIGNATURE DIGEST";
@@ -92,13 +93,16 @@ public final class CompiledContext {
     }
 
     public String summary() {
+        long tier1 = entries.stream().filter(e -> e.tier() == Tier.FULL_SOURCE).count();
+        long chunked = entries.stream().filter(e -> e.tier() == Tier.SOURCE_CHUNK).count();
         long tier2 = entries.stream().filter(e -> e.tier() == Tier.SKELETON).count();
         long tier2Pruned = entries.stream().filter(e -> e.tier() == Tier.SKELETON_PRUNED).count();
         long tier3 = entries.stream().filter(e -> e.tier() == Tier.SIGNATURE_DIGEST).count();
         StringBuilder sb = new StringBuilder();
         sb.append("Target file: ").append(targetFile).append('\n');
         sb.append("Repo files scanned: ").append(totalRepoFiles).append('\n');
-        sb.append("Tier 1 (full source): 1 file\n");
+        sb.append("Tier 1 (full source): ").append(tier1).append(" file(s)\n");
+        sb.append("Tier 1b (source chunks): ").append(chunked).append(" chunk(s)\n");
         sb.append("Tier 2 (full skeleton): ").append(tier2).append(" files\n");
         sb.append("Tier 2b (pruned skeleton): ").append(tier2Pruned).append(" files\n");
         sb.append("Tier 3 (signature digest): ").append(tier3).append(" files\n");

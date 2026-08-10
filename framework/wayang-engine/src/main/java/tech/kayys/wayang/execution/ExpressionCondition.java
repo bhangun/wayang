@@ -71,7 +71,7 @@ public final class ExpressionCondition implements EdgeCondition {
         if (expression.startsWith("variable.")) {
             String varName = expression.substring(9);
             if (context != null && context.variables() != null) {
-                return context.variables().has(new VariableKey<>(varName, Object.class));
+                return context.variables().has(VariableKey.of(varName, Object.class));
             }
         }
 

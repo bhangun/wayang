@@ -56,10 +56,8 @@
         <module>wayang-error-spi</module>
         <module>wayang-event</module>
         <module>wayang-extension</module>
-        <module>wayang-governance</module>
+
         <module>wayang-graph</module>
-        <module>wayang-guardrails</module>
-        <module>wayang-hitl</module>
         <module>wayang-knowledge</module>
         <module>wayang-mcp</module>
         <module>wayang-memory</module>

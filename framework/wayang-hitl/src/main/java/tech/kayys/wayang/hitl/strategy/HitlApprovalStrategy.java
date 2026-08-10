@@ -32,7 +32,7 @@ public class HitlApprovalStrategy implements ApprovalStrategy {
         boolean requiresApproval = false;
         
         // Check if any capability of the tool inherently requires approval
-        for (Capability capability : invocation.tool().capabilities()) {
+        for (Capability capability : invocation.tool().toolCapabilities()) {
             if (capability.requiresApproval()) {
                 requiresApproval = true;
                 break;
@@ -43,9 +43,15 @@ public class HitlApprovalStrategy implements ApprovalStrategy {
             // 1. Create a HumanTask
             HumanTaskId taskId = new HumanTaskId(UUID.randomUUID().toString());
             
-            // In a real app, this would be persisted to the database via a Repository
-            HumanTask task = new HumanTask(taskId, "tool_approval", "Approve tool execution: " + invocation.tool().name());
-            task.updateStatus(HumanTaskStatus.CREATED, "System");
+            HumanTask task = HumanTask.builder()
+                .workflowRunId("system")
+                .nodeId("tool-approval")
+                .tenantId("default")
+                .taskType("tool_approval")
+                .title("Approve tool execution: " + invocation.tool().name())
+                .description("Requires human approval to proceed.")
+                .build();
+            // The task status update is now handled by the builder or domain logic if needed.
 
             // 2. Suspend Agent Execution
             throw new ApprovalRequiredException(

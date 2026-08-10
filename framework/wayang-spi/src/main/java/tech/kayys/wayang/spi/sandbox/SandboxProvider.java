@@ -1,11 +1,11 @@
 package tech.kayys.wayang.spi.sandbox;
 
-import tech.kayys.wayang.spi.plugin.ExtensionPoint;
+import tech.kayys.wayang.extension.Extension;
 
 /**
- * Service Provider Interface for Sandbox implementations.
+ * Sandbox Provider - provides isolated execution environments
  */
-public interface SandboxProvider extends ExtensionPoint {
+public interface SandboxProvider extends Extension {
     
     /**
      * Returns the unique identifier of this sandbox provider (e.g., "docker", "nono").

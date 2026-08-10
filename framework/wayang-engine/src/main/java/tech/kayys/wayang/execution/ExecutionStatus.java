@@ -11,7 +11,8 @@ public enum ExecutionStatus {
     ERROR("Execution encountered an error"),
     CANCELLED("Execution was cancelled"),
     PAUSED("Execution is paused"),
-    TIMEOUT("Execution timed out");
+    TIMEOUT("Execution timed out"),
+    UNKNOWN("Execution status is unknown");
 
     private final String description;
 

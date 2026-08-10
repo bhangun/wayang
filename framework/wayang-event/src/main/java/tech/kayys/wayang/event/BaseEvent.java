@@ -16,6 +16,8 @@ import tech.kayys.wayang.extension.Id;
 import tech.kayys.wayang.extension.Metadata;
 import tech.kayys.wayang.identity.ResourceId;
 import tech.kayys.wayang.identity.ResourceId.EventId;
+import tech.kayys.wayang.identity.ResourceId.CorrelationId;
+import tech.kayys.wayang.identity.ResourceId.CausationId;
 import tech.kayys.wayang.resource.BaseResource;
 import tech.kayys.wayang.resource.ResourceType;
 
@@ -56,7 +58,7 @@ public abstract class BaseEvent extends BaseResource implements Event {
     }
     
     @Override
-    public EventType type() { return type; }
+    public EventType eventType() { return type; }
     
     @Override
     public Instant occurredAt() { return occurredAt; }

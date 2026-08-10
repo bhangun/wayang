@@ -17,7 +17,6 @@
         <maven.compiler.target>25</maven.compiler.target>
         <gollek.version>0.1.0-SNAPSHOT</gollek.version>
         <gamelan.version>1.0.0-SNAPSHOT</gamelan.version>
-        <lombok.version>1.18.42</lombok.version>
         <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
         <jandex.maven.plugin.version>3.2.7</jandex.maven.plugin.version>
         <quarkus.platform.version>3.32.2</quarkus.platform.version>
@@ -47,11 +46,6 @@
                 <artifactId>wayang-tool-spi</artifactId>
                 <version>1.0.0-SNAPSHOT</version>
             </dependency>
-            <dependency>
-                <groupId>org.projectlombok</groupId>
-                <artifactId>lombok</artifactId>
-                <version>${lombok.version}</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -60,6 +54,7 @@
     </dependencies>
 
     <modules>
+        <module>api/wayang-api-grpc</module>
         <module>framework</module>
         <module>runtime/wayang-sandbox</module>
         <module>runtime/wayang-agent-runtime</module>
@@ -83,6 +78,7 @@
 
 
         <!-- CLI -->
+        <module>cli/wayang-tui</module>
         <module>cli/wayang-cli</module>
         <module>cli/agent-cli</module>
     </modules>

@@ -14,16 +14,16 @@ import tech.kayys.wayang.tool.ToolInvocation;
 public class GuardrailApprovalStrategy implements ApprovalStrategy {
 
     private final GuardrailsEngine engine;
-    private final GuardrailFallbackStrategy fallbackStrategy;
+    private final GuardrailFallbackResolver fallbackResolver;
 
-    public GuardrailApprovalStrategy(GuardrailsEngine engine, GuardrailFallbackStrategy fallbackStrategy) {
+    public GuardrailApprovalStrategy(GuardrailsEngine engine, GuardrailFallbackResolver fallbackResolver) {
         this.engine = engine;
-        this.fallbackStrategy = fallbackStrategy;
+        this.fallbackResolver = fallbackResolver;
     }
 
     public GuardrailApprovalStrategy(GuardrailsEngine engine) {
-        // Default to HITL escalation as per user's preference
-        this(engine, new HitlEscalationFallbackStrategy());
+        // Default to resolving dynamically, with HITL as the ultimate fallback
+        this(engine, new DynamicGuardrailFallbackResolver());
     }
 
     @Override
@@ -36,7 +36,8 @@ public class GuardrailApprovalStrategy implements ApprovalStrategy {
         ExecutionResult result = engine.evaluate(inputToScan);
 
         if (!result.isAllowed()) { // Assuming ExecutionResult has some indication of failure
-            fallbackStrategy.handleViolation(agent, invocation, result);
+            GuardrailFallbackStrategy strategy = fallbackResolver.resolve(agent, invocation);
+            strategy.handleViolation(agent, invocation, result);
         }
     }
 }

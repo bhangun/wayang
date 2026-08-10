@@ -89,12 +89,13 @@ public final class HeuristicSymbolResolver implements SymbolResolver {
                 // precise call-site attribution here, only "this file is
                 // referenced"; member attribution for these is filled in by
                 // the conservative cross-reference pass below.
+                final int currentHop = hop;
                 for (String typeRef : symbols.referencedTypeNames) {
                     index.resolveTypeName(typeRef)
                             .or(() -> index.resolveSamePackageType(symbols.packageName, typeRef))
                             .ifPresent(dep -> {
                                 bumpCallSite(result, dep);
-                                addIfNew(dep, hop, visited, result, nextLayer);
+                                addIfNew(dep, currentHop, visited, result, nextLayer);
                             });
                 }
 

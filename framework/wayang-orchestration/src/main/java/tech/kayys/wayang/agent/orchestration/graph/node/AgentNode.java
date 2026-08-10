@@ -1,6 +1,6 @@
 package tech.kayys.wayang.agent.orchestration.graph.node;
 
-import tech.kayys.wayang.agent.Agent;
+import tech.kayys.wayang.spi.agent.Agent;
 import tech.kayys.wayang.agent.orchestration.graph.state.GraphState;
 import tech.kayys.wayang.agent.orchestration.graph.state.StateUpdate;
 
@@ -36,9 +36,15 @@ public class AgentNode implements GraphNode {
         }
 
         // Delegate execution to the underlying ReAct / PlanAndSolve agent
-        String response = agent.run(input);
-
-        return new StateUpdate()
-                .put(outputKey, response);
+        try {
+            Object response = agent.process(input);
+            return new StateUpdate()
+                    .put(outputKey, response);
+        } catch (tech.kayys.wayang.agent.spi.approval.ApprovalRequiredException e) {
+            // Rethrow immediately so the graph engine pauses and waits for HITL
+            throw new RuntimeException("Execution paused for HITL approval", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Agent execution failed", e);
+        }
     }
 }

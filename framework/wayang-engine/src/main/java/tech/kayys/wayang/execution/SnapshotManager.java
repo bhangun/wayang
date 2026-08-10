@@ -43,9 +43,9 @@ public final class SnapshotManager {
                 .createdAt(Instant.now())
                 .build();
 
-        snapshots.put(snapshot.id(), snapshot);
+        snapshots.put(snapshot.getId(), snapshot);
         executionHistory.computeIfAbsent(executionId, k -> new ArrayList<>())
-                .add(snapshot.id());
+                .add(snapshot.getId());
 
         // Apply retention policy
         applyRetentionPolicy(executionId);
@@ -79,7 +79,7 @@ public final class SnapshotManager {
     public void deleteSnapshot(UUID snapshotId) {
         ExecutionSnapshot snapshot = snapshots.remove(snapshotId);
         if (snapshot != null) {
-            UUID executionId = snapshot.executionId();
+            UUID executionId = snapshot.getExecutionId();
             List<UUID> snapshotIds = executionHistory.get(executionId);
             if (snapshotIds != null) {
                 snapshotIds.remove(snapshotId);
@@ -161,11 +161,11 @@ public final class SnapshotManager {
         while (iterator.hasNext()) {
             Map.Entry<UUID, ExecutionSnapshot> entry = iterator.next();
             ExecutionSnapshot snapshot = entry.getValue();
-            if (snapshot.createdAt().plusMillis(ttlMillis).isBefore(Instant.now())) {
+            if (snapshot.getCreatedAt().plusMillis(ttlMillis).isBefore(Instant.now())) {
                 iterator.remove();
-                List<UUID> execSnapshots = executionHistory.get(snapshot.executionId());
+                List<UUID> execSnapshots = executionHistory.get(snapshot.getExecutionId());
                 if (execSnapshots != null) {
-                    execSnapshots.remove(snapshot.id());
+                    execSnapshots.remove(snapshot.getId());
                 }
             }
         }

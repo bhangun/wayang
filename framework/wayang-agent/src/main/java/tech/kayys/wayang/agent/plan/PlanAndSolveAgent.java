@@ -23,39 +23,4 @@ public class PlanAndSolveAgent extends BaseReActAgent {
         listener.onDone("stop");
     }
 
-    @Override
-    public void initialize() throws Exception {
-    }
-
-    @Override
-    public Object process(Object request) throws Exception {
-        return null;
-    }
-
-    @Override
-    public String getId() {
-        return "plan-and-solve";
-    }
-
-    @Override
-    public tech.kayys.wayang.spi.agent.AgentPipeline getPipeline() {
-        return null;
-    }
-
-    @Override
-    public String id() {
-        return "plan-and-solve";
-    }
-
-    @Override
-    public void start() throws Exception {
-    }
-
-    @Override
-    public void stop() throws Exception {
-    }
-
-    @Override
-    public void init(PluginRegistry registry) throws Exception {
-    }
 }

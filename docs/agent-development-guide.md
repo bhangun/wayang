@@ -168,3 +168,14 @@ Once dropped into the Wayang classpath (or plugin directory), your agent is auto
 Agent myAgent = wayangKernel.getAgentRegistry().getAgent("my-custom-agent");
 Object result = myAgent.process(new UserRequest("Analyze this data."));
 ```
+
+## 5. Context Management (`wayang-context`)
+
+Wayang natively supports advanced context window management via the `wayang-context` module.
+
+When building an agent, you can configure a `ContextCompiler` (such as the `BudgetedContextCompiler`) in the `AgentBuilder` or manually in your Agent implementation. This compiler automatically trims, summarizes, and prioritizes the chat history and system prompts to ensure they fit within the LLM's maximum token context window.
+
+```java
+AgentBuilder builder = new AgentBuilder(kernel)
+    .withContextCompiler(new BudgetedContextCompiler(8000));
+```

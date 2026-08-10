@@ -1,4 +1,4 @@
-package tech.kayys.wayang.definition;
+package tech.kayys.wayang.core;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

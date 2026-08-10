@@ -58,7 +58,7 @@ public interface Manifest extends Resource {
     
     String documentation();
     
-    Map<String, String> metadata();
+    tech.kayys.wayang.extension.Metadata metadata();
     
     ManifestStatus status();
     

@@ -8,10 +8,6 @@ import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 
 import tech.kayys.wayang.extension.Extension;
-import tech.kayys.wayang.plugin.execution.ExecutionContext;
-
-
-
 
 /**
  * Inference Provider - generates completions from models.
@@ -22,13 +18,6 @@ public interface InferenceProvider extends Extension {
      * Generate a completion
      */
     CompletionResult generate(CompletionRequest request) throws Exception;
-    
-    /**
-     * Generate with execution context
-     */
-    default CompletionResult generate(CompletionRequest request, ExecutionContext context) throws Exception {
-        return generate(request);
-    }
     
     /**
      * Stream generation

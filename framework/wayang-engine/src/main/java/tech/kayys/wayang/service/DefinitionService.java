@@ -13,9 +13,9 @@ import tech.kayys.wayang.resource.BaseResource;
 import java.util.List;
 import java.util.Optional;
 
-import tech.kayys.wayang.definition.AgentDefinition;
-import tech.kayys.wayang.definition.SkillDefinition;
-import tech.kayys.wayang.definition.WorkflowDefinition;
+import tech.kayys.wayang.core.AgentDefinition;
+import tech.kayys.wayang.skill.spi.SkillDefinition;
+import tech.kayys.wayang.workflow.WorkflowDefinition;
 
 /**
  * Definition Service - manages definitions

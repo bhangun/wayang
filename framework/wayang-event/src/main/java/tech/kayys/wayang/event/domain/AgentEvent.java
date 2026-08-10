@@ -1,12 +1,14 @@
 package tech.kayys.wayang.event.domain;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
-import tech.kayys.wayang.extension.Extension;
-import tech.kayys.wayang.resource.Resource;
+import tech.kayys.wayang.core.AgentDefinition;
+import tech.kayys.wayang.event.EventPayload;
+import tech.kayys.wayang.resource.Artifact;
 import tech.kayys.wayang.resource.BaseResource;
 
 

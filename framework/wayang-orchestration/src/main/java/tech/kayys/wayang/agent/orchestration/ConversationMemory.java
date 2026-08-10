@@ -1,9 +1,7 @@
 package tech.kayys.wayang.agent.orchestration;
 
-import tech.kayys.wayang.agent.spi.InferenceTypes.AssistantMessage;
-import tech.kayys.wayang.agent.spi.InferenceTypes.ChatMessage;
-import tech.kayys.wayang.agent.spi.InferenceTypes.ToolResultMessage;
-import tech.kayys.wayang.agent.spi.InferenceTypes.UserMessage;
+import tech.kayys.wayang.provider.ChatMessage;
+import tech.kayys.wayang.provider.ContentBlock;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -32,12 +30,12 @@ public class ConversationMemory {
     }
 
     public void addUser(String text) {
-        ChatMessage msg = new UserMessage(text);
+        ChatMessage msg = ChatMessage.userText(text);
         add(msg, estimate(text));
     }
 
     public void addAssistant(String content) {
-        ChatMessage msg = new AssistantMessage(content);
+        ChatMessage msg = ChatMessage.assistantText(content);
         add(msg, estimate(content));
     }
 
@@ -49,7 +47,7 @@ public class ConversationMemory {
                     + result.substring(result.length() - 1500);
         }
 
-        ChatMessage msg = new ToolResultMessage(toolCallId, null, stored);
+        ChatMessage msg = ChatMessage.toolResults(List.of(new ContentBlock.ToolResult(toolCallId, stored, false)));
         add(msg, estimate(stored));
     }
 
@@ -61,7 +59,7 @@ public class ConversationMemory {
     public int size() { return messages.size(); }
     public int estimatedTokens() { 
         return messages.stream()
-                .mapToInt(m -> estimate(m.content()))
+                .mapToInt(m -> estimate(m.textOnly()))
                 .sum(); 
     }
 

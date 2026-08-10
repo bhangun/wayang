@@ -5,7 +5,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-import tech.kayys.wayang.sandbox.ResourceRequirements;
+
 
 /**
  * Represents a single executable unit within an ExecutionGraph.
@@ -84,8 +84,5 @@ public interface ExecutionNode {
      */
     boolean isParallelizable();
 
-    /**
-     * Returns the resource requirements for this node.
-     */
-    ResourceRequirements resourceRequirements();
+
 }

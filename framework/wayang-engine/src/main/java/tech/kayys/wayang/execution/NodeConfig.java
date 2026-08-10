@@ -75,8 +75,8 @@ public final class NodeConfig {
         }
 
         public Builder put(String key, Object value) {
-            if (this.parameters == Map.of()) {
-                this.parameters = new java.util.HashMap<>();
+            if (!(this.parameters instanceof java.util.HashMap)) {
+                this.parameters = new java.util.HashMap<>(this.parameters);
             }
             this.parameters.put(key, value);
             return this;

@@ -19,14 +19,10 @@
     <dependencies>
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-tool-spi</artifactId>
+            <artifactId>wayang-tool</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-tool-core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-arc</artifactId>

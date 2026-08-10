@@ -1,6 +1,6 @@
 package tech.kayys.wayang.agent.orchestration;
 
-import tech.kayys.wayang.agent.spi.InferenceTypes.ToolDefinition;
+import tech.kayys.wayang.provider.ToolSpec;
 import tech.kayys.wayang.tools.spi.Tool;
 
 import java.util.List;
@@ -15,15 +15,15 @@ public final class ToolDefinitionMapper {
     private ToolDefinitionMapper() {
     }
 
-    public static ToolDefinition fromTool(Tool tool) {
+    public static ToolSpec fromTool(Tool tool) {
         Objects.requireNonNull(tool, "tool");
-        return new ToolDefinition(
+        return new ToolSpec(
                 tool.id(),
                 tool.description(),
                 safeSchema(tool.inputSchema()));
     }
 
-    public static List<ToolDefinition> fromTools(List<? extends Tool> tools) {
+    public static List<ToolSpec> fromTools(List<? extends Tool> tools) {
         if (tools == null || tools.isEmpty()) {
             return List.of();
         }

@@ -10,9 +10,12 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor {
 
     @Override
     public CompletionStage<AgentDecision> execute(ToolInvocation invocation) {
-        // In Phase 1, we simulate checking approval policies.
-        // If a real approval strategy was wired, it would return WaitForApproval.
-        // For now, we simulate execution or bypass directly to execution.
+        // Simulate checking approval policies.
+        if (invocation.name().equals("filesystem.write")) {
+            return CompletableFuture.completedFuture(
+                new AgentDecision.WaitForApproval("Requires user consent to write file")
+            );
+        }
         
         return CompletableFuture.completedFuture(
             new AgentDecision.ExecuteTool(invocation)

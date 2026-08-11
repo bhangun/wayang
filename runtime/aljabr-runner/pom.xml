@@ -20,6 +20,21 @@
             <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-runtime-core</artifactId>
             <version>${project.version}</version>
+            <exclusions>
+                <!-- alkhawarizm artifacts are not in any reachable repo -->
+                <exclusion>
+                    <groupId>tech.kayys.alkhawarizm</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>tech.kayys.gollek</groupId>
+                    <artifactId>gollek-sdk-protobuf</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>tech.kayys.gollek</groupId>
+                    <artifactId>gollek-sdk-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -28,6 +43,20 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <!-- In-memory DB for headless/CI execution -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-h2</artifactId>
+        </dependency>
+        <!-- JSON output -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
     </dependencies>
 

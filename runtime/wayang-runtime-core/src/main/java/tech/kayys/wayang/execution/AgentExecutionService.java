@@ -1,82 +1,86 @@
 package tech.kayys.wayang.execution;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
 import tech.kayys.wayang.agent.AgentContext;
 import tech.kayys.wayang.core.AgentDefinition;
 import tech.kayys.wayang.agent.AgentRequest;
-import tech.kayys.wayang.core.Id;
-import tech.kayys.wayang.execution.context.ContextPlanner;
-import tech.kayys.wayang.execution.memory.MemoryManager;
-import tech.kayys.wayang.execution.routing.ModelRouter;
-import tech.kayys.wayang.execution.routing.ModelSelector;
-import tech.kayys.wayang.inference.ModelInfo;
+import tech.kayys.wayang.provider.Provider;
 
 /**
- * Service for creating and managing AgentExecutions.
+ * Service for creating and managing {@link AgentExecution} instances.
  *
- * <p>Phase 3 additions: wires in {@link ModelRouter}, {@link ContextPlanner}, and
- * {@link MemoryManager} so every new execution starts with the right model,
- * pre-compiled context, and retrieved memory.</p>
+ * <p>Wires in CDI-managed {@link Provider} instances and passes them down to
+ * {@link DefaultAgentExecution} so the real ReAct loop can connect to the LLM
+ * provider instead of returning a stub response.</p>
  */
 @ApplicationScoped
 public class AgentExecutionService {
 
     @Inject
     CheckpointStore checkpointStore;
-    
+
     @Inject
     AgentToolExecutor toolExecutor;
 
+    /**
+     * All CDI-managed {@link Provider} beans discovered at startup.
+     * Typically there is one (e.g. Anthropic, OpenAI, Gollek), but the list
+     * allows multi-provider configurations.
+     */
     @Inject
-    ModelRouter modelRouter;
+    Instance<Provider> providerInstances;
 
-    @Inject
-    ContextPlanner contextPlanner;
-
-    @Inject
-    MemoryManager memoryManager;
+    // ------------------------------------------------------------------
+    // Factory
+    // ------------------------------------------------------------------
 
     public AgentExecution create(AgentDefinition agent, AgentRequest request, ExecutionBudget budget) {
-        String executionId = Id.random().asString();
-        
+        String executionId = java.util.UUID.randomUUID().toString();
+
         AgentContext agentContext = AgentContext.builder()
-            .id(new tech.kayys.wayang.identity.ResourceId.AgentId(new tech.kayys.wayang.extension.Id(java.util.UUID.randomUUID())))
+            .id(new tech.kayys.wayang.identity.ResourceId.AgentId(
+                    new tech.kayys.wayang.extension.Id(java.util.UUID.randomUUID())))
             .request(request)
             .build();
-            
-        ExecutionContext executionContext = ExecutionContext.builder()
-            .id(Id.fromString(executionId))
-            .build();
-            
+
+        // Collect all available Provider beans into a plain list so
+        // DefaultAgentExecution can resolve them without CDI dependency.
+        List<Provider> providers = new ArrayList<>();
+        if (providerInstances != null) {
+            providerInstances.forEach(providers::add);
+        }
+
         return new DefaultAgentExecution(
             executionId,
             agent,
-            agentContext, 
-            executionContext, 
-            budget, 
-            checkpointStore, 
-            toolExecutor
+            agentContext,
+            budget,
+            checkpointStore,
+            toolExecutor,
+            providers
         );
     }
+
+    // ------------------------------------------------------------------
+    // Resume / approval
+    // ------------------------------------------------------------------
 
     public AgentExecution resume(String executionId) {
         java.util.Optional<AgentContext> contextOpt = checkpointStore.load(executionId);
         if (contextOpt.isEmpty()) {
             throw new IllegalArgumentException("Execution not found: " + executionId);
         }
-        
-        // Recover minimal execution info
-        ExecutionContext executionContext = ExecutionContext.builder()
-            .id(Id.fromString(executionId))
-            .build();
-            
+
         DefaultAgentExecution execution = new DefaultAgentExecution(
             executionId,
-            null, // Could recover agent definition if needed
+            null,
             contextOpt.get(),
-            executionContext,
             null,
             checkpointStore,
             toolExecutor
@@ -88,9 +92,7 @@ public class AgentExecutionService {
     public void approve(String executionId, AgentDecision decision) {
         AgentExecution execution = resume(executionId);
         if (decision instanceof AgentDecision.WaitForApproval) {
-            // Re-run with the approval applied
-            // In a complete implementation, this would insert the approval 
-            // into the state and re-trigger execution.
+            // Re-run with the approval applied.
             execution.execute();
         }
     }

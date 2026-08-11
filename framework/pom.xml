@@ -70,6 +70,7 @@
         <module>wayang-provider</module>
         <module>wayang-registry</module>
         <module>wayang-resilience</module>
+        <module>wayang-runtime-spi</module>
         <module>wayang-schemas</module>
         <module>wayang-security</module>
         <module>wayang-shaker</module>

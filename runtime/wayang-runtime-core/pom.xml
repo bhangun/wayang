@@ -17,7 +17,7 @@
   <!-- integration points. Minimal core - domains extracted to     -->
   <!-- separate modules (agent-inference, agent-memory, etc.)      -->
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <artifactId>wayang-core</artifactId>
+  <artifactId>wayang-runtime-core</artifactId>
   <packaging>jar</packaging>
   <name>Gollek Agent Core</name>
   <description>
@@ -57,25 +57,35 @@
     </dependency>
     -->
 
-    <!-- Gollek core SPI (Message, InferenceRequest, etc.) - optional, adapter only -->
+    <!-- gollek-spi and gollek-spi-inference removed: not in local repo and not used by any source -->
     <dependency>
-      <groupId>tech.kayys.gollek</groupId>
-      <artifactId>gollek-spi</artifactId>
-      <version>${gollek.version}</version>
-      <optional>true</optional>
+      <groupId>tech.kayys.wayang</groupId>
+      <artifactId>wayang-core</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>tech.kayys.gollek</groupId>
-      <artifactId>gollek-spi-inference</artifactId>
-      <version>${gollek.version}</version>
-      <optional>true</optional>
+      <groupId>tech.kayys.wayang</groupId>
+      <artifactId>wayang-agent</artifactId>
+      <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>tech.kayys.wayang</groupId>
+      <artifactId>wayang-tool</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>tech.kayys.wayang</groupId>
+      <artifactId>wayang-runtime-spi</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <!--
     <dependency>
       <groupId>tech.kayys.gollek</groupId>
       <artifactId>gollek-engine</artifactId>
       <version>${gollek.version}</version>
       <optional>true</optional>
     </dependency>
+    -->
 
     <!-- Quarkus Extensions -->
     <dependency>
@@ -157,13 +167,30 @@
       <artifactId>gollek-sdk</artifactId>
       <version>${gollek.version}</version>
       <optional>true</optional>
+      <exclusions>
+        <!-- These alkhawarizm artifacts are not in any reachable repo -->
+        <exclusion>
+          <groupId>tech.kayys.alkhawarizm</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>tech.kayys.gollek</groupId>
+          <artifactId>gollek-sdk-protobuf</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>tech.kayys.gollek</groupId>
+          <artifactId>gollek-sdk-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
+    <!--
     <dependency>
       <groupId>tech.kayys.wayang</groupId>
       <artifactId>wayang-gollek-sdk</artifactId>
       <version>${project.version}</version>
       <optional>true</optional>
     </dependency>
+    -->
 
     <!-- Gollek Agent Skill Management - optional at runtime -->
     <!--
@@ -256,20 +283,6 @@
   </dependencies>
   <build>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.13.0</version>
-        <configuration>
-          <annotationProcessorPaths>
-            <path>
-              <groupId>org.projectlombok</groupId>
-              <artifactId>lombok</artifactId>
-              <version>1.18.34</version>
-            </path>
-          </annotationProcessorPaths>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>io.smallrye</groupId>
         <artifactId>jandex-maven-plugin</artifactId>

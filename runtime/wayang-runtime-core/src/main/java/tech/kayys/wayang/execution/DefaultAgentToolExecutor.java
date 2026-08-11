@@ -13,7 +13,7 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor {
         // Simulate checking approval policies.
         if (invocation.name().equals("filesystem.write")) {
             return CompletableFuture.completedFuture(
-                new AgentDecision.WaitForApproval("Requires user consent to write file")
+                new AgentDecision.WaitForApproval(invocation)
             );
         }
         

@@ -42,6 +42,11 @@ public class DefaultAgentExecution implements AgentExecution {
     private final AgentToolExecutor toolExecutor;
     /** Providers resolved from CDI — may be empty when running without a provider. */
     private final List<Provider> providers;
+    
+    // Phase 3 components
+    private final tech.kayys.wayang.provider.ModelRouter modelRouter;
+    private final tech.kayys.wayang.context.api.ContextPlanner contextPlanner;
+    private final tech.kayys.wayang.memory.manager.MemoryManager memoryManager;
 
     private volatile ExecutionStatus status;
 
@@ -53,7 +58,10 @@ public class DefaultAgentExecution implements AgentExecution {
         ExecutionBudget budget,
         CheckpointStore checkpointStore,
         AgentToolExecutor toolExecutor,
-        List<Provider> providers
+        List<Provider> providers,
+        tech.kayys.wayang.provider.ModelRouter modelRouter,
+        tech.kayys.wayang.context.api.ContextPlanner contextPlanner,
+        tech.kayys.wayang.memory.manager.MemoryManager memoryManager
     ) {
         this.id = id;
         this.agent = agent;
@@ -63,6 +71,11 @@ public class DefaultAgentExecution implements AgentExecution {
         this.checkpointStore = checkpointStore;
         this.toolExecutor = toolExecutor;
         this.providers = providers != null ? new ArrayList<>(providers) : new ArrayList<>();
+        
+        this.modelRouter = modelRouter != null ? modelRouter : new tech.kayys.wayang.provider.DefaultModelRouter();
+        this.contextPlanner = contextPlanner != null ? contextPlanner : new tech.kayys.wayang.context.impl.DefaultContextPlanner();
+        this.memoryManager = memoryManager; // Can be null if memory is not configured
+        
         this.status = ExecutionStatus.PENDING;
     }
 
@@ -77,7 +90,7 @@ public class DefaultAgentExecution implements AgentExecution {
         AgentToolExecutor toolExecutor
     ) {
         this(id, agent, agentContext, budget,
-             checkpointStore, toolExecutor, List.of());
+             checkpointStore, toolExecutor, List.of(), null, null, null);
     }
 
     @Override
@@ -111,14 +124,6 @@ public class DefaultAgentExecution implements AgentExecution {
     }
 
     private void runAgentLoop(CompletableFuture<AgentResponse> future) {
-        // Resolve provider — fall back to a no-op execution when none is wired.
-        if (providers.isEmpty()) {
-            stubComplete(future, "No provider configured; returning stub response.");
-            return;
-        }
-
-        Provider provider = providers.get(0);
-
         // Derive the prompt from AgentRequest or fall back to empty string.
         AgentRequest request = agentContext.request();
         String prompt = (request != null && request.content() != null)
@@ -128,6 +133,40 @@ public class DefaultAgentExecution implements AgentExecution {
         if (prompt.isBlank()) {
             stubComplete(future, "Empty prompt; returning stub response.");
             return;
+        }
+
+        // --- Phase 3: Memory Manager ---
+        if (memoryManager != null) {
+            try {
+                String recalledMemory = memoryManager.recallContext(prompt).toCompletableFuture().join();
+                if (recalledMemory != null && !recalledMemory.isBlank()) {
+                    prompt = recalledMemory + "\n\n" + prompt;
+                }
+            } catch (Exception e) {
+                // Log and continue if memory fails
+                System.err.println("Memory recall failed: " + e.getMessage());
+            }
+        }
+
+        // --- Phase 3: Model Router ---
+        Provider provider = null;
+        try {
+            provider = modelRouter.route(request, agent, providers);
+        } catch (Exception e) {
+            stubComplete(future, "Routing failed: " + e.getMessage());
+            return;
+        }
+
+        // --- Phase 3: Context Planner ---
+        // (In a fuller implementation, we'd trim the prompt/history here based on the plan)
+        if (contextPlanner != null) {
+            tech.kayys.wayang.context.api.model.ContextPlan plan = contextPlanner.plan(
+                tech.kayys.wayang.context.api.model.TaskIntent.EXPLORATION, 8000
+            );
+            // Example usage: Ensure prompt doesn't exceed budget
+            if (prompt.length() > plan.contextBudgetTokens() * 4) { // Rough char approx
+                prompt = prompt.substring(0, (int) (plan.contextBudgetTokens() * 4)) + "... (truncated)";
+            }
         }
 
         // Resolve tools from the tool executor if available.
@@ -230,6 +269,10 @@ public class DefaultAgentExecution implements AgentExecution {
                     .content(contentBuffer.toString())
                     .metadata("stopReason", stopReason)
                     .build();
+
+                if (memoryManager != null && request != null && request.content() != null) {
+                    memoryManager.storeInteraction(request.content(), response.content());
+                }
 
                 future.complete(response);
             }

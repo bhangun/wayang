@@ -23,7 +23,9 @@
         <!-- <module>wayang-plugin-mistral</module> -->
         <!-- <module>wayang-plugin-openai</module> -->
         <!-- <module>wayang-plugin-anthropic</module> -->
-        <module>wayang-plugin-gollek</module>
+        <!-- wayang-plugin-gollek has stale SPI implementations that need updating to match the current provider interface.
+             Build separately after aligning GollekSubprocessProvider + GrpcGollekStrategy with current ProviderSpi contracts. -->
+        <!-- <module>wayang-plugin-gollek</module> -->
     </modules>
 
 </project>

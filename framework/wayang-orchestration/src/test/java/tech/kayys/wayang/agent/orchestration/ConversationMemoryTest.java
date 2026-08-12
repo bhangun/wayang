@@ -32,8 +32,8 @@ class ConversationMemoryTest {
 
         ChatMessage message = memory.getMessages().getFirst();
         assertThat(message.role).isEqualTo(ChatMessage.Role.USER);
-        tech.kayys.wayang.provider.ContentBlock.ToolResult tr = 
-            (tech.kayys.wayang.provider.ContentBlock.ToolResult) message.content.getFirst();
+        tech.kayys.wayang.resource.ContentPart.ToolResult tr = 
+            (tech.kayys.wayang.resource.ContentPart.ToolResult) message.content.getFirst();
         assertThat(tr.content()).contains("[result compressed]");
         assertThat(tr.content()).hasSizeLessThan(largeResult.length());
     }

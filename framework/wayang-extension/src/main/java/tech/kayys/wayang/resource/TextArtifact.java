@@ -30,7 +30,7 @@ public final record TextArtifact(
     ArtifactFormat format,
     String data,
     Metadata metadata,
-    Map<String, Object> artifactMetadata
+    ArtifactMetadata artifactMetadata
 ) implements Artifact {
     
     public TextArtifact {
@@ -44,7 +44,7 @@ public final record TextArtifact(
                 .build();
         }
         if (artifactMetadata == null) {
-            artifactMetadata = Collections.emptyMap();
+            artifactMetadata = new ArtifactMetadata(null, 0, null, null, null, null, null, null, Collections.emptyMap());
         }
     }
     
@@ -55,7 +55,7 @@ public final record TextArtifact(
             ArtifactFormat.TEXT,
             data,
             null,
-            Map.of()
+            new ArtifactMetadata(null, 0, null, null, null, null, null, null, Map.of())
         );
     }
     
@@ -66,7 +66,7 @@ public final record TextArtifact(
             ArtifactFormat.TEXT,
             data,
             Metadata.builder().name(name).now().build(),
-            Map.of()
+            new ArtifactMetadata(null, 0, null, null, null, null, null, null, Map.of())
         );
     }
     
@@ -77,7 +77,7 @@ public final record TextArtifact(
             ArtifactFormat.TEXT,
             data,
             metadata,
-            Map.of()
+            new ArtifactMetadata(null, 0, null, null, null, null, null, null, Map.of())
         );
     }
     

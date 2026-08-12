@@ -1,4 +1,4 @@
-package tech.kayys.wayang.client;
+package tech.kayys.wayang.registry;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -7,10 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import tech.kayys.wayang.alignment.WayangStandardAlignmentDescriptor;
-import tech.kayys.wayang.alignment.WayangStandardAlignmentPortfolio;
-import tech.kayys.wayang.client.SdkMaps;
-import tech.kayys.wayang.client.SdkText;
+import tech.kayys.wayang.gollek.sdk.WayangStandardAlignmentDescriptor;
+import tech.kayys.wayang.gollek.sdk.WayangStandardAlignmentPortfolio;
+import tech.kayys.wayang.gollek.sdk.WayangStandardDefinition;
+import tech.kayys.wayang.sdk.client.SdkMaps;
+import tech.kayys.wayang.sdk.client.SdkText;
 
 /**
  * Registry drift report for standard-alignment descriptors.

@@ -78,6 +78,16 @@
       <artifactId>wayang-runtime-spi</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>tech.kayys.wayang</groupId>
+      <artifactId>wayang-resilience</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>tech.kayys.wayang</groupId>
+      <artifactId>wayang-engine</artifactId>
+      <version>${project.version}</version>
+    </dependency>
     <!--
     <dependency>
       <groupId>tech.kayys.gollek</groupId>

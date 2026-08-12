@@ -30,7 +30,7 @@ public final record JsonArtifact(
     String json,
     Object parsed,
     Metadata metadata,
-    Map<String, Object> artifactMetadata
+    ArtifactMetadata artifactMetadata
 ) implements Artifact {
     
     public JsonArtifact {
@@ -44,7 +44,7 @@ public final record JsonArtifact(
                 .build();
         }
         if (artifactMetadata == null) {
-            artifactMetadata = Collections.emptyMap();
+            artifactMetadata = new ArtifactMetadata(null, 0, null, null, null, null, null, null, Collections.emptyMap());
         }
     }
     
@@ -56,7 +56,7 @@ public final record JsonArtifact(
             json,
             null,
             null,
-            Map.of()
+            new ArtifactMetadata(null, 0, null, null, null, null, null, null, Map.of())
         );
     }
     
@@ -68,7 +68,7 @@ public final record JsonArtifact(
             json,
             parsed,
             null,
-            Map.of()
+            new ArtifactMetadata(null, 0, null, null, null, null, null, null, Map.of())
         );
     }
     

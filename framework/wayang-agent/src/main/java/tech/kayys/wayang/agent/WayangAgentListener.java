@@ -20,13 +20,13 @@ public interface WayangAgentListener {
     void onToolCallStart(String id, String name);
 
     /** Full tool input has been parsed; about to check permission and execute. */
-    void onToolCallReady(String id, String name, JsonValue input);
+    void onToolCallReady(String id, String name, java.util.Map<String, Object> input);
 
     /**
      * A tool needs explicit approval. Call responder.accept(decision)
      * (from any thread) to unblock the agent loop.
      */
-    void onToolPermissionNeeded(String id, String name, JsonValue input,
+    void onToolPermissionNeeded(String id, String name, java.util.Map<String, Object> input,
                                  Consumer<PermissionDecision> responder);
 
     /** The official ToolResult from the wayang.tools.spi SPI. */

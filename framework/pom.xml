@@ -45,7 +45,10 @@
 
         <module>wayang-common</module>
         <module>wayang-context</module>
+        <module>wayang-cache</module>
+        <module>wayang-research</module>
         <module>wayang-agent</module>
+        <module>wayang-a2a</module>
         <module>wayang-rag</module>
         <module>wayang-configuration</module>
         <module>wayang-harness</module>

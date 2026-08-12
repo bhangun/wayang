@@ -33,6 +33,12 @@
             <version>${project.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-project</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- wayang-engine: ExecutionContext -->
         <dependency>
             <groupId>tech.kayys.wayang</groupId>

@@ -20,5 +20,10 @@
             <artifactId>wayang-guardrails</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-runtime-spi</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

@@ -205,20 +205,20 @@ public final class AnthropicProvider implements Provider {
         JsonValue msg = JsonValue.object();
         msg.put("role", m.role == ChatMessage.Role.USER ? "user" : "assistant");
         JsonValue contentArr = JsonValue.array();
-        for (ContentBlock b : m.content) {
-            if (b instanceof ContentBlock.Text t) {
+        for (tech.kayys.wayang.resource.ContentPart b : m.content) {
+            if (b instanceof tech.kayys.wayang.resource.ContentPart.Text t) {
                 JsonValue block = JsonValue.object();
                 block.put("type", "text");
                 block.put("text", t.text());
                 contentArr.add(block);
-            } else if (b instanceof ContentBlock.ToolUse tu) {
+            } else if (b instanceof tech.kayys.wayang.resource.ContentPart.ToolUse tu) {
                 JsonValue block = JsonValue.object();
                 block.put("type", "tool_use");
                 block.put("id", tu.id());
                 block.put("name", tu.name());
-                block.put("input", tu.input());
+                block.put("input", JsonValue.fromJavaValue(tu.input()));
                 contentArr.add(block);
-            } else if (b instanceof ContentBlock.ToolResult tr) {
+            } else if (b instanceof tech.kayys.wayang.resource.ContentPart.ToolResult tr) {
                 JsonValue block = JsonValue.object();
                 block.put("type", "tool_result");
                 block.put("tool_use_id", tr.toolUseId());

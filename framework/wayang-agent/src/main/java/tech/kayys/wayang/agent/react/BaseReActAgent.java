@@ -18,6 +18,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 /**
  * A base implementation of a Reasoning and Acting (ReAct) agent.
@@ -34,8 +36,35 @@ public abstract class BaseReActAgent implements Agent {
     protected BudgetedContextCompiler contextCompiler;
     protected ContextPlanner contextPlanner;
     protected Integer tokenBudget;
-    
+
+    /** Optional: policy-aware tool executor (pipeline: validate → CB → retry → execute). */
+    protected ToolExecutorBridge toolExecutor;
+
+    /** Optional: per-step checkpoint persistence. */
+    protected CheckpointBridge checkpointBridge;
+
+    /** Execution ID used for checkpoint keys. */
+    protected String executionId;
+
     protected List<AgentListener> listeners = new ArrayList<>();
+
+    // -------------------------------------------------------------------------
+    // Minimal bridge interfaces — avoids hard compile-time dep on wayang-runtime-spi
+    // from the framework module.
+    // -------------------------------------------------------------------------
+
+    /** Functional bridge for executing a tool through the policy pipeline. */
+    @FunctionalInterface
+    public interface ToolExecutorBridge {
+        /** Returns a ToolResult or throws on failure. */
+        ToolResult executeViaPolicy(ToolInvocation invocation, Supplier<ToolResult> directFallback) throws Exception;
+    }
+
+    /** Functional bridge for saving a checkpoint after each step. */
+    @FunctionalInterface
+    public interface CheckpointBridge {
+        void save(String executionId, tech.kayys.wayang.agent.AgentContext context);
+    }
 
     @Override
     public Memory<ChatMessage> getMemory() {
@@ -102,7 +131,16 @@ public abstract class BaseReActAgent implements Agent {
         this.contextPlanner = planner;
         this.tokenBudget = budget;
     }
-    
+
+    public void setToolExecutor(ToolExecutorBridge toolExecutor) {
+        this.toolExecutor = toolExecutor;
+    }
+
+    public void setCheckpointBridge(CheckpointBridge bridge, String executionId) {
+        this.checkpointBridge = bridge;
+        this.executionId = executionId;
+    }
+
     public void setListeners(List<AgentListener> listeners) {
         if (listeners != null) {
             this.listeners.addAll(listeners);

@@ -35,6 +35,10 @@ public interface Artifact extends Resource {
     
     tech.kayys.wayang.extension.Metadata metadata();
     
+    default ArtifactMetadata artifactMetadata() {
+        return null;
+    }
+    
     default boolean isText() {
         return type() == ArtifactType.TEXT;
     }

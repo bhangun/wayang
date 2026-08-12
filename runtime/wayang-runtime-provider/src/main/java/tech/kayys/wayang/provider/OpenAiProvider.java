@@ -228,14 +228,14 @@ public final class OpenAiProvider implements Provider {
         if (m.role == ChatMessage.Role.ASSISTANT) {
             StringBuilder text = new StringBuilder();
             JsonValue toolCallArr = JsonValue.array();
-            for (ContentBlock b : m.content) {
-                if (b instanceof ContentBlock.Text t) {
+            for (tech.kayys.wayang.resource.ContentPart b : m.content) {
+                if (b instanceof tech.kayys.wayang.resource.ContentPart.Text t) {
                     if (text.length() > 0) text.append('\n');
                     text.append(t.text());
-                } else if (b instanceof ContentBlock.ToolUse tu) {
+                } else if (b instanceof tech.kayys.wayang.resource.ContentPart.ToolUse tu) {
                     JsonValue fn = JsonValue.object();
                     fn.put("name", tu.name());
-                    fn.put("arguments", Json.write(tu.input()));
+                    fn.put("arguments", Json.write(JsonValue.fromJavaValue(tu.input())));
                     JsonValue call = JsonValue.object();
                     call.put("id", tu.id());
                     call.put("type", "function");
@@ -250,11 +250,11 @@ public final class OpenAiProvider implements Provider {
             msgArr.add(msg);
         } else {
             StringBuilder text = new StringBuilder();
-            for (ContentBlock b : m.content) {
-                if (b instanceof ContentBlock.Text t) {
+            for (tech.kayys.wayang.resource.ContentPart b : m.content) {
+                if (b instanceof tech.kayys.wayang.resource.ContentPart.Text t) {
                     if (text.length() > 0) text.append('\n');
                     text.append(t.text());
-                } else if (b instanceof ContentBlock.ToolResult tr) {
+                } else if (b instanceof tech.kayys.wayang.resource.ContentPart.ToolResult tr) {
                     if (text.length() > 0) {
                         JsonValue userMsg = JsonValue.object();
                         userMsg.put("role", "user");

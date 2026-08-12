@@ -19,7 +19,15 @@
     </description>
 
     <dependencies>
-        <!-- Parent provides common dependencies -->
-   
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-provider</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-client-schemas</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

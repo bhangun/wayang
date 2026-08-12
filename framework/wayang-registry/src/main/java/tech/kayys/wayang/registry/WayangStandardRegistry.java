@@ -5,11 +5,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import tech.kayys.wayang.alignment.WayangStandardAlignmentDescriptor;
-import tech.kayys.wayang.alignment.WayangStandardAlignmentPortfolio;
-import tech.kayys.wayang.client.SdkMaps;
-import tech.kayys.wayang.client.SdkText;
-import tech.kayys.wayang.client.WayangStandardDefinition;
+import tech.kayys.wayang.gollek.sdk.WayangStandardAlignmentDescriptor;
+import tech.kayys.wayang.gollek.sdk.WayangStandardAlignmentPortfolio;
+import tech.kayys.wayang.sdk.client.SdkMaps;
+import tech.kayys.wayang.sdk.client.SdkText;
+import tech.kayys.wayang.gollek.sdk.WayangStandardDefinition;
 
 /**
  * SDK-local registry of standards that Wayang can align and report against.

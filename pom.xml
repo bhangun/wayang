@@ -73,14 +73,18 @@
         <module>runtime/wayang-sandbox</module>
         <module>runtime/wayang-agent-runtime</module>
         <module>runtime/wayang-tool-runtime</module>
-        <module>runtime/wayang-rag-runtime</module>
+        <!-- <module>runtime/wayang-rag-runtime</module> -->
         <module>runtime/wayang-builtin-tools</module>
         <module>runtime/wayang-runtime-provider</module>
         <module>runtime/wayang-graph-runtime</module>
-        <module>runtime/wayang-guardrails-runtime</module>
+        
+        <!-- Guardrails -->
+        <!-- <module>runtime/wayang-guardrails-runtime</module> -->
         <module>runtime/wayang-hitl-runtime</module>
         <module>runtime/wayang-workflow-runtime</module>
-        <module>runtime/aljabr-runner</module>
+        <!-- aljabr-runner is a Quarkus executable app requiring Redis/GollekSdk/Micrometer at build time.
+             Build separately when the full infrastructure is available. -->
+        <!-- <module>runtime/aljabr-runner</module> -->
 
         <!-- Feature Modules -->
         <module>modules/graph</module>
@@ -95,7 +99,8 @@
         <!-- CLI -->
         <module>cli/wayang-tui</module>
         <module>cli/wayang-cli</module>
-        <module>cli/agent-cli</module>
+        <!-- agent-cli: stale ref to tech.kayys.alkhawarizm.spi.model — needs alkhawarizm SPI realignment -->
+        <!-- <module>cli/agent-cli</module> -->
     </modules>
 
     <repositories>

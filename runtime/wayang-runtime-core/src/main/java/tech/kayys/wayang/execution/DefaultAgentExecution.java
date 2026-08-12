@@ -141,13 +141,45 @@ public class DefaultAgentExecution implements AgentExecution {
             ? agent.goal()
             : "You are a helpful AI assistant.";
 
+        // Policy bridge: routes tool calls through the executor pipeline
+        // (schema validation → circuit breaker → retry → timeout → Tool.execute).
+        tech.kayys.wayang.agent.react.BaseReActAgent.ToolExecutorBridge policyBridge =
+            (toolExecutor != null)
+            ? (invocation, directFallback) -> {
+                AgentDecision decision = toolExecutor.execute(invocation)
+                    .toCompletableFuture().get();
+                return switch (decision) {
+                    case AgentDecision.ToolCompleted tc -> tc.result();
+                    case AgentDecision.ExecuteTool et   -> directFallback.get();
+                    case AgentDecision.Fail f           -> {
+                        throw new RuntimeException(f.error());
+                    }
+                    default -> directFallback.get();
+                };
+              }
+            : null;
+
+        // Checkpoint bridge: persists agent context before/after each model step.
+        tech.kayys.wayang.agent.react.BaseReActAgent.CheckpointBridge cpBridge =
+            (execId, ctx) -> {
+                if (ctx != null) {
+                    checkpointStore.save(execId, ctx);
+                } else {
+                    // Step marker — save the current agentContext snapshot.
+                    checkpointStore.save(execId, agentContext);
+                }
+            };
+
         // Build the ReActAgent.
         Agent reactAgent = AgentBuilder.create("react")
             .withProvider(provider)
             .withSystemPrompt(systemPrompt)
             .withTools(tools)
             .withAutoApproveTools(true)
+            .withToolExecutor(policyBridge)
+            .withCheckpointBridge(cpBridge, id)
             .build();
+
 
         // Buffer accumulated text for the final response content.
         StringBuilder contentBuffer = new StringBuilder();
@@ -166,13 +198,13 @@ public class DefaultAgentExecution implements AgentExecution {
             }
 
             @Override
-            public void onToolCallReady(String callId, String name, JsonValue input) {
+            public void onToolCallReady(String callId, String name, java.util.Map<String, Object> input) {
                 // Visibility hook — no action required here.
             }
 
             @Override
             public void onToolPermissionNeeded(String callId, String name,
-                    JsonValue input, java.util.function.Consumer<PermissionDecision> responder) {
+                    java.util.Map<String, Object> input, Consumer<PermissionDecision> responder) {
                 // Auto-approve all tools in headless/CI mode.
                 responder.accept(PermissionDecision.APPROVE_ONCE);
             }

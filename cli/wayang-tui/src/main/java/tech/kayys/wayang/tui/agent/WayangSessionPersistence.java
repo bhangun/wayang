@@ -1,11 +1,9 @@
 package tech.kayys.wayang.tui.agent;
-import tech.kayys.wayang.sdk.provider.ContentBlock;
-import tech.kayys.wayang.sdk.provider.ChatMessage;
+import tech.kayys.wayang.provider.ChatMessage;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import tech.kayys.wayang.sdk.provider.ChatMessage;
-import tech.kayys.wayang.sdk.provider.ContentBlock;
+import tech.kayys.wayang.provider.ChatMessage;
 
 import java.io.IOException;
 import java.nio.file.Files;

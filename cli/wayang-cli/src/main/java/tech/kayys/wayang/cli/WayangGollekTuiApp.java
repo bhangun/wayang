@@ -287,7 +287,7 @@ You are operating on a real local filesystem. All file paths are local.
         List<ToolCall> calls = new ArrayList<>();
         for (ContentBlock b : blocks) {
             if (b instanceof ContentBlock.ToolUse tu) {
-                Map<String, Object> input = tu.input().asStringObjectMap();
+                Map<String, Object> input = tu.input() != null ? tu.input().asStringObjectMap() : Map.of();
                 calls.add(ToolCall.builder()
                     .id(tu.id())
                     .name(tu.name())

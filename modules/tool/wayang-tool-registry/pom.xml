@@ -11,12 +11,8 @@
 
     <artifactId>wayang-tool-registry</artifactId>
 
+    <!-- wayang-tool-execution was removed; its functionality is covered by wayang-tool-spi -->
     <dependencies>
-        <dependency>
-            <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-tool-execution</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-hibernate-reactive-panache</artifactId>

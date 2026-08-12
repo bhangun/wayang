@@ -110,8 +110,8 @@ public final class Config {
 
         ProviderConfig gollek = new ProviderConfig();
         gollek.name = "gollek";
-        gollek.type = "openai"; // gollek exposes an OpenAI-compatible endpoint
-        gollek.baseUrl = "http://127.0.0.1:9131";
+        gollek.type = "engine";
+        gollek.baseUrl = "http://localhost:8080/api/v1/coder/run";
         gollek.apiKeyEnv = null;
         c.providers.add(gollek);
 

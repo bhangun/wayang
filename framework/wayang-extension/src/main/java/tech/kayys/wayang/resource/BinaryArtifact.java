@@ -30,7 +30,7 @@ public final record BinaryArtifact(
     ArtifactFormat format,
     byte[] data,
     Metadata metadata,
-    Map<String, Object> artifactMetadata
+    ArtifactMetadata artifactMetadata
 ) implements Artifact {
     
     public BinaryArtifact {
@@ -44,7 +44,7 @@ public final record BinaryArtifact(
                 .build();
         }
         if (artifactMetadata == null) {
-            artifactMetadata = Collections.emptyMap();
+            artifactMetadata = new ArtifactMetadata(null, 0, null, null, null, null, null, null, Collections.emptyMap());
         }
     }
     
@@ -55,7 +55,7 @@ public final record BinaryArtifact(
             format,
             data,
             null,
-            Map.of()
+            new ArtifactMetadata(null, 0, null, null, null, null, null, null, Map.of())
         );
     }
     

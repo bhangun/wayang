@@ -37,6 +37,9 @@ public class AgentBuilder {
     private ContextPlanner contextPlanner;
     private Integer tokenBudget;
     private List<AgentListener> listeners = new ArrayList<>();
+    private tech.kayys.wayang.agent.react.BaseReActAgent.ToolExecutorBridge toolExecutorBridge;
+    private tech.kayys.wayang.agent.react.BaseReActAgent.CheckpointBridge checkpointBridge;
+    private String checkpointExecutionId;
 
     private AgentBuilder(String type) {
         this.type = type;
@@ -110,6 +113,18 @@ public class AgentBuilder {
         return this;
     }
 
+    public AgentBuilder withToolExecutor(tech.kayys.wayang.agent.react.BaseReActAgent.ToolExecutorBridge bridge) {
+        this.toolExecutorBridge = bridge;
+        return this;
+    }
+
+    public AgentBuilder withCheckpointBridge(
+            tech.kayys.wayang.agent.react.BaseReActAgent.CheckpointBridge bridge, String executionId) {
+        this.checkpointBridge = bridge;
+        this.checkpointExecutionId = executionId;
+        return this;
+    }
+
     public Agent build() {
         Agent agent;
         if ("react".equalsIgnoreCase(type)) {
@@ -137,6 +152,12 @@ public class AgentBuilder {
                 base.setContextCompiler(contextCompiler, contextPlanner, tokenBudget);
             }
             base.setListeners(listeners);
+            if (toolExecutorBridge != null) {
+                base.setToolExecutor(toolExecutorBridge);
+            }
+            if (checkpointBridge != null && checkpointExecutionId != null) {
+                base.setCheckpointBridge(checkpointBridge, checkpointExecutionId);
+            }
         }
 
         return agent;

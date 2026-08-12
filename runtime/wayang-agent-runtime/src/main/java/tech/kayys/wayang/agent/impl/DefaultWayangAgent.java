@@ -5,7 +5,7 @@ import tech.kayys.wayang.agent.Agent;
 import tech.kayys.wayang.agent.WayangAgentListener;
 import tech.kayys.wayang.agent.PermissionDecision;
 import tech.kayys.wayang.provider.ChatMessage;
-import tech.kayys.wayang.provider.ContentBlock;
+import tech.kayys.wayang.resource.ContentPart;
 import tech.kayys.wayang.provider.Provider;
 import tech.kayys.wayang.provider.StreamEvent;
 import tech.kayys.wayang.provider.ToolSpec;
@@ -111,6 +111,17 @@ public final class DefaultWayangAgent implements Agent {
         persistHistory();
     }
     
+    private tech.kayys.wayang.spi.memory.Memory<ChatMessage> memory;
+    @Override
+    public tech.kayys.wayang.spi.memory.Memory<ChatMessage> getMemory() {
+        return memory;
+    }
+
+    @Override
+    public void setMemory(tech.kayys.wayang.spi.memory.Memory<ChatMessage> memory) {
+        this.memory = memory;
+    }
+    
     private void persistHistory() {
         try {
             sessionPersistence.save(history);
@@ -171,8 +182,8 @@ public final class DefaultWayangAgent implements Agent {
             if (acc.errored) return;
 
             // Commit assistant turn to history.
-            List<ContentBlock> blocks = new ArrayList<>();
-            if (!acc.text.isEmpty()) blocks.add(new ContentBlock.Text(acc.text.toString()));
+            List<ContentPart> blocks = new ArrayList<>();
+            if (!acc.text.isEmpty()) blocks.add(ContentPart.text(acc.text.toString()));
             blocks.addAll(acc.toolUses);
             if (!blocks.isEmpty()) {
                 history.add(ChatMessage.assistant(blocks));
@@ -186,13 +197,13 @@ public final class DefaultWayangAgent implements Agent {
             }
 
             // Execute requested tool calls, gating mutating ones behind permission.
-            List<ContentBlock.ToolResult> results = new ArrayList<>();
-            for (ContentBlock.ToolUse call : acc.toolUses) {
+            List<ContentPart.ToolResult> results = new ArrayList<>();
+            for (ContentPart.ToolUse call : acc.toolUses) {
                 listener.onToolCallReady(call.id(), call.name(), call.input());
 
                 Tool tool = toolIndex.get(call.name());
                 if (tool == null) {
-                    results.add(new ContentBlock.ToolResult(call.id(), "Unknown tool: " + call.name(), true));
+                    results.add(new ContentPart.ToolResult(call.id(), "Unknown tool: " + call.name(), true, Map.of()));
                     continue;
                 }
 
@@ -201,8 +212,8 @@ public final class DefaultWayangAgent implements Agent {
                     PermissionDecision decision = awaitPermission(call, listener);
                     switch (decision) {
                         case DENY -> {
-                            results.add(new ContentBlock.ToolResult(call.id(),
-                                    "User denied permission to run this tool.", true));
+                            results.add(new ContentPart.ToolResult(call.id(),
+                                    "User denied permission to run this tool.", true, Map.of()));
                             continue;
                         }
                         case APPROVE_ALWAYS_THIS_TOOL -> sessionApprovedTools.add(tool.getId());
@@ -210,16 +221,14 @@ public final class DefaultWayangAgent implements Agent {
                     }
                 }
 
-                // Dispatch: bridge JsonValue -> ToolInvocation for the Tool SPI.
-                Map<String, Object> params = call.input() != null
-                        ? call.input().asStringObjectMap()
-                        : Map.of();
+                // Dispatch: input is already Map<String,Object> from ContentPart.ToolUse
+                Map<String, Object> params = call.input() != null ? call.input() : Map.of();
                 ToolContext ctx = new SimpleToolContext(workspace);
                 ToolResult result;
                 try {
                     result = tool.execute(new SimpleToolInvocation(call.name(), params), ctx).get();
                 } catch (Exception ex) {
-                    results.add(new ContentBlock.ToolResult(call.id(), "Tool error: " + ex.getMessage(), true));
+                    results.add(new ContentPart.ToolResult(call.id(), "Tool error: " + ex.getMessage(), true, Map.of()));
                     continue;
                 }
                 listener.onToolResult(call.id(), call.name(), result);
@@ -227,7 +236,7 @@ public final class DefaultWayangAgent implements Agent {
                 String content = result.isSuccess()
                         ? (result.getOutputs() != null ? result.getOutputs().toString() : "")
                         : result.getErrorMessage();
-                results.add(new ContentBlock.ToolResult(call.id(), content, !result.isSuccess()));
+                results.add(new ContentPart.ToolResult(call.id(), content, !result.isSuccess(), Map.of()));
             }
 
             history.add(ChatMessage.toolResults(results));
@@ -259,7 +268,7 @@ public final class DefaultWayangAgent implements Agent {
         return (msg != null && !msg.isBlank()) ? msg : e.getClass().getSimpleName();
     }
 
-    private PermissionDecision awaitPermission(ContentBlock.ToolUse call, WayangAgentListener listener) {
+    private PermissionDecision awaitPermission(ContentPart.ToolUse call, WayangAgentListener listener) {
         CompletableFuture<PermissionDecision> future = new CompletableFuture<>();
         listener.onToolPermissionNeeded(call.id(), call.name(), call.input(), future::complete);
         try {
@@ -286,7 +295,8 @@ public final class DefaultWayangAgent implements Agent {
             case StreamEvent.ToolUseInputDelta ignored -> {}
             case StreamEvent.ToolUseEnd(String id, JsonValue input) -> {
                 String name = acc.pendingToolNames.getOrDefault(id, "unknown");
-                acc.toolUses.add(new ContentBlock.ToolUse(id, name, input));
+                Map<String, Object> inputMap = input != null ? input.asStringObjectMap() : Map.of();
+                acc.toolUses.add(new ContentPart.ToolUse(id, name, inputMap, Map.of()));
             }
             case StreamEvent.Usage(int in, int out) -> listener.onUsage(in, out);
             case StreamEvent.MessageStop(String reason) -> acc.stopReason = reason;
@@ -301,7 +311,7 @@ public final class DefaultWayangAgent implements Agent {
 
     private static final class TurnAccumulator {
         final StringBuilder text = new StringBuilder();
-        final List<ContentBlock.ToolUse> toolUses = new ArrayList<>();
+        final List<ContentPart.ToolUse> toolUses = new ArrayList<>();
         final Map<String, String> pendingToolNames = new HashMap<>();
         String stopReason;
         boolean errored = false;

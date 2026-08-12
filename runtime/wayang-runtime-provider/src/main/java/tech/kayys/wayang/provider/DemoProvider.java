@@ -27,7 +27,7 @@ public final class DemoProvider implements Provider {
         String userText = last.textOnly();
 
         // If the last turn was a tool result, just summarize and stop -- avoids infinite tool loops in the demo.
-        boolean lastWasToolResult = last.content.stream().anyMatch(b -> b instanceof ContentBlock.ToolResult);
+        boolean lastWasToolResult = last.content.stream().anyMatch(b -> b instanceof tech.kayys.wayang.resource.ContentPart.ToolResult);
         if (lastWasToolResult) {
             streamText(onEvent, "Got it -- the tool finished. (This is the offline demo provider; " +
                     "configure a real provider in `~/.wayang/config.json` for actual AI responses.)");

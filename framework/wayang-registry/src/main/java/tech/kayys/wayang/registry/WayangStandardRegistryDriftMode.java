@@ -2,7 +2,7 @@ package tech.kayys.wayang.registry;
 
 import java.util.Locale;
 
-import tech.kayys.wayang.client.SdkText;
+import tech.kayys.wayang.sdk.client.SdkText;
 
 /**
  * Deployment behavior for registry drift discovered in standard-alignment health.

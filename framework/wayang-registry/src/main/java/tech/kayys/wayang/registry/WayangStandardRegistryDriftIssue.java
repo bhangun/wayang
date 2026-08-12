@@ -3,8 +3,8 @@ package tech.kayys.wayang.registry;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import tech.kayys.wayang.client.SdkMaps;
-import tech.kayys.wayang.client.SdkText;
+import tech.kayys.wayang.sdk.client.SdkMaps;
+import tech.kayys.wayang.sdk.client.SdkText;
 
 /**
  * Field-level mismatch between a reported standard descriptor and the SDK registry.

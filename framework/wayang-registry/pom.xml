@@ -19,18 +19,18 @@
     </properties>
 
     <dependencies>
-        <!-- Client-side SDK providing WayangStandardDefinition, SdkMaps, SdkText -->
+        <!-- SdkText, SdkMaps and core client utilities -->
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-sdk</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+
+        <!-- WayangStandardDefinition, WayangStandardAlignment*, WayangJsonSchema* -->
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-gollek-sdk</artifactId>
             <version>1.0.0-SNAPSHOT</version>
-        </dependency>
-
-        <!-- Alignment types (WayangStandardAlignmentDescriptor, portfolio, etc.) -->
-        <dependency>
-            <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-contract</artifactId>
-            <version>1.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
 

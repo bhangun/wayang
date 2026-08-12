@@ -1,7 +1,7 @@
 package tech.kayys.wayang.agent.orchestration;
 
 import tech.kayys.wayang.provider.ChatMessage;
-import tech.kayys.wayang.provider.ContentBlock;
+import tech.kayys.wayang.resource.ContentPart;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -47,7 +47,7 @@ public class ConversationMemory {
                     + result.substring(result.length() - 1500);
         }
 
-        ChatMessage msg = ChatMessage.toolResults(List.of(new ContentBlock.ToolResult(toolCallId, stored, false)));
+        ChatMessage msg = ChatMessage.toolResults(List.of((ContentPart.ToolResult) ContentPart.toolResult(toolCallId, stored, false)));
         add(msg, estimate(stored));
     }
 

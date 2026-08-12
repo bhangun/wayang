@@ -12,19 +12,20 @@
     <groupId>tech.kayys.wayang</groupId>
     <artifactId>wayang-tool-parent</artifactId>
     <packaging>pom</packaging>
-    <modules>
         <!--
+        All modules below depend on packages from the removed wayang-tool-execution artifact
+        (tool.entity, tool.dto, tool.repository, tool.service, tools.spi).
+        They need SPI realignment before they can build.
+        <module>wayang-tool-registry</module>
+        <module>wayang-tool-mcp</module>
+        <module>wayang-tool-nono</module>
+        <module>wayang-sandbox-docker</module>
+        <module>wayang-tool-execution</module>
         <module>wayang-tool-parser</module>
         <module>wayang-tool-utcp</module>
         <module>wayang-tool-http</module>
         <module>wayang-tool-os</module>
         -->
-        <module>wayang-tool-registry</module>
-        <module>wayang-tool-mcp</module>
-        <module>wayang-tool-nono</module>
-        <module>wayang-sandbox-docker</module>
-        <!--<module>wayang-tool-execution</module>-->
-    </modules>
 
     <properties>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>

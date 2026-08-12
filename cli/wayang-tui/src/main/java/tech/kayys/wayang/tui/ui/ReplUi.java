@@ -189,11 +189,11 @@ public final class ReplUi {
                 System.out.println("→ " + name);
             }
 
-            @Override public void onToolCallReady(String id, String name, JsonValue in) {
+            @Override public void onToolCallReady(String id, String name, tech.kayys.wayang.sdk.json.JsonValue in) {
                 System.out.println("  " + summarizeArgs(in));
             }
 
-            @Override public void onToolPermissionNeeded(String id, String name, JsonValue in, Consumer<PermissionDecision> responder) {
+            @Override public void onToolPermissionNeeded(String id, String name, tech.kayys.wayang.sdk.json.JsonValue in, Consumer<PermissionDecision> responder) {
                 System.out.print("  Allow '" + name + "' to run? [y]es/[n]o/[a]lways: ");
                 System.out.flush();
                 try {
@@ -269,6 +269,10 @@ public final class ReplUi {
                         }
                         if (agent != null) {
                             agent.setModelId(modelId);
+                            if (config != null && config.activeProfile() != null) {
+                                config.activeProfile().model = modelId;
+                                try { config.save(Config.defaultConfigPath()); } catch (Exception ignored) {}
+                            }
                             System.out.println("Model assigned: " + modelId);
                         }
                     }
@@ -604,7 +608,12 @@ public final class ReplUi {
                         }
                         if (agent != null) {
                             agent.setModelId(modelId);
+                            if (config != null && config.activeProfile() != null) {
+                                config.activeProfile().model = modelId;
+                                try { config.save(Config.defaultConfigPath()); } catch (Exception ignored) {}
+                            }
                             appendBlock(List.of(Ansi.fg(Theme.TOOL_OK) + "Model assigned: " + modelId + Ansi.RESET));
+                            fullRedraw();
                         }
                     }
                 } else {
@@ -826,8 +835,8 @@ public final class ReplUi {
         return "Wayang Agent — general-purpose AI assistant";
     }
 
-    private String summarizeArgs(JsonValue input) {
-        String s = Json.write(input);
+    private String summarizeArgs(tech.kayys.wayang.sdk.json.JsonValue input) {
+        String s = input != null ? input.toString() : "{}";
         if (s.length() > 140) s = s.substring(0, 140) + "...";
         return s;
     }
@@ -1104,7 +1113,7 @@ public final class ReplUi {
             appendBlock(List.of(Ansi.fg(Theme.TOOL) + "→ " + name + Ansi.RESET));
         }
 
-        @Override public void onToolCallReady(String id, String name, JsonValue toolInput) {
+        @Override public void onToolCallReady(String id, String name, tech.kayys.wayang.sdk.json.JsonValue toolInput) {
             // Args are hidden by default to keep the UX clean.
             // Set env WAYANG_VERBOSE_TOOLS=1 to show them.
             if ("1".equals(System.getenv("WAYANG_VERBOSE_TOOLS"))
@@ -1113,7 +1122,7 @@ public final class ReplUi {
             }
         }
 
-        @Override public void onToolPermissionNeeded(String id, String name, JsonValue toolInput,
+        @Override public void onToolPermissionNeeded(String id, String name, tech.kayys.wayang.sdk.json.JsonValue toolInput,
                                                      Consumer<PermissionDecision> responder) {
             pendingPermissionResponder = responder;
             pendingToolName = name;

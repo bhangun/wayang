@@ -417,9 +417,10 @@ public final class PanelUi {
         return s + " ".repeat(width - visLen);
     }
 
-    private String summarizeArgs(JsonValue v) {
-        String s = Json.write(v);
-        return s.length() > 100 ? s.substring(0, 100) + "..." : s;
+    private String summarizeArgs(tech.kayys.wayang.sdk.json.JsonValue input) {
+        String s = input != null ? input.toString() : "{}";
+        if (s.length() > 140) s = s.substring(0, 140) + "...";
+        return s;
     }
 
     private String firstLine(String s) {
@@ -445,12 +446,12 @@ public final class PanelUi {
             render();
         }
 
-        @Override public void onToolCallReady(String id, String name, JsonValue toolInput) {
+        @Override public void onToolCallReady(String id, String name, tech.kayys.wayang.sdk.json.JsonValue toolInput) {
             entries.add(new Entry(Kind.TOOL_CALL, "  " + summarizeArgs(toolInput)));
             render();
         }
 
-        @Override public void onToolPermissionNeeded(String id, String name, JsonValue toolInput, Consumer<PermissionDecision> responder) {
+        @Override public void onToolPermissionNeeded(String id, String name, tech.kayys.wayang.sdk.json.JsonValue toolInput, Consumer<PermissionDecision> responder) {
             pendingPermissionResponder = responder;
             pendingToolName = name;
             entries.add(new Entry(Kind.PERMISSION, "  Allow '" + name + "' to run?  [y]es [a]lways [n]o"));

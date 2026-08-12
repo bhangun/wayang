@@ -49,6 +49,13 @@
             <version>${gamelan.version}</version>
         </dependency>
 
+        <!-- Agent core services: AgentMemoryService, etc. -->
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-agent-runtime</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Optional graph telemetry integration -->
         <dependency>
             <groupId>tech.kayys.wayang</groupId>

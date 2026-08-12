@@ -23,6 +23,11 @@
             <artifactId>wayang-tool-spi</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-tool-nono</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!-- JSON support if needed -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>

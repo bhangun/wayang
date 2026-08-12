@@ -1,6 +1,8 @@
 package tech.kayys.wayang.execution;
 
+import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
@@ -12,6 +14,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
+import tech.kayys.wayang.execution.cache.CacheNamespace;
+import tech.kayys.wayang.execution.cache.ExecutionCache;
+import tech.kayys.wayang.execution.cache.ExecutionCacheEntry;
 import tech.kayys.wayang.resilience.CircuitBreakerRegistry;
 import tech.kayys.wayang.resilience.DefaultRetryPolicy;
 import tech.kayys.wayang.resilience.Retry;
@@ -52,10 +57,23 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor, AgentToolExe
     Instance<ToolGuardrailCheck> guardrailCheckInstances;
 
     /**
+     * Optional execution cache — provided by {@code wayang-runtime-core} when deployed.
+     * If the bean is not present, caching is silently skipped.
+     */
+    @Inject
+    Instance<ExecutionCache> executionCacheInstances;
+
+    /**
      * One circuit breaker per tool name — keeps failures isolated.
      * Plain field rather than @Inject so the module stays self-contained.
      */
     private final CircuitBreakerRegistry circuitBreakerRegistry = new CircuitBreakerRegistry();
+
+    /** Execution context for cache provenance (set per-execution via setter). */
+    private volatile String currentExecutionId;
+    private volatile String currentTenantId;
+    private volatile String currentUserId;
+    private volatile ExecutionBudget currentBudget = ExecutionBudget.balanced();
 
     /** 3 attempts, 500ms initial delay, 2× back-off, 10s max wait between retries. */
     private static final RetryPolicy RETRY_POLICY =
@@ -63,6 +81,18 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor, AgentToolExe
 
     /** Hard timeout for a single tool execution. */
     private static final long TOOL_TIMEOUT_SECONDS = 30;
+
+    /**
+     * Called by {@link tech.kayys.wayang.execution.DefaultAgentExecution} before each
+     * execution to bind the execution context for cache provenance.
+     */
+    public void bindExecutionContext(String executionId, String tenantId, String userId,
+                                      ExecutionBudget budget) {
+        this.currentExecutionId = executionId;
+        this.currentTenantId    = tenantId;
+        this.currentUserId      = userId;
+        this.currentBudget      = budget != null ? budget : ExecutionBudget.balanced();
+    }
 
     // -------------------------------------------------------------------------
     // AgentToolExecutor.ToolAware
@@ -84,6 +114,22 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor, AgentToolExe
     @Override
     public CompletionStage<AgentDecision> execute(ToolInvocation invocation) {
         String toolName = invocation.name();
+
+        // --- 0. Tool-result cache lookup ---
+        ExecutionCache cache = resolveExecutionCache();
+        if (cache != null && currentBudget.toolCacheEnabled()) {
+            String inputHash = ExecutionCache.hashTool(toolName, invocation.arguments());
+            Optional<ExecutionCacheEntry> hit = cache.lookup(
+                    CacheNamespace.TOOL, currentTenantId, currentUserId, inputHash);
+            if (hit.isPresent()) {
+                ExecutionCacheEntry entry = hit.get();
+                LOG.fine(() -> "Cache HIT for tool " + toolName + " (" + inputHash + ")");
+                if (entry.value() instanceof ToolResult cachedResult) {
+                    return CompletableFuture.completedFuture(
+                            new AgentDecision.ToolCompleted(invocation, cachedResult));
+                }
+            }
+        }
 
         // --- 1. Capability / existence check ---
         Tool tool = resolveTool(toolName);
@@ -126,8 +172,31 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor, AgentToolExe
             }
         }
 
-        // --- 5–8. Circuit breaker + retry + timeout + actual execution ---
-        return CompletableFuture.supplyAsync(() -> runWithResilience(tool, invocation));
+        // --- 5–8. Circuit breaker + retry + timeout + actual execution
+        //     9.  Cache store (on success) ---
+        return CompletableFuture.supplyAsync(() -> {
+            AgentDecision decision = runWithResilience(tool, invocation);
+            // Step 9 — persist a successful result to the tool cache
+            if (cache != null && currentBudget.toolCacheEnabled()
+                    && decision instanceof AgentDecision.ToolCompleted tc) {
+                String inputHash = ExecutionCache.hashTool(toolName, invocation.arguments());
+                Instant expires  = ExecutionCache.expiresAt(currentBudget.toolCacheTtl());
+                String toolId    = tool.id() != null ? tool.id().toString() : toolName;
+                cache.store(ExecutionCacheEntry.builder()
+                        .namespace(CacheNamespace.TOOL)
+                        .tenantId(currentTenantId)
+                        .userId(currentUserId)
+                        .executionId(currentExecutionId)
+                        .toolId(toolId)
+                        .inputHash(inputHash)
+                        .value(tc.result())
+                        .expiresAt(expires)
+                        .provenance(toolName + "(" + invocation.arguments() + ")")
+                        .build());
+                LOG.fine(() -> "Cache STORE for tool " + toolName + " (" + inputHash + ")");
+            }
+            return decision;
+        });
     }
 
     // -------------------------------------------------------------------------
@@ -228,5 +297,16 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor, AgentToolExe
             return null;
         }
         return guardrailCheckInstances.get();
+    }
+
+    /**
+     * Returns the first available {@link ExecutionCache} bean, or {@code null}
+     * when the cache module is not deployed or CDI is not active.
+     */
+    private ExecutionCache resolveExecutionCache() {
+        if (executionCacheInstances == null || executionCacheInstances.isUnsatisfied()) {
+            return null;
+        }
+        return executionCacheInstances.get();
     }
 }

@@ -17,6 +17,7 @@ public class DefaultWayangAgentBuilder {
     private int maxTokens = 4096;
     private boolean autoApproveTools = false;
     private java.nio.file.Path workspace = java.nio.file.Path.of(System.getProperty("user.dir"));
+    private DefaultWayangAgent.ToolExecutorBridge toolExecutorBridge;
 
     public DefaultWayangAgentBuilder provider(Provider provider) {
         this.provider = provider;
@@ -71,10 +72,15 @@ public class DefaultWayangAgentBuilder {
         return this;
     }
 
+    public DefaultWayangAgentBuilder toolExecutorBridge(DefaultWayangAgent.ToolExecutorBridge toolExecutorBridge) {
+        this.toolExecutorBridge = toolExecutorBridge;
+        return this;
+    }
+
     public Agent build() {
         if (provider == null) {
             throw new IllegalStateException("Provider must be set");
         }
-        return new DefaultWayangAgent(provider, tools, systemPrompt, temperature, maxTokens, autoApproveTools, workspace);
+        return new DefaultWayangAgent(provider, tools, systemPrompt, temperature, maxTokens, autoApproveTools, workspace, toolExecutorBridge);
     }
 }

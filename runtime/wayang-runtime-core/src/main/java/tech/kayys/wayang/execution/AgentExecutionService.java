@@ -10,14 +10,15 @@ import jakarta.inject.Inject;
 import tech.kayys.wayang.agent.AgentContext;
 import tech.kayys.wayang.core.AgentDefinition;
 import tech.kayys.wayang.agent.AgentRequest;
+import tech.kayys.wayang.execution.cache.ExecutionCache;
 import tech.kayys.wayang.provider.Provider;
 
 /**
  * Service for creating and managing {@link AgentExecution} instances.
  *
- * <p>Wires in CDI-managed {@link Provider} instances and passes them down to
- * {@link DefaultAgentExecution} so the real ReAct loop can connect to the LLM
- * provider instead of returning a stub response.</p>
+ * <p>Wires in CDI-managed {@link Provider} and {@link ExecutionCache} instances,
+ * passing them down to {@link DefaultAgentExecution} so the real ReAct loop can
+ * connect to the LLM provider and benefit from execution-scoped caching.</p>
  */
 @ApplicationScoped
 public class AgentExecutionService {
@@ -30,11 +31,16 @@ public class AgentExecutionService {
 
     /**
      * All CDI-managed {@link Provider} beans discovered at startup.
-     * Typically there is one (e.g. Anthropic, OpenAI, Gollek), but the list
-     * allows multi-provider configurations.
      */
     @Inject
     Instance<Provider> providerInstances;
+
+    /**
+     * Optional execution cache — available when {@code InMemoryExecutionCache}
+     * (or a distributed alternative) is on the classpath.
+     */
+    @Inject
+    Instance<ExecutionCache> executionCacheInstances;
 
     // ------------------------------------------------------------------
     // Factory
@@ -49,22 +55,34 @@ public class AgentExecutionService {
             .request(request)
             .build();
 
-        // Collect all available Provider beans into a plain list so
-        // DefaultAgentExecution can resolve them without CDI dependency.
         List<Provider> providers = new ArrayList<>();
         if (providerInstances != null) {
             providerInstances.forEach(providers::add);
         }
 
+        ExecutionCache cache = resolveCache();
+        ExecutionBudget effectiveBudget = budget != null ? budget : ExecutionBudget.balanced();
+
         return new DefaultAgentExecution(
             executionId,
             agent,
             agentContext,
-            budget,
+            effectiveBudget,
             checkpointStore,
             toolExecutor,
-            providers
+            providers,
+            null, // ModelRouter — resolved inside DefaultAgentExecution
+            null, // ContextPlanner — resolved inside DefaultAgentExecution
+            null, // MemoryManager — resolved inside DefaultAgentExecution
+            cache,
+            null, // tenantId — null in standalone mode
+            null  // userId   — null in standalone mode
         );
+    }
+
+    /** Convenience overload using the {@code balanced} profile. */
+    public AgentExecution create(AgentDefinition agent, AgentRequest request) {
+        return create(agent, request, ExecutionBudget.balanced());
     }
 
     // ------------------------------------------------------------------
@@ -81,9 +99,13 @@ public class AgentExecutionService {
             executionId,
             null,
             contextOpt.get(),
-            null,
+            ExecutionBudget.balanced(),
             checkpointStore,
-            toolExecutor
+            toolExecutor,
+            List.of(),
+            null, null, null,
+            resolveCache(),
+            null, null
         );
         execution.resume();
         return execution;
@@ -92,8 +114,18 @@ public class AgentExecutionService {
     public void approve(String executionId, AgentDecision decision) {
         AgentExecution execution = resume(executionId);
         if (decision instanceof AgentDecision.WaitForApproval) {
-            // Re-run with the approval applied.
             execution.execute();
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Internal
+    // ------------------------------------------------------------------
+
+    private ExecutionCache resolveCache() {
+        if (executionCacheInstances == null || executionCacheInstances.isUnsatisfied()) {
+            return null;
+        }
+        return executionCacheInstances.get();
     }
 }

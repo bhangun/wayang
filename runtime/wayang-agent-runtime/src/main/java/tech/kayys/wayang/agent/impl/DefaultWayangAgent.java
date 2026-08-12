@@ -49,13 +49,35 @@ public final class DefaultWayangAgent implements Agent {
     private final int maxTokens;
     private volatile boolean autoApproveTools;
     private final java.nio.file.Path workspace;
+    private final ToolExecutorBridge toolExecutorBridge;
 
     private final List<ChatMessage> history = new ArrayList<>();
     private final Set<String> sessionApprovedTools = ConcurrentHashMap.newKeySet();
-    private final WayangSessionPersistence sessionPersistence = new WayangSessionPersistence();
 
     /** Hard limit on agentic loops per turn to prevent runaway chains. */
     private static final int MAX_TOOL_ITERATIONS = 50;
+
+    public interface ToolExecutorBridge {
+        ToolResult execute(ToolInvocation invocation, java.util.function.Supplier<ToolResult> directFallback);
+    }
+
+    public DefaultWayangAgent(Provider provider,
+                       List<Tool> tools,
+                       String systemPrompt,
+                       double temperature,
+                       int maxTokens,
+                       boolean autoApproveTools,
+                       java.nio.file.Path workspace,
+                       ToolExecutorBridge toolExecutorBridge) {
+        this.provider = provider;
+        this.toolIndex = indexTools(tools);
+        this.systemPrompt = systemPrompt;
+        this.temperature = temperature;
+        this.maxTokens = maxTokens;
+        this.autoApproveTools = autoApproveTools;
+        this.workspace = workspace != null ? workspace : java.nio.file.Path.of(System.getProperty("user.dir"));
+        this.toolExecutorBridge = toolExecutorBridge;
+    }
 
     public DefaultWayangAgent(Provider provider,
                        List<Tool> tools,
@@ -64,13 +86,7 @@ public final class DefaultWayangAgent implements Agent {
                        int maxTokens,
                        boolean autoApproveTools,
                        java.nio.file.Path workspace) {
-        this.provider = provider;
-        this.toolIndex = indexTools(tools);
-        this.systemPrompt = systemPrompt;
-        this.temperature = temperature;
-        this.maxTokens = maxTokens;
-        this.autoApproveTools = autoApproveTools;
-        this.workspace = workspace != null ? workspace : java.nio.file.Path.of(System.getProperty("user.dir"));
+        this(provider, tools, systemPrompt, temperature, maxTokens, autoApproveTools, workspace, null);
     }
 
     public void setModelId(String modelId) {
@@ -97,7 +113,7 @@ public final class DefaultWayangAgent implements Agent {
     // ── Accessors ───────────────────────────────────────────────────────────
 
     public List<ChatMessage> history()          { return history; }
-    public void clearHistory()                  { history.clear(); sessionApprovedTools.clear(); persistHistory(); }
+    public void clearHistory()                  { history.clear(); sessionApprovedTools.clear(); }
 
     /**
      * Replace the current conversation history with the provided messages.
@@ -108,7 +124,6 @@ public final class DefaultWayangAgent implements Agent {
         history.clear();
         sessionApprovedTools.clear();
         if (newHistory != null) history.addAll(newHistory);
-        persistHistory();
     }
     
     private tech.kayys.wayang.spi.memory.Memory<ChatMessage> memory;
@@ -122,14 +137,6 @@ public final class DefaultWayangAgent implements Agent {
         this.memory = memory;
     }
     
-    private void persistHistory() {
-        try {
-            sessionPersistence.save(history);
-        } catch (Exception e) {
-            // Silently fail - don't interrupt the conversation flow
-        }
-    }
-
     public java.nio.file.Path workspace() {
         return workspace;
     }
@@ -152,9 +159,7 @@ public final class DefaultWayangAgent implements Agent {
                 ("[DefaultWayangAgent.send] called with: " + (userInput == null ? "null" : userInput) + "\n").getBytes(),
                 java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
         } catch (Exception e) { }
-        
         history.add(ChatMessage.userText(userInput));
-        persistHistory();
         runUntilDone(listener);
     }
 
@@ -187,7 +192,6 @@ public final class DefaultWayangAgent implements Agent {
             blocks.addAll(acc.toolUses);
             if (!blocks.isEmpty()) {
                 history.add(ChatMessage.assistant(blocks));
-                persistHistory();
             }
 
             boolean wantsTools = !acc.toolUses.isEmpty();
@@ -221,12 +225,23 @@ public final class DefaultWayangAgent implements Agent {
                     }
                 }
 
-                // Dispatch: input is already Map<String,Object> from ContentPart.ToolUse
                 Map<String, Object> params = call.input() != null ? call.input() : Map.of();
-                ToolContext ctx = new SimpleToolContext(workspace);
                 ToolResult result;
                 try {
-                    result = tool.execute(new SimpleToolInvocation(call.name(), params), ctx).get();
+                    if (toolExecutorBridge != null) {
+                        result = toolExecutorBridge.execute(
+                                new SimpleToolInvocation(call.name(), params),
+                                () -> {
+                                    try {
+                                        return tool.execute(new SimpleToolInvocation(call.name(), params), new SimpleToolContext(workspace)).get();
+                                    } catch (Exception e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                        );
+                    } else {
+                        result = tool.execute(new SimpleToolInvocation(call.name(), params), new SimpleToolContext(workspace)).get();
+                    }
                 } catch (Exception ex) {
                     results.add(new ContentPart.ToolResult(call.id(), "Tool error: " + ex.getMessage(), true, Map.of()));
                     continue;

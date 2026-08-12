@@ -22,13 +22,19 @@ public class A2AAgentAdapter implements A2AServer {
 
     private final WayangRuntime runtime;
     private final AgentDefinition agentDefinition;
+    private final tech.kayys.wayang.execution.journal.ExecutionJournal executionJournal;
     
     // In-memory track of active tasks
     private final Map<String, CompletableFuture<AgentResponse>> activeExecutions = new ConcurrentHashMap<>();
 
-    public A2AAgentAdapter(WayangRuntime runtime, AgentDefinition agentDefinition) {
+    public A2AAgentAdapter(WayangRuntime runtime, AgentDefinition agentDefinition, tech.kayys.wayang.execution.journal.ExecutionJournal executionJournal) {
         this.runtime = runtime;
         this.agentDefinition = agentDefinition;
+        this.executionJournal = executionJournal;
+    }
+
+    public A2AAgentAdapter(WayangRuntime runtime, AgentDefinition agentDefinition) {
+        this(runtime, agentDefinition, null);
     }
 
     @Override
@@ -62,6 +68,22 @@ public class A2AAgentAdapter implements A2AServer {
         CompletableFuture<AgentResponse> future = activeExecutions.get(taskId);
         
         if (future == null) {
+            if (executionJournal != null) {
+                java.util.List<tech.kayys.wayang.execution.journal.ExecutionJournal.JournalEvent> events = executionJournal.read(taskId);
+                if (events != null && !events.isEmpty()) {
+                    // Try to determine status from events
+                    boolean isCompleted = events.stream().anyMatch(e -> "COMPLETED".equals(e.type()) || "SUCCESS".equals(e.type()));
+                    boolean isFailed = events.stream().anyMatch(e -> "FAILED".equals(e.type()) || "ERROR".equals(e.type()));
+                    if (isFailed) {
+                        return CompletableFuture.completedFuture(A2AMessageMapper.toFailedTask(taskId, new RuntimeException("Task failed according to journal")));
+                    } else if (isCompleted) {
+                        // We might not have the full response, but we know it's completed
+                        return CompletableFuture.completedFuture(A2AMessageMapper.toCompletedTask(taskId, AgentResponse.success("Task completed (recovered from journal)")));
+                    } else {
+                        return CompletableFuture.completedFuture(A2AMessageMapper.toInProgressTask(taskId));
+                    }
+                }
+            }
             return CompletableFuture.completedFuture(A2AMessageMapper.toFailedTask(taskId, new RuntimeException("Task not found or expired: " + taskId)));
         }
         

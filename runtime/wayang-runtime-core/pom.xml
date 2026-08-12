@@ -262,7 +262,7 @@
     <!-- Memory Integration -->
     <dependency>
       <groupId>tech.kayys.wayang</groupId>
-      <artifactId>wayang-memory-core</artifactId>
+      <artifactId>wayang-memory</artifactId>
       <version>${project.version}</version>
       <exclusions>
         <exclusion>

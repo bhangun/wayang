@@ -81,6 +81,21 @@ public class GollekManager {
     }
 
     public static void ensureGollekRunning() {
+        boolean nonInteractive = System.console() == null || 
+                                 Boolean.getBoolean("wayang.cli.nonInteractive") || 
+                                 System.getenv("WAYANG_NON_INTERACTIVE") != null;
+
+        if (nonInteractive) {
+            if (!isInstalled()) {
+                System.err.println("Gollek is not installed and we are in non-interactive mode. Please install it manually.");
+                return;
+            } else if (!isRunning()) {
+                System.out.println("Non-interactive mode: auto-starting Gollek.");
+                start();
+            }
+            return;
+        }
+
         Scanner scanner = new Scanner(System.in);
 
         if (!isInstalled()) {

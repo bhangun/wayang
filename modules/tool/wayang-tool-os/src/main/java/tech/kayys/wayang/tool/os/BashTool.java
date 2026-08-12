@@ -8,6 +8,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
+import tech.kayys.wayang.tool.nono.NonoProcessExecutor;
+import tech.kayys.wayang.tool.nono.NonoSandboxConfig;
+import tech.kayys.wayang.tool.nono.NonoNetworkMode;
+import tech.kayys.wayang.spi.sandbox.SandboxExecutionResult;
+
 public final class BashTool implements Tool {
 
     private static final int DEFAULT_TIMEOUT_SECONDS = 120;
@@ -39,46 +44,29 @@ public final class BashTool implements Tool {
         int timeout = params.containsKey("timeout_seconds") ? ((Number) params.get("timeout_seconds")).intValue() : DEFAULT_TIMEOUT_SECONDS;
         String workingDir = params.containsKey("working_dir") ? (String) params.get("working_dir") : null;
 
-        ProcessBuilder pb = new ProcessBuilder("sh", "-c", command);
-        pb.redirectErrorStream(true);
         Path defaultDir = context.workingDirectory() != null ? context.workingDirectory() : Paths.get(System.getProperty("user.dir"));
-        if (workingDir != null) {
-            pb.directory(defaultDir.resolve(workingDir).toFile());
-        } else {
-            pb.directory(defaultDir.toFile());
+        String resolvedWorkingDir = workingDir != null ? defaultDir.resolve(workingDir).toString() : defaultDir.toString();
+
+        NonoSandboxConfig config = new NonoSandboxConfig();
+        config.addAllowedPath(resolvedWorkingDir, "READ_WRITE");
+        
+        // Optional user overrides via params
+        if (params.containsKey("sandbox_allowed_paths")) {
+            for (String p : (Iterable<String>) params.get("sandbox_allowed_paths")) {
+                config.addAllowedPath(p, "READ_WRITE");
+            }
+        }
+        if (params.containsKey("sandbox_network_mode")) {
+            config.withNetworkMode(params.get("sandbox_network_mode").toString());
         }
 
-        Process process = pb.start();
+        NonoProcessExecutor executor = new NonoProcessExecutor(config);
+        SandboxExecutionResult res = executor.execute(command, resolvedWorkingDir, timeout * 1000L);
 
-        StringBuilder output = new StringBuilder();
-        Thread reader = new Thread(() -> {
-            try (var in = process.getInputStream()) {
-                byte[] buf = new byte[4096];
-                int n;
-                while ((n = in.read(buf)) != -1) {
-                    synchronized (output) {
-                        if (output.length() < MAX_OUTPUT_CHARS) {
-                            output.append(new String(buf, 0, n));
-                        }
-                    }
-                }
-            } catch (Exception ignored) {}
-        });
-        reader.setDaemon(true);
-        reader.start();
-
-        boolean finished = process.waitFor(timeout, TimeUnit.SECONDS);
-        if (!finished) {
-            process.destroyForcibly();
-            reader.join(1000);
-            return ToolResult.error("Command timed out after " + timeout + "s. Partial output:\n" + trim(output.toString()));
-        }
-        reader.join(2000);
-
-        int exitCode = process.exitValue();
-        String text = trim(output.toString());
-        String result = "(exit code " + exitCode + ")\n" + text;
-        return exitCode == 0 ? ToolResult.success(result) : ToolResult.error(result);
+        String text = trim(res.stdout() + (res.stderr().isEmpty() ? "" : "\n" + res.stderr()));
+        String result = "(exit code " + res.exitCode() + ")\n" + text;
+        
+        return res.isSuccess() ? ToolResult.success(result) : ToolResult.error(result);
     
         } catch (Exception e) {
             return ToolResult.error("Execution failed: " + e.getMessage());

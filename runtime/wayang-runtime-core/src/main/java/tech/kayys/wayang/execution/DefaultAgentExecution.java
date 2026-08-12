@@ -2,6 +2,7 @@ package tech.kayys.wayang.execution;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -15,6 +16,8 @@ import tech.kayys.wayang.agent.PermissionDecision;
 import tech.kayys.wayang.agent.WayangAgentListener;
 import tech.kayys.wayang.agent.builder.AgentBuilder;
 import tech.kayys.wayang.core.AgentDefinition;
+import tech.kayys.wayang.execution.cache.ExecutionCache;
+import tech.kayys.wayang.execution.cache.ExecutionCacheEntry;
 import tech.kayys.wayang.json.JsonValue;
 import tech.kayys.wayang.provider.Provider;
 import tech.kayys.wayang.tool.Tool;
@@ -48,6 +51,13 @@ public class DefaultAgentExecution implements AgentExecution {
     private final tech.kayys.wayang.context.api.ContextPlanner contextPlanner;
     private final tech.kayys.wayang.memory.manager.MemoryManager memoryManager;
 
+    /** Phase 3: Execution-scoped cache — null when caching is not configured. */
+    private final ExecutionCache executionCache;
+
+    /** Tenant / user context for cache key isolation. */
+    private final String tenantId;
+    private final String userId;
+
     private volatile ExecutionStatus status;
 
     public DefaultAgentExecution(
@@ -61,7 +71,10 @@ public class DefaultAgentExecution implements AgentExecution {
         List<Provider> providers,
         tech.kayys.wayang.provider.ModelRouter modelRouter,
         tech.kayys.wayang.context.api.ContextPlanner contextPlanner,
-        tech.kayys.wayang.memory.manager.MemoryManager memoryManager
+        tech.kayys.wayang.memory.manager.MemoryManager memoryManager,
+        ExecutionCache executionCache,
+        String tenantId,
+        String userId
     ) {
         this.id = id;
         this.agent = agent;
@@ -72,9 +85,13 @@ public class DefaultAgentExecution implements AgentExecution {
         this.toolExecutor = toolExecutor;
         this.providers = providers != null ? new ArrayList<>(providers) : new ArrayList<>();
         
-        this.modelRouter = modelRouter != null ? modelRouter : new tech.kayys.wayang.provider.DefaultModelRouter();
+        this.modelRouter    = modelRouter    != null ? modelRouter    : new tech.kayys.wayang.provider.DefaultModelRouter();
         this.contextPlanner = contextPlanner != null ? contextPlanner : new tech.kayys.wayang.context.impl.DefaultContextPlanner();
-        this.memoryManager = memoryManager; // Can be null if memory is not configured
+        this.memoryManager  = memoryManager; // Can be null if memory is not configured
+
+        this.executionCache = executionCache; // Can be null if caching is not configured
+        this.tenantId       = tenantId;
+        this.userId         = userId;
         
         this.status = ExecutionStatus.PENDING;
     }
@@ -90,7 +107,7 @@ public class DefaultAgentExecution implements AgentExecution {
         AgentToolExecutor toolExecutor
     ) {
         this(id, agent, agentContext, budget,
-             checkpointStore, toolExecutor, List.of(), null, null, null);
+             checkpointStore, toolExecutor, List.of(), null, null, null, null, null, null);
     }
 
     @Override
@@ -109,6 +126,12 @@ public class DefaultAgentExecution implements AgentExecution {
     @Override
     public CompletionStage<AgentResponse> execute() {
         this.status = ExecutionStatus.RUNNING;
+
+        // Bind execution context to the tool executor so it can tag cache entries
+        if (toolExecutor instanceof DefaultAgentToolExecutor dex) {
+            dex.bindExecutionContext(id, tenantId, userId, budget);
+        }
+
         CompletableFuture<AgentResponse> future = new CompletableFuture<>();
 
         AGENT_POOL.execute(() -> {
@@ -163,9 +186,9 @@ public class DefaultAgentExecution implements AgentExecution {
             tech.kayys.wayang.context.api.model.ContextPlan plan = contextPlanner.plan(
                 tech.kayys.wayang.context.api.model.TaskIntent.EXPLORATION, 8000
             );
-            // Example usage: Ensure prompt doesn't exceed budget
-            if (prompt.length() > plan.contextBudgetTokens() * 4) { // Rough char approx
-                prompt = prompt.substring(0, (int) (plan.contextBudgetTokens() * 4)) + "... (truncated)";
+            // Ensure prompt doesn't exceed budget (rough char approx: 1 token ≈ 4 chars)
+            if (prompt.length() > plan.tokenBudget() * 4) {
+                prompt = prompt.substring(0, (int) (plan.tokenBudget() * 4)) + "... (truncated)";
             }
         }
 
@@ -263,11 +286,21 @@ public class DefaultAgentExecution implements AgentExecution {
                 DefaultAgentExecution.this.status = ExecutionStatus.COMPLETED;
                 checkpointStore.save(id, agentContext);
 
+                // Collect cache entry IDs for this execution (traceability)
+                java.util.List<String> cacheEntryIds = java.util.List.of();
+                if (executionCache != null) {
+                    cacheEntryIds = executionCache.listByExecution(id)
+                            .stream()
+                            .map(ExecutionCacheEntry::cacheId)
+                            .collect(java.util.stream.Collectors.toList());
+                }
+
                 AgentResponse response = AgentResponse.builder()
                     .id(id)
                     .success(true)
                     .content(contentBuffer.toString())
                     .metadata("stopReason", stopReason)
+                    .metadata("cacheEntryCount", String.valueOf(cacheEntryIds.size()))
                     .build();
 
                 if (memoryManager != null && request != null && request.content() != null) {

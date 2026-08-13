@@ -8,17 +8,25 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
 import tech.kayys.wayang.agent.AgentContext;
+import tech.kayys.wayang.context.ContextProvider;
 import tech.kayys.wayang.core.AgentDefinition;
 import tech.kayys.wayang.agent.AgentRequest;
 import tech.kayys.wayang.execution.cache.ExecutionCache;
+import tech.kayys.wayang.execution.context.DefaultRuntimeContextPlanner;
+import tech.kayys.wayang.execution.context.RuntimeContextPlanner;
+import tech.kayys.wayang.memory.manager.MemoryManager;
+import tech.kayys.wayang.execution.event.EventLedger;
+import tech.kayys.wayang.provider.DefaultModelRouter;
+import tech.kayys.wayang.provider.ModelRouter;
 import tech.kayys.wayang.provider.Provider;
 
 /**
  * Service for creating and managing {@link AgentExecution} instances.
  *
- * <p>Wires in CDI-managed {@link Provider} and {@link ExecutionCache} instances,
- * passing them down to {@link DefaultAgentExecution} so the real ReAct loop can
- * connect to the LLM provider and benefit from execution-scoped caching.</p>
+ * <p>Phase 4: Wires in CDI-managed {@link Provider}, {@link ModelRouter},
+ * {@link RuntimeContextPlanner}, {@link MemoryManager}, and {@link ExecutionCache}
+ * instances, passing them into {@link DefaultAgentExecution} so the kernel is
+ * fully dependency-injected.</p>
  */
 @ApplicationScoped
 public class AgentExecutionService {
@@ -29,18 +37,45 @@ public class AgentExecutionService {
     @Inject
     AgentToolExecutor toolExecutor;
 
-    /**
-     * All CDI-managed {@link Provider} beans discovered at startup.
-     */
+    /** All CDI-managed {@link Provider} beans discovered at startup. */
     @Inject
     Instance<Provider> providerInstances;
 
-    /**
-     * Optional execution cache — available when {@code InMemoryExecutionCache}
-     * (or a distributed alternative) is on the classpath.
-     */
+    /** Optional execution cache. */
     @Inject
     Instance<ExecutionCache> executionCacheInstances;
+
+    /**
+     * Optional model router — CDI-discovered; falls back to {@link DefaultModelRouter}
+     * if none is configured.
+     */
+    @Inject
+    Instance<ModelRouter> modelRouterInstances;
+
+    /**
+     * Optional runtime context planner — CDI-discovered; falls back to
+     * {@link DefaultRuntimeContextPlanner} if none is configured.
+     */
+    @Inject
+    Instance<RuntimeContextPlanner> contextPlannerInstances;
+
+    /**
+     * Optional memory manager — CDI-discovered; may be absent in minimal deployments.
+     */
+    @Inject
+    Instance<MemoryManager> memoryManagerInstances;
+
+    /**
+     * All CDI-managed {@link ContextProvider} beans for context assembly.
+     */
+    @Inject
+    Instance<ContextProvider> contextProviderInstances;
+
+    /**
+     * Phase 5: Optional Event Ledger — CDI-discovered; absent in test/minimal deployments.
+     */
+    @Inject
+    Instance<EventLedger> eventLedgerInstances;
 
     // ------------------------------------------------------------------
     // Factory
@@ -71,12 +106,13 @@ public class AgentExecutionService {
             checkpointStore,
             toolExecutor,
             providers,
-            null, // ModelRouter — resolved inside DefaultAgentExecution
-            null, // ContextPlanner — resolved inside DefaultAgentExecution
-            null, // MemoryManager — resolved inside DefaultAgentExecution
+            resolveModelRouter(),
+            resolveContextPlanner(),
+            resolveMemoryManager(),
             cache,
             null, // tenantId — null in standalone mode
-            null  // userId   — null in standalone mode
+            null, // userId   — null in standalone mode
+            resolveEventLedger()
         );
     }
 
@@ -103,9 +139,12 @@ public class AgentExecutionService {
             checkpointStore,
             toolExecutor,
             List.of(),
-            null, null, null,
+            resolveModelRouter(),
+            resolveContextPlanner(),
+            resolveMemoryManager(),
             resolveCache(),
-            null, null
+            null, null,
+            resolveEventLedger()
         );
         execution.resume();
         return execution;
@@ -119,7 +158,7 @@ public class AgentExecutionService {
     }
 
     // ------------------------------------------------------------------
-    // Internal
+    // Internal resolver helpers
     // ------------------------------------------------------------------
 
     private ExecutionCache resolveCache() {
@@ -127,5 +166,33 @@ public class AgentExecutionService {
             return null;
         }
         return executionCacheInstances.get();
+    }
+
+    private ModelRouter resolveModelRouter() {
+        if (modelRouterInstances == null || modelRouterInstances.isUnsatisfied()) {
+            return new DefaultModelRouter();
+        }
+        return modelRouterInstances.get();
+    }
+
+    private RuntimeContextPlanner resolveContextPlanner() {
+        if (contextPlannerInstances == null || contextPlannerInstances.isUnsatisfied()) {
+            return new DefaultRuntimeContextPlanner();
+        }
+        return contextPlannerInstances.get();
+    }
+
+    private MemoryManager resolveMemoryManager() {
+        if (memoryManagerInstances == null || memoryManagerInstances.isUnsatisfied()) {
+            return null;
+        }
+        return memoryManagerInstances.get();
+    }
+
+    private EventLedger resolveEventLedger() {
+        if (eventLedgerInstances == null || eventLedgerInstances.isUnsatisfied()) {
+            return null;
+        }
+        return eventLedgerInstances.get();
     }
 }

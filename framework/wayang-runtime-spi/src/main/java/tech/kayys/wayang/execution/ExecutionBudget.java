@@ -21,6 +21,8 @@ public record ExecutionBudget(
         long maxToolCalls,
         long maxInputTokens,
         long maxOutputTokens,
+        // ── Context planning ───────────────────────────────────────────────────
+        long contextTokens,
         // ── Resilience ─────────────────────────────────────────────────────────
         int maxRetries,
         int maxConcurrentTools,
@@ -55,6 +57,7 @@ public record ExecutionBudget(
         return new ExecutionBudget(
                 Duration.ofMinutes(2), 15, 30,
                 100_000, 20_000,
+                8_192,    // contextTokens — tight for quick interactions
                 1, 1,
                 true,  Duration.ofMinutes(5),
                 true,  Duration.ofMinutes(5),
@@ -70,6 +73,7 @@ public record ExecutionBudget(
         return new ExecutionBudget(
                 Duration.ofMinutes(5), 25, 50,
                 200_000, 50_000,
+                32_768,   // contextTokens — standard window
                 3, 2,
                 true,  Duration.ofMinutes(30),
                 true,  Duration.ofMinutes(30),
@@ -86,6 +90,7 @@ public record ExecutionBudget(
         return new ExecutionBudget(
                 Duration.ofMinutes(20), 50, 100,
                 400_000, 100_000,
+                128_000,  // contextTokens — large window for deep analysis
                 5, 4,
                 true,  Duration.ofHours(2),
                 true,  Duration.ofHours(2),
@@ -102,6 +107,7 @@ public record ExecutionBudget(
         return new ExecutionBudget(
                 Duration.ofMinutes(5), 25, 50,
                 200_000, 50_000,
+                32_768,   // contextTokens — same as balanced for debug visibility
                 1, 1,
                 false, null,
                 false, null,

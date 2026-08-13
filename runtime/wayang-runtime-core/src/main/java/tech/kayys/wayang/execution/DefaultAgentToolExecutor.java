@@ -17,6 +17,15 @@ import jakarta.inject.Inject;
 import tech.kayys.wayang.execution.cache.CacheNamespace;
 import tech.kayys.wayang.execution.cache.ExecutionCache;
 import tech.kayys.wayang.execution.cache.ExecutionCacheEntry;
+import tech.kayys.wayang.execution.event.EventLedger;
+import tech.kayys.wayang.execution.event.ExecutionEvent;
+import tech.kayys.wayang.execution.event.ExecutionEventType;
+import tech.kayys.wayang.execution.governance.PolicyDecision;
+import tech.kayys.wayang.execution.governance.ToolBudget;
+import tech.kayys.wayang.execution.governance.ToolBudgetLedger;
+import tech.kayys.wayang.execution.governance.ToolCapabilityLevel;
+import tech.kayys.wayang.execution.governance.ToolPermissionContext;
+import tech.kayys.wayang.execution.governance.ToolPolicyEvaluator;
 import tech.kayys.wayang.resilience.CircuitBreakerRegistry;
 import tech.kayys.wayang.resilience.DefaultRetryPolicy;
 import tech.kayys.wayang.resilience.Retry;
@@ -81,6 +90,21 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor, AgentToolExe
 
     /** Hard timeout for a single tool execution. */
     private static final long TOOL_TIMEOUT_SECONDS = 30;
+
+    /**
+     * Phase 6 — Tool Governance
+     */
+    @Inject
+    Instance<ToolPolicyEvaluator> policyEvaluatorInstances;
+
+    @Inject
+    ToolBudgetLedger budgetLedger;
+
+    @Inject
+    Instance<EventLedger> eventLedgerInstances;
+
+    /** Monotonic audit sequence per executor instance. */
+    private final java.util.concurrent.atomic.AtomicLong auditSeq = new java.util.concurrent.atomic.AtomicLong();
 
     /**
      * Called by {@link tech.kayys.wayang.execution.DefaultAgentExecution} before each
@@ -149,12 +173,41 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor, AgentToolExe
             );
         }
 
-        // --- 3. Approval policy ---
-        if (requiresApproval(tool, invocation)) {
-            LOG.info(() -> "Tool " + toolName + " requires human approval.");
+        // --- 2b. Phase 6: Tool Budget check ---
+        ToolBudget budget = (budgetLedger != null)
+            ? budgetLedger.budgetFor(currentTenantId, currentUserId)
+            : ToolBudget.unlimited();
+        if (budget.isCallBudgetExhausted()) {
+            emitAudit(ExecutionEventType.TOOL_FAILED, toolName,
+                Map.of("reason", "budget exhausted", "budget", budget.toString()));
             return CompletableFuture.completedFuture(
-                new AgentDecision.WaitForApproval(invocation)
+                AgentDecision.fail("Tool call budget exhausted for " + budget)
             );
+        }
+
+        // --- 3. Phase 6: Policy evaluation (replaces naive requiresApproval) ---
+        ToolPermissionContext permCtx = ToolPermissionContext.standalone(
+            currentExecutionId, toolName, resolveCapabilityLevel(toolName));
+        PolicyDecision policyDecision = evaluatePolicy(invocation, permCtx);
+
+        switch (policyDecision) {
+            case PolicyDecision.Deny d -> {
+                LOG.info(() -> "Tool " + toolName + " denied by policy [" + d.policyId() + "]: " + d.reason());
+                emitAudit(ExecutionEventType.TOOL_FAILED, toolName,
+                    Map.of("reason", "policy deny", "policy", d.policyId(), "detail", d.reason()));
+                return CompletableFuture.completedFuture(
+                    AgentDecision.fail("Policy denied tool " + toolName + ": " + d.reason())
+                );
+            }
+            case PolicyDecision.RequireApproval ra -> {
+                LOG.info(() -> "Tool " + toolName + " requires approval: " + ra.reason());
+                emitAudit(ExecutionEventType.TOOL_APPROVAL_REQUIRED, toolName,
+                    Map.of("policy", ra.policyId(), "reason", ra.reason()));
+                return CompletableFuture.completedFuture(
+                    new AgentDecision.WaitForApproval(invocation)
+                );
+            }
+            default -> {} // Allow — continue
         }
 
         // --- 4. Guardrail check (optional CDI bean from wayang-guardrails-runtime) ---
@@ -175,7 +228,22 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor, AgentToolExe
         // --- 5–8. Circuit breaker + retry + timeout + actual execution
         //     9.  Cache store (on success) ---
         return CompletableFuture.supplyAsync(() -> {
+            long startMs = System.currentTimeMillis();
             AgentDecision decision = runWithResilience(tool, invocation);
+
+            // Phase 6: Consume budget and emit audit event
+            long durationMs = System.currentTimeMillis() - startMs;
+            if (budgetLedger != null) {
+                budget.consume(durationMs, 0.0); // cost USD injected by billing module later
+            }
+            if (decision instanceof AgentDecision.ToolCompleted) {
+                emitAudit(ExecutionEventType.TOOL_EXECUTED, toolName,
+                    Map.of("durationMs", durationMs));
+            } else if (decision instanceof AgentDecision.Fail f) {
+                emitAudit(ExecutionEventType.TOOL_FAILED, toolName,
+                    Map.of("durationMs", durationMs, "error", f.error()));
+            }
+
             // Step 9 — persist a successful result to the tool cache
             if (cache != null && currentBudget.toolCacheEnabled()
                     && decision instanceof AgentDecision.ToolCompleted tc) {
@@ -239,18 +307,44 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor, AgentToolExe
         return null;
     }
 
+    // -------------------------------------------------------------------------
+    // Phase 6: Governance helpers
+    // -------------------------------------------------------------------------
+
+    private PolicyDecision evaluatePolicy(ToolInvocation invocation, ToolPermissionContext context) {
+        if (policyEvaluatorInstances == null || policyEvaluatorInstances.isUnsatisfied()) {
+            return PolicyDecision.allow(); // No evaluator configured — open in standalone mode
+        }
+        return policyEvaluatorInstances.get().evaluate(invocation, context);
+    }
+
+    private void emitAudit(ExecutionEventType type, String toolName, Map<String, Object> payload) {
+        if (eventLedgerInstances == null || eventLedgerInstances.isUnsatisfied()) return;
+        EventLedger ledger = eventLedgerInstances.get();
+        ledger.record(ExecutionEvent.of(
+            currentExecutionId != null ? currentExecutionId : "unknown",
+            auditSeq.getAndIncrement(),
+            type,
+            toolName,
+            payload
+        ));
+    }
+
     /**
-     * Tools that mutate state (filesystem writes, API calls, shell commands) need approval
-     * when the agent is not in auto-approve mode.  We detect mutation by convention on the
-     * tool name prefix.  A proper capability-based check can replace this later.
+     * Resolves the capability level for a tool by convention on the tool name prefix.
+     * A proper capability registry can replace this in a future phase.
      */
-    private boolean requiresApproval(Tool tool, ToolInvocation invocation) {
-        String name = invocation.name();
-        return name.startsWith("filesystem.write")
-            || name.startsWith("shell.")
-            || name.startsWith("http.post")
-            || name.startsWith("http.put")
-            || name.startsWith("http.delete");
+    private ToolCapabilityLevel resolveCapabilityLevel(String toolName) {
+        if (toolName.startsWith("shell."))              return ToolCapabilityLevel.SHELL;
+        if (toolName.startsWith("system."))             return ToolCapabilityLevel.SYSTEM;
+        if (toolName.startsWith("filesystem."))         return ToolCapabilityLevel.FILESYSTEM;
+        if (toolName.startsWith("http.post")
+         || toolName.startsWith("http.put")
+         || toolName.startsWith("http.delete"))         return ToolCapabilityLevel.WRITE;
+        if (toolName.startsWith("http."))               return ToolCapabilityLevel.NETWORK;
+        if (toolName.startsWith("db.write")
+         || toolName.startsWith("db.delete"))           return ToolCapabilityLevel.WRITE;
+        return ToolCapabilityLevel.READ;
     }
 
     private AgentDecision runWithResilience(Tool tool, ToolInvocation invocation) {

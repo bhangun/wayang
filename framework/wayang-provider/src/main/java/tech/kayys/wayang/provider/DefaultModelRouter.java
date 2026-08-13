@@ -16,10 +16,20 @@ public class DefaultModelRouter implements ModelRouter {
             throw new IllegalStateException("No available providers to route to");
         }
         
-        // Phase 3 implementation: Simple fallback routing.
-        // In the future, this would inspect agentDefinition.constraints() and Provider capabilities.
+        // If agent explicitly requests a specific model reference, try to find a matching provider.
+        if (agentDefinition != null && agentDefinition.model() != null) {
+            String requestedModel = agentDefinition.model().id().asString();
+            for (Provider provider : availableProviders) {
+                // In a fuller implementation, Provider would expose capabilities and models it supports.
+                // For now, we perform a naive check on the provider's class name or ID.
+                if (provider.getClass().getSimpleName().toLowerCase().contains(requestedModel.toLowerCase())) {
+                    return provider;
+                }
+            }
+        }
         
-        // For now, return the first one
+        // Phase 4 implementation: Simple fallback routing if no specific constraints match.
+        // In the future, this would inspect agentDefinition.constraints() vs Provider capabilities.
         return availableProviders.get(0);
     }
 }

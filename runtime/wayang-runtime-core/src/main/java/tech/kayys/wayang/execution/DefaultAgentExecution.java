@@ -7,6 +7,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import tech.kayys.wayang.agent.Agent;
 import tech.kayys.wayang.agent.AgentContext;
@@ -15,9 +17,16 @@ import tech.kayys.wayang.agent.AgentResponse;
 import tech.kayys.wayang.agent.PermissionDecision;
 import tech.kayys.wayang.agent.WayangAgentListener;
 import tech.kayys.wayang.agent.builder.AgentBuilder;
+import tech.kayys.wayang.context.ContextProvider;
 import tech.kayys.wayang.core.AgentDefinition;
 import tech.kayys.wayang.execution.cache.ExecutionCache;
 import tech.kayys.wayang.execution.cache.ExecutionCacheEntry;
+import tech.kayys.wayang.execution.context.RuntimeContextPlan;
+import tech.kayys.wayang.execution.context.RuntimeContextPlanner;
+import tech.kayys.wayang.execution.context.DefaultRuntimeContextPlanner;
+import tech.kayys.wayang.execution.event.EventLedger;
+import tech.kayys.wayang.execution.event.ExecutionEvent;
+import tech.kayys.wayang.execution.event.ExecutionEventType;
 import tech.kayys.wayang.json.JsonValue;
 import tech.kayys.wayang.provider.Provider;
 import tech.kayys.wayang.tool.Tool;
@@ -34,6 +43,7 @@ import tech.kayys.wayang.tool.ToolResult;
  */
 public class DefaultAgentExecution implements AgentExecution {
 
+    private static final Logger LOGGER = Logger.getLogger(DefaultAgentExecution.class.getName());
     private static final Executor AGENT_POOL =
         Executors.newVirtualThreadPerTaskExecutor();
 
@@ -46,17 +56,23 @@ public class DefaultAgentExecution implements AgentExecution {
     /** Providers resolved from CDI — may be empty when running without a provider. */
     private final List<Provider> providers;
     
-    // Phase 3 components
+    // Phase 4 components (fully CDI-injected via AgentExecutionService)
     private final tech.kayys.wayang.provider.ModelRouter modelRouter;
-    private final tech.kayys.wayang.context.api.ContextPlanner contextPlanner;
+    private final RuntimeContextPlanner contextPlanner;
     private final tech.kayys.wayang.memory.manager.MemoryManager memoryManager;
 
-    /** Phase 3: Execution-scoped cache — null when caching is not configured. */
+    /** Execution-scoped cache — null when caching is not configured. */
     private final ExecutionCache executionCache;
 
     /** Tenant / user context for cache key isolation. */
     private final String tenantId;
     private final String userId;
+
+    // Phase 5: Event Ledger — null if not configured (graceful degradation)
+    private final EventLedger eventLedger;
+
+    /** Monotonic event sequence counter for this execution. */
+    private final java.util.concurrent.atomic.AtomicLong eventSeq = new java.util.concurrent.atomic.AtomicLong();
 
     private volatile ExecutionStatus status;
 
@@ -64,35 +80,56 @@ public class DefaultAgentExecution implements AgentExecution {
         String id,
         AgentDefinition agent,
         AgentContext agentContext,
-        
         ExecutionBudget budget,
         CheckpointStore checkpointStore,
         AgentToolExecutor toolExecutor,
         List<Provider> providers,
         tech.kayys.wayang.provider.ModelRouter modelRouter,
-        tech.kayys.wayang.context.api.ContextPlanner contextPlanner,
+        RuntimeContextPlanner contextPlanner,
         tech.kayys.wayang.memory.manager.MemoryManager memoryManager,
         ExecutionCache executionCache,
         String tenantId,
         String userId
     ) {
+        this(id, agent, agentContext, budget, checkpointStore, toolExecutor,
+             providers, modelRouter, contextPlanner, memoryManager,
+             executionCache, tenantId, userId, null);
+    }
+
+    /** Full constructor including the Event Ledger. */
+    public DefaultAgentExecution(
+        String id,
+        AgentDefinition agent,
+        AgentContext agentContext,
+        ExecutionBudget budget,
+        CheckpointStore checkpointStore,
+        AgentToolExecutor toolExecutor,
+        List<Provider> providers,
+        tech.kayys.wayang.provider.ModelRouter modelRouter,
+        RuntimeContextPlanner contextPlanner,
+        tech.kayys.wayang.memory.manager.MemoryManager memoryManager,
+        ExecutionCache executionCache,
+        String tenantId,
+        String userId,
+        EventLedger eventLedger
+    ) {
         this.id = id;
         this.agent = agent;
         this.agentContext = agentContext;
-        
         this.budget = budget;
         this.checkpointStore = checkpointStore;
         this.toolExecutor = toolExecutor;
         this.providers = providers != null ? new ArrayList<>(providers) : new ArrayList<>();
         
+        // Phase 4: All components are now CDI-injected; fall back to defaults only here
         this.modelRouter    = modelRouter    != null ? modelRouter    : new tech.kayys.wayang.provider.DefaultModelRouter();
-        this.contextPlanner = contextPlanner != null ? contextPlanner : new tech.kayys.wayang.context.impl.DefaultContextPlanner();
-        this.memoryManager  = memoryManager; // Can be null if memory is not configured
-
-        this.executionCache = executionCache; // Can be null if caching is not configured
+        this.contextPlanner = contextPlanner != null ? contextPlanner : new DefaultRuntimeContextPlanner();
+        this.memoryManager  = memoryManager; // null if memory is not configured
+        this.executionCache = executionCache; // null if caching is not configured
         this.tenantId       = tenantId;
         this.userId         = userId;
-        
+        // Phase 5: Event Ledger
+        this.eventLedger    = eventLedger;   // null means events are not persisted
         this.status = ExecutionStatus.PENDING;
     }
 
@@ -120,12 +157,30 @@ public class DefaultAgentExecution implements AgentExecution {
     public ExecutionStatus status() { return status; }
 
     // -------------------------------------------------------------------------
+    // Event helper
+    // -------------------------------------------------------------------------
+
+    /** Emit an event to the ledger if one is configured; no-op otherwise. */
+    private void emit(ExecutionEventType type, String actor, java.util.Map<String, Object> payload) {
+        if (eventLedger == null) return;
+        eventLedger.record(ExecutionEvent.of(id, eventSeq.getAndIncrement(), type, actor, payload));
+    }
+
+    private void emit(ExecutionEventType type, String actor) {
+        emit(type, actor, java.util.Map.of());
+    }
+
+    // -------------------------------------------------------------------------
     // Core execution — drives the ReAct loop
     // -------------------------------------------------------------------------
 
     @Override
     public CompletionStage<AgentResponse> execute() {
         this.status = ExecutionStatus.RUNNING;
+
+        // Phase 5: Record execution start
+        emit(ExecutionEventType.EXECUTION_STARTED, "execution-kernel",
+            java.util.Map.of("agentId", id, "tenantId", tenantId != null ? tenantId : "*"));
 
         // Bind execution context to the tool executor so it can tag cache entries
         if (toolExecutor instanceof DefaultAgentToolExecutor dex) {
@@ -139,6 +194,8 @@ public class DefaultAgentExecution implements AgentExecution {
                 runAgentLoop(future);
             } catch (Throwable t) {
                 this.status = ExecutionStatus.FAILED;
+                emit(ExecutionEventType.EXECUTION_FAILED, "execution-kernel",
+                    java.util.Map.of("error", t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName()));
                 future.completeExceptionally(t);
             }
         });
@@ -164,10 +221,11 @@ public class DefaultAgentExecution implements AgentExecution {
                 String recalledMemory = memoryManager.recallContext(prompt).toCompletableFuture().join();
                 if (recalledMemory != null && !recalledMemory.isBlank()) {
                     prompt = recalledMemory + "\n\n" + prompt;
+                    emit(ExecutionEventType.MEMORY_RETRIEVED, "memory-manager",
+                        java.util.Map.of("chars", recalledMemory.length()));
                 }
             } catch (Exception e) {
-                // Log and continue if memory fails
-                System.err.println("Memory recall failed: " + e.getMessage());
+                LOGGER.log(Level.WARNING, "Memory recall failed", e);
             }
         }
 
@@ -175,22 +233,40 @@ public class DefaultAgentExecution implements AgentExecution {
         Provider provider = null;
         try {
             provider = modelRouter.route(request, agent, providers);
+            final String providerName = provider.getClass().getSimpleName();
+            emit(ExecutionEventType.MODEL_ROUTING_RESOLVED, "model-router",
+                java.util.Map.of("provider", providerName));
         } catch (Exception e) {
+            emit(ExecutionEventType.EXECUTION_FAILED, "model-router",
+                java.util.Map.of("error", "Routing failed: " + e.getMessage()));
             stubComplete(future, "Routing failed: " + e.getMessage());
             return;
         }
 
-        // --- Phase 3: Context Planner ---
-        // (In a fuller implementation, we'd trim the prompt/history here based on the plan)
+        // --- Phase 4: Runtime Context Planner ---
         if (contextPlanner != null) {
-            tech.kayys.wayang.context.api.model.ContextPlan plan = contextPlanner.plan(
-                tech.kayys.wayang.context.api.model.TaskIntent.EXPLORATION, 8000
-            );
-            // Ensure prompt doesn't exceed budget (rough char approx: 1 token ≈ 4 chars)
-            if (prompt.length() > plan.tokenBudget() * 4) {
-                prompt = prompt.substring(0, (int) (plan.tokenBudget() * 4)) + "... (truncated)";
+            try {
+                RuntimeContextPlan ctxPlan = contextPlanner.planContext(
+                    agentContext, budget, List.of()
+                );
+                tech.kayys.wayang.context.ContextData cd = ctxPlan.getContextData();
+                if (cd != null && !cd.isEmpty() && !cd.documents().isEmpty()) {
+                    StringBuilder ctx = new StringBuilder();
+                    cd.documents().forEach(doc -> {
+                        if (doc != null && doc.content() != null) ctx.append(doc.content()).append("\n");
+                    });
+                    if (!ctx.isEmpty()) prompt = ctx + "\n" + prompt;
+                }
+                emit(ExecutionEventType.CONTEXT_COMPILED, "context-planner",
+                    java.util.Map.of(
+                        "tokenUsage",  ctxPlan.getTokenUsage(),
+                        "providers",   ctxPlan.getContributingProviders().toString()
+                    ));
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Context planning failed, continuing with raw prompt", e);
             }
         }
+
 
         // Resolve tools from the tool executor if available.
         List<Tool> tools = new ArrayList<>();

@@ -1,4 +1,4 @@
-package tech.kayys.wayang.agent.plan;
+package tech.kayys.wayang.agent.reflection;
 
 import tech.kayys.wayang.agent.WayangAgentListener;
 import tech.kayys.wayang.agent.react.BaseReActAgent;
@@ -17,85 +17,76 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
- * Plan-and-Solve Agent (§35) — three-phase loop: Plan → Solve → Reflect.
+ * Reflection Agent (§38) — Generate → Critique → Refine loop.
  *
  * <ol>
- *   <li><b>Plan</b>   — model decomposes the task into ordered sub-steps.</li>
- *   <li><b>Solve</b>  — for each step, runs a ReAct-style tool loop.</li>
- *   <li><b>Reflect</b>— model critiques the assembled answer; re-solves if needed (up to 2 rounds).</li>
+ *   <li><b>Generate</b> — produce an initial answer (with tool use).</li>
+ *   <li><b>Critique</b> — self-evaluate: is the answer complete, accurate, well-structured?</li>
+ *   <li><b>Refine</b>   — if critique found issues, produce an improved version.</li>
  * </ol>
  *
- * <p>Adheres to "An Agent decides. The Execution Kernel executes." — it never manages
- * state beyond its conversation history.</p>
+ * <p>The loop repeats up to {@code maxRounds} times (default 2).
+ * Each round is fully observable via the {@link WayangAgentListener}.</p>
  */
-public class PlanAndSolveAgent extends BaseReActAgent {
+public class ReflectionAgent extends BaseReActAgent {
 
-    private static final int MAX_STEPS_PER_SUBPLAN = 10;
-    private static final int MAX_REFLECTION_ROUNDS  = 2;
+    private int maxRounds = 2;
 
-    private static final String PLANNER_SUFFIX =
-        "\n\nYou are in PLANNING mode. Decompose the request into a numbered list of " +
-        "atomic sub-steps an AI can execute with available tools. Do NOT execute yet.\n" +
-        "Format:\nPLAN:\n1. <step>\n2. <step>\n...";
+    public ReflectionAgent() {}
 
-    private static final String SOLVER_PREFIX =
-        "\n\nYou are in SOLVING mode. Execute the plan step-by-step using tools when needed. " +
-        "After all steps report: ALL STEPS DONE.\nPlan:\n";
+    public ReflectionAgent(int maxRounds) {
+        this.maxRounds = maxRounds;
+    }
 
-    private static final String REFLECTOR_SUFFIX =
-        "\n\nYou are in REFLECTION mode. If the answer fully satisfies the request output " +
-        "\"REFLECTION: SATISFIED\". Otherwise output \"REFLECTION: NEEDS IMPROVEMENT\" " +
-        "followed by what is missing, then an improved answer.";
+    private static final String CRITIQUE_SUFFIX =
+        "\n\nYou are now in CRITIQUE mode. Review your previous answer critically.\n" +
+        "Ask yourself:\n" +
+        "- Is the answer complete?\n" +
+        "- Is it accurate and well-reasoned?\n" +
+        "- Is it clear and well-structured?\n\n" +
+        "Output one of:\n" +
+        "CRITIQUE: SATISFACTORY — answer meets all criteria.\n" +
+        "CRITIQUE: NEEDS REFINEMENT — followed by specific issues and an improved answer.";
 
     @Override
     public void send(String userInput, WayangAgentListener listener) {
         if (memory != null) memory.addMessage(ChatMessage.userText(userInput));
 
-        listener.onTextDelta("\n[PlanAndSolve] Phase 1: Planning\n");
-        String plan = runPhase(basePrompt() + PLANNER_SUFFIX, listener, "Planning");
-        if (plan == null) return;
+        // Generate initial answer
+        listener.onTextDelta("\n[Reflection] Round 1: Generating initial answer\n");
+        String answer = runGenerate(listener);
+        if (answer == null) return;
 
-        listener.onTextDelta("\n[PlanAndSolve] Phase 2: Solving\n");
-        String solution = runSolvingPhase(userInput, plan, listener, 0);
-        if (solution == null) return;
+        // Critique-Refine loop
+        for (int round = 1; round <= maxRounds; round++) {
+            listener.onTextDelta("\n[Reflection] Round " + (round + 1) + ": Critiquing\n");
+            String critique = runCritique(listener);
+            if (critique == null) return;
 
-        listener.onTextDelta("\n[PlanAndSolve] Phase 3: Reflecting\n");
-        runReflectionPhase(userInput, solution, listener, 0);
+            if (critique.contains("CRITIQUE: SATISFACTORY")) {
+                listener.onTextDelta("\n[Reflection] Critique satisfied — answer accepted.\n");
+                break;
+            }
+
+            if (round < maxRounds) {
+                listener.onTextDelta("\n[Reflection] Round " + (round + 1) + ": Refining\n");
+                answer = runGenerate(listener);
+                if (answer == null) return;
+            }
+        }
 
         listener.onDone("stop");
     }
 
-    // -------------------------------------------------------------------------
+    // ── Generate (with tool support) ─────────────────────────────────────────
 
-    private String runPhase(String systemPrompt, WayangAgentListener listener, String phaseName) {
-        StringBuilder buf = new StringBuilder();
-        try {
-            provider.streamChat(currentHistory(), systemPrompt, List.of(), 0.3, 2048, event -> {
-                if (event instanceof StreamEvent.TextDelta td) {
-                    listener.onTextDelta(td.text());
-                    buf.append(td.text());
-                }
-            });
-        } catch (IOException | InterruptedException e) {
-            Thread.currentThread().interrupt();
-            listener.onError(phaseName + " phase failed: " + e.getMessage());
-            return null;
-        }
-        String text = buf.toString().trim();
-        if (memory != null) memory.addMessage(ChatMessage.assistantText(text));
-        return text;
-    }
-
-    private String runSolvingPhase(String userInput, String plan, WayangAgentListener listener, int stepCount) {
-        if (stepCount >= MAX_STEPS_PER_SUBPLAN) {
-            listener.onError("Max solving steps exceeded.");
-            return null;
-        }
+    private String runGenerate(WayangAgentListener listener) {
         StringBuilder buf = new StringBuilder();
         AtomicReference<String> pendingTool = new AtomicReference<>();
+        List<ToolSpec> specs = buildToolSpecs();
+
         try {
-            provider.streamChat(currentHistory(), basePrompt() + SOLVER_PREFIX + plan,
-                buildToolSpecs(), 0.5, 4096, event -> {
+            provider.streamChat(currentHistory(), basePrompt(), specs, 0.7, 4096, event -> {
                 if (event instanceof StreamEvent.TextDelta td) {
                     listener.onTextDelta(td.text());
                     buf.append(td.text());
@@ -108,26 +99,38 @@ public class PlanAndSolveAgent extends BaseReActAgent {
             });
         } catch (IOException | InterruptedException e) {
             Thread.currentThread().interrupt();
-            listener.onError("Solving phase failed: " + e.getMessage());
+            listener.onError("Generation failed: " + e.getMessage());
             return null;
         }
-        String solution = buf.toString().trim();
-        if (memory != null) memory.addMessage(ChatMessage.assistantText(solution));
-        return solution;
+
+        String text = buf.toString().trim();
+        if (memory != null) memory.addMessage(ChatMessage.assistantText(text));
+        return text;
     }
 
-    private void runReflectionPhase(String userInput, String solution, WayangAgentListener listener, int round) {
-        if (round >= MAX_REFLECTION_ROUNDS) return;
-        String reflection = runPhase(basePrompt() + REFLECTOR_SUFFIX, listener, "Reflection");
-        if (reflection == null) return;
-        if (reflection.contains("REFLECTION: NEEDS IMPROVEMENT")) {
-            listener.onTextDelta("\n[PlanAndSolve] Re-solving based on reflection\n");
-            String improved = runSolvingPhase(userInput, reflection, listener, 0);
-            if (improved != null) runReflectionPhase(userInput, improved, listener, round + 1);
+    // ── Critique (text-only, no tools) ───────────────────────────────────────
+
+    private String runCritique(WayangAgentListener listener) {
+        StringBuilder buf = new StringBuilder();
+        try {
+            provider.streamChat(currentHistory(), basePrompt() + CRITIQUE_SUFFIX,
+                List.of(), 0.3, 2048, event -> {
+                if (event instanceof StreamEvent.TextDelta td) {
+                    listener.onTextDelta(td.text());
+                    buf.append(td.text());
+                }
+            });
+        } catch (IOException | InterruptedException e) {
+            Thread.currentThread().interrupt();
+            listener.onError("Critique failed: " + e.getMessage());
+            return null;
         }
+        String text = buf.toString().trim();
+        if (memory != null) memory.addMessage(ChatMessage.assistantText(text));
+        return text;
     }
 
-    // -------------------------------------------------------------------------
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private void invokeTool(StreamEvent.ToolUseEnd toolEnd, String toolName, WayangAgentListener listener) {
         if (toolName == null) return;
@@ -154,7 +157,7 @@ public class PlanAndSolveAgent extends BaseReActAgent {
 
     private ToolResult safeDirect(Tool tool, ToolInvocation inv) {
         try { return tool.execute(inv, null).get(); }
-        catch (Exception e) { throw new RuntimeException(e); }
+        catch (Exception ex) { throw new RuntimeException(ex); }
     }
 
     private List<ChatMessage> currentHistory() {

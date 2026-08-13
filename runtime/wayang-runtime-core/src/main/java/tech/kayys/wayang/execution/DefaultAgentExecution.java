@@ -70,6 +70,7 @@ public class DefaultAgentExecution implements AgentExecution {
 
     // Phase 5: Event Ledger — null if not configured (graceful degradation)
     private final EventLedger eventLedger;
+    private final ExecutionStateStore stateStore;
 
     /** Monotonic event sequence counter for this execution. */
     private final java.util.concurrent.atomic.AtomicLong eventSeq = new java.util.concurrent.atomic.AtomicLong();
@@ -130,6 +131,7 @@ public class DefaultAgentExecution implements AgentExecution {
         this.userId         = userId;
         // Phase 5: Event Ledger
         this.eventLedger    = eventLedger;   // null means events are not persisted
+        this.stateStore     = new DefaultExecutionStateStore(checkpointStore, eventLedger);
         this.status = ExecutionStatus.PENDING;
     }
 
@@ -160,15 +162,7 @@ public class DefaultAgentExecution implements AgentExecution {
     // Event helper
     // -------------------------------------------------------------------------
 
-    /** Emit an event to the ledger if one is configured; no-op otherwise. */
-    private void emit(ExecutionEventType type, String actor, java.util.Map<String, Object> payload) {
-        if (eventLedger == null) return;
-        eventLedger.record(ExecutionEvent.of(id, eventSeq.getAndIncrement(), type, actor, payload));
-    }
-
-    private void emit(ExecutionEventType type, String actor) {
-        emit(type, actor, java.util.Map.of());
-    }
+    // Event helper is now managed inside DefaultExecutionStateStore
 
     // -------------------------------------------------------------------------
     // Core execution — drives the ReAct loop
@@ -179,7 +173,7 @@ public class DefaultAgentExecution implements AgentExecution {
         this.status = ExecutionStatus.RUNNING;
 
         // Phase 5: Record execution start
-        emit(ExecutionEventType.EXECUTION_STARTED, "execution-kernel",
+        stateStore.transition(id, ExecutionPhase.INPUT,
             java.util.Map.of("agentId", id, "tenantId", tenantId != null ? tenantId : "*"));
 
         // Bind execution context to the tool executor so it can tag cache entries
@@ -194,8 +188,7 @@ public class DefaultAgentExecution implements AgentExecution {
                 runAgentLoop(future);
             } catch (Throwable t) {
                 this.status = ExecutionStatus.FAILED;
-                emit(ExecutionEventType.EXECUTION_FAILED, "execution-kernel",
-                    java.util.Map.of("error", t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName()));
+                stateStore.fail(id, t);
                 future.completeExceptionally(t);
             }
         });
@@ -216,12 +209,13 @@ public class DefaultAgentExecution implements AgentExecution {
         }
 
         // --- Phase 3: Memory Manager ---
+        stateStore.transition(id, ExecutionPhase.MEMORY, java.util.Map.of());
         if (memoryManager != null) {
             try {
                 String recalledMemory = memoryManager.recallContext(prompt).toCompletableFuture().join();
                 if (recalledMemory != null && !recalledMemory.isBlank()) {
                     prompt = recalledMemory + "\n\n" + prompt;
-                    emit(ExecutionEventType.MEMORY_RETRIEVED, "memory-manager",
+                    stateStore.transition(id, ExecutionPhase.MEMORY,
                         java.util.Map.of("chars", recalledMemory.length()));
                 }
             } catch (Exception e) {
@@ -230,20 +224,21 @@ public class DefaultAgentExecution implements AgentExecution {
         }
 
         // --- Phase 3: Model Router ---
+        stateStore.transition(id, ExecutionPhase.INFERENCE, java.util.Map.of());
         Provider provider = null;
         try {
             provider = modelRouter.route(request, agent, providers);
             final String providerName = provider.getClass().getSimpleName();
-            emit(ExecutionEventType.MODEL_ROUTING_RESOLVED, "model-router",
+            stateStore.transition(id, ExecutionPhase.INFERENCE,
                 java.util.Map.of("provider", providerName));
         } catch (Exception e) {
-            emit(ExecutionEventType.EXECUTION_FAILED, "model-router",
-                java.util.Map.of("error", "Routing failed: " + e.getMessage()));
+            stateStore.fail(id, new RuntimeException("Routing failed: " + e.getMessage(), e));
             stubComplete(future, "Routing failed: " + e.getMessage());
             return;
         }
 
         // --- Phase 4: Runtime Context Planner ---
+        stateStore.transition(id, ExecutionPhase.CONTEXT, java.util.Map.of());
         if (contextPlanner != null) {
             try {
                 RuntimeContextPlan ctxPlan = contextPlanner.planContext(
@@ -257,7 +252,7 @@ public class DefaultAgentExecution implements AgentExecution {
                     });
                     if (!ctx.isEmpty()) prompt = ctx + "\n" + prompt;
                 }
-                emit(ExecutionEventType.CONTEXT_COMPILED, "context-planner",
+                stateStore.transition(id, ExecutionPhase.CONTEXT,
                     java.util.Map.of(
                         "tokenUsage",  ctxPlan.getTokenUsage(),
                         "providers",   ctxPlan.getContributingProviders().toString()
@@ -383,6 +378,7 @@ public class DefaultAgentExecution implements AgentExecution {
                     memoryManager.storeInteraction(request.content(), response.content());
                 }
 
+                stateStore.complete(id, response);
                 future.complete(response);
             }
 
@@ -396,6 +392,7 @@ public class DefaultAgentExecution implements AgentExecution {
                     .error(message)
                     .build();
 
+                stateStore.fail(id, new RuntimeException(message));
                 future.complete(response);
             }
         });

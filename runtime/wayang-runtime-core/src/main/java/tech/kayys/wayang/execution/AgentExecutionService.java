@@ -82,11 +82,11 @@ public class AgentExecutionService {
     // ------------------------------------------------------------------
 
     public AgentExecution create(AgentDefinition agent, AgentRequest request, ExecutionBudget budget) {
-        String executionId = java.util.UUID.randomUUID().toString();
+        ExecutionIdentity identity = ExecutionIdentity.create();
 
         AgentContext agentContext = AgentContext.builder()
-            .id(new tech.kayys.wayang.identity.ResourceId.AgentId(
-                    new tech.kayys.wayang.extension.Id(java.util.UUID.randomUUID())))
+            .id(new tech.kayys.wayang.identity.ResourceId.ExecutionId(
+                    new tech.kayys.wayang.extension.Id(java.util.UUID.fromString(identity.executionId()))))
             .request(request)
             .build();
 
@@ -99,7 +99,7 @@ public class AgentExecutionService {
         ExecutionBudget effectiveBudget = budget != null ? budget : ExecutionBudget.balanced();
 
         return new DefaultAgentExecution(
-            executionId,
+            identity.executionId(),
             agent,
             agentContext,
             effectiveBudget,

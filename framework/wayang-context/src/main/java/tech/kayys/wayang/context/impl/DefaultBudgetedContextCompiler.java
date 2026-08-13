@@ -12,6 +12,7 @@ import tech.kayys.wayang.context.api.model.SkeletonResult;
 import tech.kayys.wayang.context.api.model.SourceChunk;
 import tech.kayys.wayang.context.api.model.Tier;
 import tech.kayys.wayang.context.api.model.TierEntry;
+import tech.kayys.wayang.resource.ContentPart;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -130,7 +131,7 @@ public final class DefaultBudgetedContextCompiler implements BudgetedContextComp
             SourceChunk chunk = chunks.get(0);
             long tokens = tokenEstimator.estimate(chunk.content());
             if (tokens <= tokenBudget) {
-                entries.add(new TierEntry(target, Tier.FULL_SOURCE, chunk.content(), tokens, 0));
+                entries.add(new TierEntry(target, Tier.FULL_SOURCE, java.util.List.of(new ContentPart.Text(chunk.content(), java.util.Map.of())), tokens, 0));
                 return tokenBudget - tokens;
             }
         }
@@ -151,7 +152,7 @@ public final class DefaultBudgetedContextCompiler implements BudgetedContextComp
     private TierEntry tryTier(Path path, Tier tier, String content, Integer hop, long budgetRemaining) {
         long tokens = tokenEstimator.estimate(content);
         if (tokens > budgetRemaining) return null;
-        return new TierEntry(path, tier, content, tokens, hop);
+        return new TierEntry(path, tier, java.util.List.of(new ContentPart.Text(content, java.util.Map.of())), tokens, hop);
     }
 
     private long estimateFileTokensOrZero(Path path) {

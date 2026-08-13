@@ -57,8 +57,14 @@ public class DefaultRagPipeline implements RagPipeline {
 
     @Override
     public RagResult query(RagQuery query) {
-        List<RagScoredChunk> retrieved = strategy.retrieve(
-                query.text(), vectorStore, query.topK(), query.minScore());
+        MultimodalRetrievalQuery mmQuery = new MultimodalRetrievalQuery(
+            List.of(new QueryPart.TextPart(query.text())),
+            "hybrid",
+            query.topK(),
+            query.minScore(),
+            Map.of()
+        );
+        List<RagScoredChunk> retrieved = strategy.retrieve(mmQuery, vectorStore);
 
         // Simple concatenation answer — override with LLM-based generation as needed
         StringBuilder sb = new StringBuilder();

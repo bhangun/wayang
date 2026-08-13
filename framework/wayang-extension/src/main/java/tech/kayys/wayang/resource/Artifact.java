@@ -39,6 +39,10 @@ public interface Artifact extends Resource {
         return null;
     }
     
+    default List<ArtifactRepresentation> representations() {
+        return List.of();
+    }
+    
     default boolean isText() {
         return type() == ArtifactType.TEXT;
     }

@@ -3,6 +3,8 @@ package tech.kayys.wayang.provider;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.Set;
+import tech.kayys.wayang.resource.Modality;
 
 /**
  * A pluggable AI backend. Implementations translate the normalized
@@ -26,4 +28,11 @@ public interface Provider {
             int maxTokens,
             Consumer<StreamEvent> onEvent
     ) throws IOException, InterruptedException;
+    
+    /**
+     * @return the set of modalities this provider supports (defaults to TEXT only)
+     */
+    default Set<Modality> supportedModalities() {
+        return Set.of(Modality.TEXT);
+    }
 }

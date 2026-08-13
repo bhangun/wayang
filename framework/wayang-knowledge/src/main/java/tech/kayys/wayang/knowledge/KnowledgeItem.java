@@ -3,6 +3,7 @@ package tech.kayys.wayang.knowledge;
 import java.time.Instant;
 import java.util.List;
 import tech.kayys.wayang.project.ProjectContext;
+import tech.kayys.wayang.rag.model.Provenance;
 
 /**
  * Represents a curated fact, decision, or finding stored as project knowledge.

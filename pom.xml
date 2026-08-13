@@ -73,7 +73,7 @@
         <module>runtime/wayang-sandbox</module>
         <module>runtime/wayang-agent-runtime</module>
         <module>runtime/wayang-tool-runtime</module>
-        <!-- <module>runtime/wayang-rag-runtime</module> -->
+        <module>runtime/wayang-rag-runtime</module>
         <module>runtime/wayang-builtin-tools</module>
         <module>runtime/wayang-runtime-provider</module>
         <module>runtime/wayang-graph-runtime</module>

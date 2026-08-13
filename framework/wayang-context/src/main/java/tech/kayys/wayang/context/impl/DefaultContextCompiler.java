@@ -5,6 +5,7 @@ import tech.kayys.wayang.context.api.Skeletonizer;
 import tech.kayys.wayang.context.api.SymbolResolver;
 import tech.kayys.wayang.context.api.TokenEstimator;
 import tech.kayys.wayang.context.api.model.CompiledContext;
+import tech.kayys.wayang.resource.ContentPart;
 import tech.kayys.wayang.context.api.model.ModuleIndex;
 import tech.kayys.wayang.context.api.model.ReachabilityResult;
 import tech.kayys.wayang.context.api.model.SkeletonResult;
@@ -53,7 +54,7 @@ public final class DefaultContextCompiler implements ContextCompiler {
 
         List<TierEntry> entries = new ArrayList<>();
         String targetSource = readOrThrow(target);
-        entries.add(new TierEntry(target, Tier.FULL_SOURCE, targetSource,
+        entries.add(new TierEntry(target, Tier.FULL_SOURCE, List.of(new ContentPart.Text(targetSource, java.util.Map.of())),
                 tokenEstimator.estimate(targetSource), 0));
 
         reachability.reachable().entrySet().stream()
@@ -62,7 +63,7 @@ public final class DefaultContextCompiler implements ContextCompiler {
                     try {
                         String source = Files.readString(dep.getKey());
                         SkeletonResult skeleton = skeletonizer.skeletonize(source);
-                        entries.add(new TierEntry(dep.getKey(), Tier.SKELETON, skeleton.skeleton(),
+                        entries.add(new TierEntry(dep.getKey(), Tier.SKELETON, List.of(new ContentPart.Text(skeleton.skeleton(), java.util.Map.of())),
                                 tokenEstimator.estimate(skeleton.skeleton()), dep.getValue()));
                     } catch (Exception unreadableOrUnparsable) {
                         // Treated as a tier-2 miss, same policy as an unresolved import.

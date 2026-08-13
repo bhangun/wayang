@@ -1,7 +1,9 @@
 package tech.kayys.wayang.context.api.model;
 
+import tech.kayys.wayang.resource.ContentPart;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -79,6 +81,16 @@ public final class CompiledContext {
             sb.append("\n\n");
         }
         return sb.toString().stripTrailing();
+    }
+    
+    public List<ContentPart> toContentParts() {
+        List<ContentPart> parts = new ArrayList<>();
+        for (TierEntry entry : entries) {
+            parts.add(new ContentPart.Text("// ---- [" + tierLabel(entry.tier()) + "] " + entry.path() + " ----\n", java.util.Map.of()));
+            parts.addAll(entry.contentParts());
+            parts.add(new ContentPart.Text("\n\n", java.util.Map.of()));
+        }
+        return parts;
     }
 
     private String tierLabel(Tier tier) {

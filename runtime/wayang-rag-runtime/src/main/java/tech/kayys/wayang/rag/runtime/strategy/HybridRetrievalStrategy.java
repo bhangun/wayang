@@ -1,5 +1,6 @@
 package tech.kayys.wayang.rag.runtime.strategy;
 
+import tech.kayys.wayang.rag.model.MultimodalRetrievalQuery;
 import tech.kayys.wayang.rag.model.RagScoredChunk;
 import tech.kayys.wayang.rag.spi.RagEmbedder;
 import tech.kayys.wayang.rag.spi.RetrievalStrategy;
@@ -29,9 +30,10 @@ public class HybridRetrievalStrategy implements RetrievalStrategy {
     }
 
     @Override
-    public List<RagScoredChunk> retrieve(String query, VectorStore store, int topK, double minScore) {
-        List<RagScoredChunk> denseHits   = dense.retrieve(query, store, topK * 2, 0.0);
-        List<RagScoredChunk> keywordHits = keyword.retrieve(query, store, topK * 2, 0.0);
+    public List<RagScoredChunk> retrieve(MultimodalRetrievalQuery query, VectorStore store) {
+        MultimodalRetrievalQuery subQuery = new MultimodalRetrievalQuery(query.parts(), query.mode(), query.topK() * 2, 0.0, query.filters());
+        List<RagScoredChunk> denseHits   = dense.retrieve(subQuery, store);
+        List<RagScoredChunk> keywordHits = keyword.retrieve(subQuery, store);
 
         // Reciprocal Rank Fusion
         Map<String, Double> scores = new LinkedHashMap<>();
@@ -41,7 +43,7 @@ public class HybridRetrievalStrategy implements RetrievalStrategy {
 
         return scores.entrySet().stream()
                 .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
-                .limit(topK)
+                .limit(query.topK())
                 .map(e -> {
                     // Find the chunk matching this id
                     return denseHits.stream()
@@ -52,7 +54,7 @@ public class HybridRetrievalStrategy implements RetrievalStrategy {
                                     .findFirst().orElse(null));
                 })
                 .filter(Objects::nonNull)
-                .filter(c -> c.score() >= minScore)
+                .filter(c -> c.score() >= query.minScore())
                 .toList();
     }
 

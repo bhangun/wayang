@@ -7,5 +7,6 @@ package tech.kayys.wayang.project;
 public record ProjectContext(
     String projectId,
     String tenantId,
+    String userId,
     String workspaceId
 ) {}

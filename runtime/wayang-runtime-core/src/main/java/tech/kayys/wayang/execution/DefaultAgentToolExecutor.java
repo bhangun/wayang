@@ -20,6 +20,8 @@ import tech.kayys.wayang.execution.cache.ExecutionCacheEntry;
 import tech.kayys.wayang.execution.event.EventLedger;
 import tech.kayys.wayang.execution.event.ExecutionEvent;
 import tech.kayys.wayang.execution.event.ExecutionEventType;
+import tech.kayys.wayang.execution.event.ToolExecution;
+import tech.kayys.wayang.execution.event.ToolExecutionLedger;
 import tech.kayys.wayang.execution.governance.PolicyDecision;
 import tech.kayys.wayang.execution.governance.ToolBudget;
 import tech.kayys.wayang.execution.governance.ToolBudgetLedger;
@@ -102,6 +104,9 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor, AgentToolExe
 
     @Inject
     Instance<EventLedger> eventLedgerInstances;
+    
+    @Inject
+    Instance<ToolExecutionLedger> toolExecutionLedgerInstances;
 
     /** Monotonic audit sequence per executor instance. */
     private final java.util.concurrent.atomic.AtomicLong auditSeq = new java.util.concurrent.atomic.AtomicLong();
@@ -149,6 +154,7 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor, AgentToolExe
                 ExecutionCacheEntry entry = hit.get();
                 LOG.fine(() -> "Cache HIT for tool " + toolName + " (" + inputHash + ")");
                 if (entry.value() instanceof ToolResult cachedResult) {
+                    recordToolExecution(toolName, invocation.arguments(), 0, true);
                     return CompletableFuture.completedFuture(
                             new AgentDecision.ToolCompleted(invocation, cachedResult));
                 }
@@ -236,9 +242,10 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor, AgentToolExe
             if (budgetLedger != null) {
                 budget.consume(durationMs, 0.0); // cost USD injected by billing module later
             }
-            if (decision instanceof AgentDecision.ToolCompleted) {
+            if (decision instanceof AgentDecision.ToolCompleted tc) {
                 emitAudit(ExecutionEventType.TOOL_EXECUTED, toolName,
                     Map.of("durationMs", durationMs));
+                recordToolExecution(toolName, invocation.arguments(), durationMs, false);
             } else if (decision instanceof AgentDecision.Fail f) {
                 emitAudit(ExecutionEventType.TOOL_FAILED, toolName,
                     Map.of("durationMs", durationMs, "error", f.error()));
@@ -327,6 +334,21 @@ public class DefaultAgentToolExecutor implements AgentToolExecutor, AgentToolExe
             type,
             toolName,
             payload
+        ));
+    }
+    
+    private void recordToolExecution(String toolName, Map<String, Object> arguments, long durationMs, boolean cacheHit) {
+        if (toolExecutionLedgerInstances == null || toolExecutionLedgerInstances.isUnsatisfied()) return;
+        ToolExecutionLedger ledger = toolExecutionLedgerInstances.get();
+        ledger.record(new ToolExecution(
+            currentExecutionId != null ? currentExecutionId : "unknown",
+            currentTenantId,
+            currentUserId,
+            toolName,
+            ExecutionCache.hashInputs(arguments),
+            durationMs,
+            cacheHit,
+            Instant.now()
         ));
     }
 

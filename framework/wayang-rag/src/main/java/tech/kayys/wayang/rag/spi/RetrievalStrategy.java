@@ -2,6 +2,7 @@ package tech.kayys.wayang.rag.spi;
 
 import tech.kayys.wayang.rag.model.RagChunk;
 import tech.kayys.wayang.rag.model.RagScoredChunk;
+import tech.kayys.wayang.rag.model.MultimodalRetrievalQuery;
 import java.util.List;
 
 /**
@@ -9,5 +10,5 @@ import java.util.List;
  * Implementations live in wayang-rag-runtime.
  */
 public interface RetrievalStrategy {
-    List<RagScoredChunk> retrieve(String query, VectorStore store, int topK, double minScore);
+    List<RagScoredChunk> retrieve(MultimodalRetrievalQuery query, VectorStore store);
 }

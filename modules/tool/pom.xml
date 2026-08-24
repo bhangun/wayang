@@ -26,6 +26,10 @@
         <module>wayang-tool-http</module>
         <module>wayang-tool-os</module>
         -->
+    <modules>
+        <module>wayang-image-tools</module>
+        <module>wayang-audio-tools</module>
+    </modules>
 
     <properties>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>

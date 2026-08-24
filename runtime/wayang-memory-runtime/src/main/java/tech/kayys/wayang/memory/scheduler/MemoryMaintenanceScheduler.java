@@ -6,6 +6,7 @@ import tech.kayys.wayang.memory.service.MemoryService;
 import tech.kayys.wayang.memory.entity.MemorySessionEntity;
 import tech.kayys.wayang.memory.model.MemoryContext;
 import tech.kayys.wayang.memory.model.SecurityScanResult;
+import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import io.quarkus.scheduler.Scheduled;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.Multi;
@@ -31,10 +32,11 @@ public class MemoryMaintenanceScheduler {
     MemoryService memoryService;
 
     @Scheduled(cron = "0 0 2 * * ?") // Run at 2 AM daily
-    public void optimizeStaleMemories() {
+    @WithSession
+    public Uni<Void> optimizeStaleMemories() {
         LOG.info("Starting scheduled memory optimization");
         
-        MemorySessionEntity.<MemorySessionEntity>findAll().list()
+        return MemorySessionEntity.<MemorySessionEntity>findAll().list()
             .onItem().transformToMulti(sessions -> Multi.createFrom().iterable(sessions))
             .onItem().transformToUniAndMerge(session -> 
                 optimizationService.optimizeMemory(session.sessionId)
@@ -44,31 +46,29 @@ public class MemoryMaintenanceScheduler {
                     .onFailure().invoke(throwable -> 
                         LOG.error("Failed to optimize session: {}", session.sessionId, throwable)))
             .collect().asList()
-            .subscribe().with(
-                results -> LOG.info("Completed optimization for {} sessions", results.size()),
-                throwable -> LOG.error("Optimization job failed", throwable)
-            );
+            .onItem().invoke(results -> LOG.info("Completed optimization for {} sessions", results.size()))
+            .replaceWithVoid();
     }
 
     @Scheduled(cron = "0 0 3 * * ?") // Run at 3 AM daily
-    public void cleanupExpiredSessions() {
+    @WithSession
+    public Uni<Void> cleanupExpiredSessions() {
         LOG.info("Starting cleanup of expired sessions");
         
         Instant now = Instant.now();
         
-        MemorySessionEntity.<MemorySessionEntity>delete(
+        return MemorySessionEntity.<MemorySessionEntity>delete(
                 "expiresAt < ?1 AND expiresAt IS NOT NULL", now)
-            .subscribe().with(
-                count -> LOG.info("Deleted {} expired sessions", count),
-                throwable -> LOG.error("Cleanup job failed", throwable)
-            );
+            .onItem().invoke(count -> LOG.info("Deleted {} expired sessions", count))
+            .replaceWithVoid();
     }
 
     @Scheduled(every = "6h") // Run every 6 hours
-    public void auditMemorySecurity() {
+    @WithSession
+    public Uni<Void> auditMemorySecurity() {
         LOG.info("Starting security audit of memory");
         
-        MemorySessionEntity.<MemorySessionEntity>findAll().list()
+        return MemorySessionEntity.<MemorySessionEntity>findAll().list()
             .onItem().transformToMulti(sessions -> Multi.createFrom().iterable(sessions))
             .select().first(100) // Limit to 100 sessions per run
             .onItem().transformToUniAndMerge(session -> 
@@ -84,9 +84,7 @@ public class MemoryMaintenanceScheduler {
                     .onFailure().invoke(throwable -> 
                         LOG.error("Failed to scan session: {}", session.sessionId, throwable)))
             .collect().asList()
-            .subscribe().with(
-                results -> LOG.info("Completed security audit for {} sessions", results.size()),
-                throwable -> LOG.error("Security audit failed", throwable)
-            );
+            .onItem().invoke(results -> LOG.info("Completed security audit for {} sessions", results.size()))
+            .replaceWithVoid();
     }
 }

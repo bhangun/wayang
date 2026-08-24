@@ -13,6 +13,19 @@
 
     <properties>
         <maven.compiler.release>22</maven.compiler.release>
+        <exec-maven-plugin.version>3.1.0</exec-maven-plugin.version>
+        <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
+        <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
+
+        <!-- Native build configuration & CI/CD awareness -->
+        <cargo.executable>cargo</cargo.executable>
+        <nono.build.skip>false</nono.build.skip>
+        <nono.copy.skip>false</nono.copy.skip>
+
+        <!-- Dynamic paths with repository defaults; overridable via CLI (-Dnono.root.dir=...) or CI env -->
+        <nono.root.dir>${project.basedir}/../../../../../3rdparty/nono</nono.root.dir>
+        <nono.bindings.c.dir>${nono.root.dir}/bindings/c</nono.bindings.c.dir>
+        <nono.native.dir>${nono.root.dir}/target/release</nono.native.dir>
     </properties>
 
     <dependencies>
@@ -51,11 +64,11 @@
 
     <build>
         <plugins>
-            <!-- Build the Rust native library nono_ffi -->
+            <!-- Build the Rust native library nono_ffi (skipped if -Dnono.build.skip=true or in CI prebuilt mode) -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>${exec-maven-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>build-nono-ffi</id>
@@ -64,9 +77,9 @@
                             <goal>exec</goal>
                         </goals>
                         <configuration>
-                            <!-- Execute cargo build in 3rdparty/nono/bindings/c -->
-                            <executable>cargo</executable>
-                            <workingDirectory>${project.basedir}/../../../../../3rdparty/nono/bindings/c</workingDirectory>
+                            <skip>${nono.build.skip}</skip>
+                            <executable>${cargo.executable}</executable>
+                            <workingDirectory>${nono.bindings.c.dir}</workingDirectory>
                             <arguments>
                                 <argument>build</argument>
                                 <argument>--release</argument>
@@ -75,11 +88,12 @@
                     </execution>
                 </executions>
             </plugin>
+
             <!-- Copy the generated shared library to classes folder so it's on classpath -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
-                <version>3.3.1</version>
+                <version>${maven-resources-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>copy-nono-native-lib</id>
@@ -88,10 +102,11 @@
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
+                            <skip>${nono.copy.skip}</skip>
                             <outputDirectory>${project.build.outputDirectory}</outputDirectory>
                             <resources>
                                 <resource>
-                                    <directory>${project.basedir}/../../../../../3rdparty/nono/target/release</directory>
+                                    <directory>${nono.native.dir}</directory>
                                     <includes>
                                         <include>libnono_ffi.so</include>
                                         <include>libnono_ffi.dylib</include>
@@ -103,6 +118,7 @@
                     </execution>
                 </executions>
             </plugin>
+
             <!-- Ensure compiler has preview features or target 22+ for FFM -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -111,14 +127,60 @@
                     <release>22</release>
                 </configuration>
             </plugin>
+
             <!-- Enable native access for testing -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven-surefire-plugin.version}</version>
                 <configuration>
                     <argLine>--enable-native-access=ALL-UNNAMED</argLine>
                 </configuration>
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- CI profile when prebuilt native libraries are supplied via env variable NONO_NATIVE_DIR -->
+        <profile>
+            <id>ci-prebuilt-native-env</id>
+            <activation>
+                <property>
+                    <name>env.NONO_NATIVE_DIR</name>
+                </property>
+            </activation>
+            <properties>
+                <nono.native.dir>${env.NONO_NATIVE_DIR}</nono.native.dir>
+                <nono.build.skip>true</nono.build.skip>
+            </properties>
+        </profile>
+
+        <!-- CI profile when NONO_ROOT_DIR is specified -->
+        <profile>
+            <id>ci-nono-root-env</id>
+            <activation>
+                <property>
+                    <name>env.NONO_ROOT_DIR</name>
+                </property>
+            </activation>
+            <properties>
+                <nono.root.dir>${env.NONO_ROOT_DIR}</nono.root.dir>
+                <nono.bindings.c.dir>${env.NONO_ROOT_DIR}/bindings/c</nono.bindings.c.dir>
+                <nono.native.dir>${env.NONO_ROOT_DIR}/target/release</nono.native.dir>
+            </properties>
+        </profile>
+
+        <!-- Profile to skip cargo build during fast CI / Java-only verification -->
+        <profile>
+            <id>skip-cargo</id>
+            <activation>
+                <property>
+                    <name>skipCargo</name>
+                </property>
+            </activation>
+            <properties>
+                <nono.build.skip>true</nono.build.skip>
+            </properties>
+        </profile>
+    </profiles>
 </project>

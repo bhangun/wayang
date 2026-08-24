@@ -1,6 +1,8 @@
 package tech.kayys.wayang.agent.mcp;
 
 import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import tech.kayys.wayang.agent.spi.skills.SkillRegistry;
 
 import java.util.LinkedHashMap;
@@ -8,12 +10,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public final class McpSkillBridge {
+@ApplicationScoped
+public class McpSkillBridge {
 
     private final McpToolClient client;
     private final SkillRegistry skillRegistry;
     private final Map<String, List<McpToolDescriptor>> toolsByServer = new LinkedHashMap<>();
 
+    @Inject
     public McpSkillBridge(McpToolClient client, SkillRegistry skillRegistry) {
         this.client = Objects.requireNonNull(client, "client");
         this.skillRegistry = Objects.requireNonNull(skillRegistry, "skillRegistry");

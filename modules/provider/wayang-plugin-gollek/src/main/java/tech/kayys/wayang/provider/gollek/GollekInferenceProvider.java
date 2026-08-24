@@ -143,6 +143,8 @@ public class GollekInferenceProvider implements InferenceProvider {
             private final StringBuilder lineAccum = new StringBuilder(); // accumulates one line
             private final ArrayDeque<String> buf = new ArrayDeque<>();   // ready-to-emit tokens
             private boolean       done        = false;
+            private boolean inMetrics = false;
+            private final StringBuilder metricsBuf = new StringBuilder();
 
             // Pre-fill on construction
             { fillBuf(); }
@@ -163,9 +165,6 @@ public class GollekInferenceProvider implements InferenceProvider {
                     processLine(line);
                 }
             }
-
-            private boolean inMetrics = false;
-            private StringBuilder metricsBuf = new StringBuilder();
 
             /**
              * Process a single line from the subprocess.
@@ -226,7 +225,7 @@ public class GollekInferenceProvider implements InferenceProvider {
             }
             
             private void emitMetricsIfAny() {
-                if (metricsBuf.length() > 0) {
+                if (metricsBuf != null && metricsBuf.length() > 0) {
                     String data = metricsBuf.toString().trim();
                     buf.add("{\"t\":\"metrics\",\"d\":\"" + jsonEscape(data) + "\"}");
                     metricsBuf.setLength(0);

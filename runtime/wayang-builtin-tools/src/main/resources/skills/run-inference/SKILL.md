@@ -91,11 +91,13 @@ response.getUsageMetrics()     // Resource usage
 
 ### Provider Types
 
+- **gollek** - Native Gollek Engine (GGUF, SafeTensors, LiteRT, ONNX, and Time-Series)
 - **openai** - OpenAI API (GPT-3.5, GPT-4)
 - **anthropic** - Anthropic Claude
 - **google** - Google PaLM / Gemini
 - **onnx** - Local ONNX Runtime
 - **gguf** - llama.cpp format
+- **timeseries** - Time Series Forecaster (ARIMA, Holt-Winters, Deep LSTM, Chronos)
 - **triton** - Triton Inference Server
 
 ## Example: Text Classification

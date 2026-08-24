@@ -5,9 +5,9 @@ Wayang is a comprehensive agentic coding platform designed for seamless local an
 ## Core Components
 
 ### 1. Agent Engine (Gollek SDK & Adapters)
-At the heart of the platform is the **Gollek Engine**, which facilitates inference and interaction with LLMs.
+At the heart of the platform is the **Gollek Engine**, which facilitates inference and interaction with LLMs, Vision/OCR, and Time-Series Forecasting models.
 - **Provider Abstraction**: Interacts with underlying models via `WayangProvider`, abstracting away the differences between various model architectures.
-- **Local Engine (`safetensor-engine`)**: Wayang can run fully localized instances of models using its native safetensor loading and inference mechanisms, enabling privacy and offline capabilities.
+- **Local Engine (`safetensor-engine` & `tafkir-ml-timeseries`)**: Wayang can run fully localized instances of LLM models and pure-Java time-series forecasters (ARIMA, Holt-Winters, Deep LSTM, Chronos) using native loading and inference mechanisms, enabling privacy and offline capabilities.
 - **Context Management**: Dynamically formats chat history and tool schemas to fit the context window constraints of the active model, natively mapping abstract `ToolDefinition` arrays into the specific chat templates (e.g., Llama, Qwen, Granite).
 
 ### 2. Terminal UI (TUI) & CLI

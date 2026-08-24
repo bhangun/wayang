@@ -26,3 +26,10 @@ The behavior is dictated by `Families/wayang/config/providers/gollek.yaml`:
 
 ## gRPC Strategy
 Under the hood, when Gollek is active, Wayang leverages the `GrpcGollekStrategy` located in `wayang-plugin-gollek`. This strategy maps Wayang's `ChatMessage` objects into the native `ChatRequest` protobufs generated from `gollek-sdk-protobuf`, ensuring highly efficient, HTTP/2 multiplexed streaming.
+
+## Time Series & Forecasting Engine
+Wayang agents can leverage Gollek's embedded time-series forecasting engine (`tafkir-ml-timeseries`) for predictive tasks:
+- **Statistical Models**: ARIMA (Autoregressive Integrated Moving Average), Auto-ARIMA, Holt-Winters Exponential Smoothing.
+- **Deep Learning**: Stacked LSTM sequence-to-sequence networks with Adam optimizer and sliding-window feature engineering.
+- **Foundation Models**: Amazon Chronos (zero-shot time series forecaster).
+- **Task Category**: `timeseries` (supported in `wayang gollek list -t timeseries`).

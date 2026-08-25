@@ -16,14 +16,18 @@ import tech.kayys.wayang.provider.ModelsDevRegistry;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -340,10 +344,68 @@ public class GollekInferenceProvider implements InferenceProvider {
         return tech.kayys.gollek.models.core.ChatTemplateFormatter.format(mapped, model);
     }
 
+    private static final long MODEL_CACHE_TTL_MS = 10_000L;
+    private long lastModelFetchTime = 0;
+    private final Map<String, ModelInfo> cachedModelInfos = new LinkedHashMap<>();
+
+    private synchronized void refreshGollekModels() {
+        long now = System.currentTimeMillis();
+        if (now - lastModelFetchTime < MODEL_CACHE_TTL_MS && !cachedModelInfos.isEmpty()) {
+            return;
+        }
+        cachedModelInfos.clear();
+        try {
+            ProcessBuilder pb = new ProcessBuilder(GOLLEK_CLI, "list", "-f=json");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            boolean finished = p.waitFor(5, TimeUnit.SECONDS);
+            if (finished && p.exitValue() == 0) {
+                String json = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(json);
+                if (root.isArray()) {
+                    for (com.fasterxml.jackson.databind.JsonNode node : root) {
+                        String id = node.hasNonNull("id") ? node.get("id").asText() : "";
+                        String name = node.hasNonNull("name") ? node.get("name").asText() : id;
+                        String format = node.hasNonNull("format") ? node.get("format").asText() : "gguf";
+                        String taskType = node.hasNonNull("taskType") ? node.get("taskType").asText() : "text";
+                        long size = node.hasNonNull("size") ? node.get("size").asLong() : 0L;
+
+                        if (!id.isBlank()) {
+                            ModelInfo info = new ModelInfo(
+                                    id,
+                                    name,
+                                    format,
+                                    Set.of("chat", "streaming", taskType),
+                                    Map.of("sizeBytes", size, "format", format, "taskType", taskType)
+                            );
+                            cachedModelInfos.put(id, info);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+
+        if (cachedModelInfos.isEmpty()) {
+            cachedModelInfos.put("hf:unsloth/gemma-4-12b-it-GGUF", new ModelInfo("hf:unsloth/gemma-4-12b-it-GGUF", "gemma-4-12b-it-GGUF", "gguf", Set.of("chat"), Map.of()));
+            cachedModelInfos.put("gemma-2-2b-it-Q4_K_M", new ModelInfo("gemma-2-2b-it-Q4_K_M", "gemma-2-2b-it-Q4_K_M", "gguf", Set.of("chat"), Map.of()));
+        }
+        lastModelFetchTime = now;
+    }
+
     @Override
     public Set<String> listModels() {
-        List<String> models = ModelsDevRegistry.getInstance().getModelsForProvider("gollek");
-        if (models != null && !models.isEmpty()) return Set.copyOf(models);
-        return Set.of("gemma-2-2b-it-Q4_K_M");
+        refreshGollekModels();
+        return Collections.unmodifiableSet(cachedModelInfos.keySet());
+    }
+
+    @Override
+    public ModelInfo getModelInfo(String modelId) {
+        refreshGollekModels();
+        ModelInfo info = cachedModelInfos.get(modelId);
+        if (info != null) return info;
+        return new ModelInfo(modelId, modelId, "gguf", Set.of("chat", "streaming"), Map.of());
     }
 }

@@ -21,6 +21,13 @@ import tech.kayys.wayang.extension.Extension;
 public interface MemoryProvider extends Extension {
     
     /**
+     * Name or identifier of this memory provider/tier (e.g. short-term, working, episodic, long-term).
+     */
+    default String name() {
+        return getClass().getSimpleName();
+    }
+    
+    /**
      * Save a memory record
      */
     void save(MemoryRecord record) throws Exception;
@@ -69,4 +76,38 @@ public interface MemoryProvider extends Extension {
     default MemoryStats getStats() throws Exception {
         return new MemoryStats(0, 0, Map.of(), Map.of());
     }
+
+    /**
+     * Export all memory records for a given agent/namespace as a portable snapshot.
+     * Implementations should return all records regardless of TTL state, ordered oldest-first.
+     */
+    default List<MemoryRecord> exportAll(String agentId) throws Exception {
+        return search(MemoryQuery.builder()
+                .filter("agentId", agentId)
+                .limit(Integer.MAX_VALUE)
+                .build());
+    }
+
+    /**
+     * Import (restore) memory records from a snapshot.
+     * Implementations should upsert: update existing records with same key,
+     * and insert records that do not yet exist.
+     *
+     * @param records the records to restore
+     * @param overwrite if true, overwrite records with the same key; if false, skip existing
+     * @return count of records actually written
+     */
+    default int importAll(List<MemoryRecord> records, boolean overwrite) throws Exception {
+        int count = 0;
+        for (MemoryRecord record : records) {
+            if (!overwrite) {
+                Optional<MemoryRecord> existing = get(record.key());
+                if (existing.isPresent()) continue;
+            }
+            save(record);
+            count++;
+        }
+        return count;
+    }
 }
+

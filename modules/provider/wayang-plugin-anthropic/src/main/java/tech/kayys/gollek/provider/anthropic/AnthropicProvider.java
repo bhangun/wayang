@@ -117,9 +117,9 @@ public class AnthropicProvider implements InferenceProvider {
 
     @Override
     public ModelInfo getModelInfo(String modelId) {
-        return new ModelInfo(modelId, "Anthropic", null, Set.of("chat"), Map.of(
+        return new ModelInfo(modelId, modelId, "anthropic", Set.of("chat"), Map.of(
                 "maxContextTokens", 200000,
-                "maxOutputTokens", 4096
+                "maxOutputTokens", 8192
         ));
     }
 

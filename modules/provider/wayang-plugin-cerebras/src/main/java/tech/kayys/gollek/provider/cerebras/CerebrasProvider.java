@@ -135,7 +135,7 @@ public class CerebrasProvider implements InferenceProvider {
 
     @Override
     public ModelInfo getModelInfo(String modelId) {
-        return new ModelInfo(modelId, "Cerebras", null, Set.of("chat"), Map.of(
+        return new ModelInfo(modelId, modelId, "cerebras", Set.of("chat"), Map.of(
                 "maxContextTokens", 8192,
                 "maxOutputTokens", 8192
         ));

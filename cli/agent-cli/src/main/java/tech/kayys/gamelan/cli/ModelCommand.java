@@ -8,7 +8,7 @@ import tech.kayys.gamelan.agent.SdkProvider;
 import tech.kayys.gamelan.util.AnsiPrinter;
 import tech.kayys.gollek.sdk.core.GollekSdk;
 import tech.kayys.gollek.sdk.exception.SdkException;
-import tech.kayys.alkhawarizm.spi.model.ModelInfo;
+import tech.kayys.gollek.spi.model.ModelInfo;
 
 import java.util.List;
 

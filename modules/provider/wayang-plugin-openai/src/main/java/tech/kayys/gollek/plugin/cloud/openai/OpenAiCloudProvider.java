@@ -142,9 +142,9 @@ public class OpenAiCloudProvider implements InferenceProvider {
 
     @Override
     public ModelInfo getModelInfo(String modelId) {
-        return new ModelInfo(modelId, "OpenAI", null, Set.of("chat", "embeddings"), Map.of(
+        return new ModelInfo(modelId, modelId, "openai", Set.of("chat", "embeddings"), Map.of(
                 "maxContextTokens", 128000,
-                "maxOutputTokens", 16384
+                "maxOutputTokens", 4096
         ));
     }
 

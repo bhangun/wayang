@@ -201,19 +201,27 @@ public class SkillRegistry {
     private List<Path> searchDirs() {
         return List.of(
                 // Project-local
+                Path.of(".wayang", "skills"),
                 Path.of(".gamelan", "skills"),
-                // User-global (from config)
+                // User-global
+                Path.of(System.getProperty("user.home"), ".wayang", "skills"),
                 globalSkillsDir(),
                 // Built-in (bundled in jar)
+                Path.of(System.getProperty("user.home"), ".wayang", "skills", "_builtin"),
                 Path.of(System.getProperty("user.home"), ".gamelan", "skills", "_builtin")
         );
     }
 
     private Path globalSkillsDir() {
-        String configured = config.skillsDir();
-        return configured != null && !configured.isBlank()
-                ? Path.of(configured)
-                : Path.of(System.getProperty("user.home"), ".gamelan", "skills");
+        String configured = config != null ? config.skillsDir() : null;
+        if (configured != null && !configured.isBlank()) {
+            return Path.of(configured);
+        }
+        Path wayangDir = Path.of(System.getProperty("user.home"), ".wayang", "skills");
+        if (Files.isDirectory(wayangDir)) {
+            return wayangDir;
+        }
+        return Path.of(System.getProperty("user.home"), ".gamelan", "skills");
     }
 
     private Path installFromLocal(Path source, Path targetDir) throws IOException {

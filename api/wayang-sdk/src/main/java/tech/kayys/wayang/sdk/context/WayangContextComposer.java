@@ -53,16 +53,66 @@ public final class WayangContextComposer {
     private boolean appendSkillsDir(StringBuilder sb, Path dir, boolean hasSkillsStarted) {
         boolean started = hasSkillsStarted;
         try (Stream<Path> stream = Files.list(dir)) {
-            for (Path p : stream.filter(p -> p.toString().endsWith(".md")).toList()) {
-                if (!started) {
-                    sb.append("## Skills\n\n");
-                    started = true;
+            for (Path entry : stream.toList()) {
+                Path skillFile = null;
+                String skillName = null;
+
+                if (Files.isDirectory(entry)) {
+                    // Standard skill folder structure: <skill-name>/SKILL.md
+                    Path skillMd = entry.resolve("SKILL.md");
+                    Path lowerMd = entry.resolve("skill.md");
+                    Path readmeMd = entry.resolve("README.md");
+
+                    if (Files.isRegularFile(skillMd)) {
+                        skillFile = skillMd;
+                    } else if (Files.isRegularFile(lowerMd)) {
+                        skillFile = lowerMd;
+                    } else if (Files.isRegularFile(readmeMd)) {
+                        skillFile = readmeMd;
+                    }
+                    skillName = entry.getFileName().toString();
+                } else if (entry.toString().endsWith(".md") && !entry.getFileName().toString().equalsIgnoreCase("README.md")) {
+                    skillFile = entry;
+                    skillName = entry.getFileName().toString().replace(".md", "");
                 }
-                try {
-                    String content = Files.readString(p);
-                    sb.append("### Skill: ").append(p.getFileName().toString().replace(".md", "")).append("\n");
-                    sb.append(content).append("\n\n");
-                } catch (IOException ignored) {}
+
+                if (skillFile != null && Files.isRegularFile(skillFile)) {
+                    try {
+                        String rawContent = Files.readString(skillFile);
+                        if (rawContent.isBlank()) continue;
+
+                        if (!started) {
+                            sb.append("## Available Skills\n\n");
+                            started = true;
+                        }
+
+                        // Extract frontmatter if present
+                        String parsedName = skillName;
+                        String parsedDescription = "";
+                        String body = rawContent;
+
+                        if (rawContent.startsWith("---")) {
+                            int end = rawContent.indexOf("\n---", 3);
+                            if (end > 0) {
+                                String frontmatter = rawContent.substring(3, end).strip();
+                                body = rawContent.substring(end + 4).stripLeading();
+                                for (String line : frontmatter.split("\\r?\\n")) {
+                                    if (line.startsWith("name:")) {
+                                        parsedName = line.substring(5).strip();
+                                    } else if (line.startsWith("description:")) {
+                                        parsedDescription = line.substring(12).strip();
+                                    }
+                                }
+                            }
+                        }
+
+                        sb.append("### Skill: ").append(parsedName).append("\n");
+                        if (!parsedDescription.isBlank()) {
+                            sb.append("**Description**: ").append(parsedDescription).append("\n\n");
+                        }
+                        sb.append(body).append("\n\n");
+                    } catch (IOException ignored) {}
+                }
             }
         } catch (IOException ignored) {}
         return started;

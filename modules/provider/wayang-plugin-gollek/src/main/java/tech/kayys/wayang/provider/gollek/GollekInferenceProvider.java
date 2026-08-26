@@ -118,24 +118,131 @@ public class GollekInferenceProvider implements InferenceProvider {
         return CompletionResult.of(sb.toString());
     }
 
+    private static final Object PROCESS_LOCK = new Object();
+    private static Process activeProcess = null;
+
     // ── stream ────────────────────────────────────────────────────────────────
 
     @Override
+    
+    @Override
     public CompletionStream stream(CompletionRequest request) throws Exception {
+        String grpcTarget = System.getenv("GOLLEK_GRPC_TARGET");
+        if (grpcTarget == null || grpcTarget.isBlank()) {
+            grpcTarget = "localhost:9131"; // Use gRPC by default!
+        }
+        
+        try {
+            return streamGrpc(request, grpcTarget);
+        } catch (Exception e) {
+            System.err.println("[Gollek] gRPC failed, falling back to CLI. Error: " + e.getMessage());
+            return streamCli(request);
+        }
+    }
+
+    private CompletionStream streamGrpc(CompletionRequest request, String target) {
+        String model = request.model() != null && !request.model().isBlank()
+                ? request.model() : "default";
+        int maxTokens = request.maxTokens() > 0 ? request.maxTokens() : 2048;
+
+        tech.kayys.gollek.protobuf.ChatRequest.Builder reqBuilder = tech.kayys.gollek.protobuf.ChatRequest.newBuilder()
+                .setModelId("default")
+                .setMaxTokens(maxTokens)
+                .setTemperature((float) (request.temperature() != null ? request.temperature() : 0.7));
+
+        if (request.messages() != null) {
+            for (Message m : request.messages()) {
+                String roleStr = m.role() != null ? m.role().name().toLowerCase() : "user";
+                if (roleStr.equals("system") && (m.content() == null || m.content().isBlank())) {
+                    continue;
+                }
+                reqBuilder.addMessages(tech.kayys.gollek.protobuf.Message.newBuilder().setRole(roleStr).setContent(m.content() != null ? m.content() : "").build());
+            }
+        }
+
+        io.grpc.ManagedChannel channel = io.grpc.ManagedChannelBuilder.forTarget(target).usePlaintext().build();
+        tech.kayys.gollek.protobuf.GollekServiceGrpc.GollekServiceBlockingStub stub = tech.kayys.gollek.protobuf.GollekServiceGrpc.newBlockingStub(channel);
+        
+        // This will block until the connection is established or fails
+        java.util.Iterator<tech.kayys.gollek.protobuf.ChatResponse> iter = stub.streamChat(reqBuilder.build());
+        final String streamId = "g-" + UUID.randomUUID();
+
+        return new CompletionStream() {
+            private tech.kayys.gollek.protobuf.ChatResponse nextVal = null;
+            private boolean done = false;
+
+            private void fetch() {
+                if (nextVal != null || done) return;
+                try {
+                    if (iter.hasNext()) {
+                        nextVal = iter.next();
+                    } else {
+                        done = true;
+                    }
+                } catch (Exception e) {
+                    System.err.println("[Gollek] gRPC stream failed: " + e.getMessage());
+                    e.printStackTrace();
+                    done = true;
+                }
+            }
+
+            @Override public boolean hasNext() {
+                fetch();
+                return !done;
+            }
+
+            @Override public CompletionResult next() {
+                fetch();
+                if (done || nextVal == null) return CompletionResult.of("");
+                String content = nextVal.getMessage() != null ? nextVal.getMessage().getContent() : "";
+                nextVal = null;
+                return CompletionResult.of(content);
+            }
+
+            @Override public void close() {
+                done = true;
+                if (channel != null) {
+                    channel.shutdownNow();
+                }
+            }
+
+            @Override public boolean isComplete() { return done; }
+            @Override public String getStreamId() { return streamId; }
+        };
+    }
+
+    private CompletionStream streamCli(CompletionRequest request) throws Exception {
+
         String model  = request.model() != null && !request.model().isBlank()
                         ? request.model() : "hf:unsloth/gemma-4-12b-it-gguf";
         String prompt = buildPrompt(request.messages(), model);
 
-        int maxTokens = request.maxTokens() > 0 ? request.maxTokens() : 1024;
+        int maxTokens = request.maxTokens() > 0 ? request.maxTokens() : 512;
 
         ProcessBuilder pb = new ProcessBuilder(GOLLEK_CLI, "run",
                 "--model", model,
                 "--max-tokens", String.valueOf(maxTokens),
                 "--prompt", prompt);
-        pb.environment().put("GGUF_CONTEXT_SIZE", "8192");
+        pb.environment().put("GGUF_CONTEXT_SIZE", "4096");
         pb.redirectErrorStream(true);
 
-        Process        process  = pb.start();
+        Process process;
+        synchronized (PROCESS_LOCK) {
+            if (activeProcess != null) {
+                try {
+                    if (activeProcess.isAlive()) {
+                        activeProcess.destroyForcibly();
+                        activeProcess.waitFor(1000, TimeUnit.MILLISECONDS);
+                    }
+                    // Add a delay to allow macOS/Metal to reclaim the 7GB+ of unified memory 
+                    // before we spawn the next process, preventing memory pressure spikes.
+                    Thread.sleep(1500); 
+                } catch (Exception ignored) {}
+            }
+            process = pb.start();
+            activeProcess = process;
+        }
+
         BufferedReader reader   = new BufferedReader(new InputStreamReader(process.getInputStream()));
         final String   streamId = "g-" + UUID.randomUUID();
 
@@ -148,6 +255,7 @@ public class GollekInferenceProvider implements InferenceProvider {
             private final ArrayDeque<String> buf = new ArrayDeque<>();   // ready-to-emit tokens
             private boolean       done        = false;
             private boolean inMetrics = false;
+            private boolean preamblePassed = false;
             private final StringBuilder metricsBuf = new StringBuilder();
 
             // Pre-fill on construction
@@ -170,11 +278,30 @@ public class GollekInferenceProvider implements InferenceProvider {
                 }
             }
 
+            private boolean isPreamble(String line) {
+                if (line == null) return true;
+                String trimmed = line.trim();
+                if (trimmed.isEmpty()) return true;
+                if (trimmed.startsWith("Resolved") ||
+                    trimmed.startsWith("Model:") ||
+                    trimmed.startsWith("Provider:") ||
+                    trimmed.startsWith("Execution route:") ||
+                    trimmed.startsWith("Using ") ||
+                    trimmed.startsWith("-") ||
+                    trimmed.startsWith("=") ||
+                    trimmed.startsWith("_") ||
+                    trimmed.startsWith("/") ||
+                    trimmed.startsWith("|") ||
+                    trimmed.startsWith("\\") ||
+                    trimmed.contains("____") ||
+                    trimmed.contains("|_|")) {
+                    return true;
+                }
+                return false;
+            }
+
             /**
              * Process a single line from the subprocess.
-             *
-             * <p>A line may contain an embedded {@code <channel|>} separator, so we
-             * split on it when we are in the THINKING state.
              */
             private void processLine(String line) {
                 // ── stop on metrics markers ──────────────────────────────────
@@ -194,102 +321,73 @@ public class GollekInferenceProvider implements InferenceProvider {
                         metricsBuf.append(line).append("\n");
                         return;
                     } else {
-                        // Metrics block ended
                         emitMetricsIfAny();
                         inMetrics = false;
                     }
                 }
 
+                if (!preamblePassed) {
+                    if (isPreamble(line)) {
+                        return; // Discard CLI banner / loader info lines
+                    }
+                    preamblePassed = true;
+                }
+
+                // If channel marker present:
+                if (line.startsWith(CHANNEL_OPEN)) {
+                    state = State.CHAN_HEADER;
+                    return;
+                }
+
+                if (state == State.SKIP) {
+                    // Standard text output (no channel wrapper)
+                    state = State.RESPONSE;
+                }
+
                 switch (state) {
-                    case SKIP -> {
-                        if (line.startsWith(CHANNEL_OPEN)) {
-                            // e.g. "<|channel>thought"
-                            state = State.CHAN_HEADER;
-                            // channel name is the rest of this line (after <|channel>)
-                            // We don't need the name for now; all content goes to
-                            // thinking/response based on position relative to <channel|>
-                        }
-                        // anything else in SKIP → discard (banner, info lines)
-                    }
-                    case CHAN_HEADER -> {
-                        // This is the line AFTER <|channel>NAME; it may start with
-                        // <channel|> immediately (no scratch) or contain scratch text.
-                        emitContentLine(line);
-                    }
-                    case THINKING -> {
-                        emitContentLine(line);
-                    }
+                    case CHAN_HEADER, THINKING -> emitContentLine(line);
                     case RESPONSE -> {
-                        // We are in the response section; emit the whole line as response.
-                        emitText("response", line);
-                        emitText("response", "\n");
+                        emitText(line + "\n");
                     }
                     case DONE -> { /* no-op */ }
+                    default -> emitText(line + "\n");
                 }
             }
             
             private void emitMetricsIfAny() {
-                if (metricsBuf != null && metricsBuf.length() > 0) {
-                    String data = metricsBuf.toString().trim();
-                    buf.add("{\"t\":\"metrics\",\"d\":\"" + jsonEscape(data) + "\"}");
-                    metricsBuf.setLength(0);
+                try {
+                    if (this.metricsBuf != null && this.metricsBuf.length() > 0) {
+                        this.metricsBuf.setLength(0);
+                    }
+                } catch (NullPointerException e) {
+                    // Ignore if metricsBuf is not initialized yet during fillBuf()
                 }
             }
-            
-            private String jsonEscape(String value) {
-                if (value == null) return "";
-                return value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
-            }
 
-            /**
-             * Handle a line that may straddle the thinking/response boundary.
-             * If the line contains {@code <channel|>}, the text before it is
-             * thinking (scratch) and the text after is response.
-             */
             private void emitContentLine(String line) {
                 int sep = line.indexOf(CHANNEL_START);
                 if (sep >= 0) {
-                    // Part before <channel|> is scratch/thinking
                     String thinking = line.substring(0, sep);
                     if (!thinking.isEmpty()) {
-                        emitText("thinking", thinking);
-                        emitText("thinking", "\n");
+                        emitText(thinking + "\n");
                     }
-                    // Part after <channel|> is the response
                     String response = line.substring(sep + CHANNEL_START.length());
                     state = State.RESPONSE;
                     if (!response.isEmpty()) {
-                        emitText("response", response);
-                        emitText("response", "\n");
+                        emitText(response + "\n");
                     }
                 } else {
-                    // Whole line is thinking/scratch
                     state = State.THINKING;
                     if (!line.isEmpty()) {
-                        emitText("thinking", line);
-                        emitText("thinking", "\n");
+                        emitText(line + "\n");
                     }
                 }
             }
 
-            /** Enqueue individual character tokens for a given channel type. */
-            private void emitText(String channel, String text) {
-                for (int i = 0; i < text.length(); i++) {
-                    buf.add(jsonToken(channel, text.charAt(i)));
+            private void emitText(String text) {
+                if (text != null && !text.isEmpty()) {
+                    buf.add(text);
                 }
-            }
-
-            /** Produce a compact JSON token: {@code {"t":"channel","d":"char"}} */
-            private String jsonToken(String channel, char c) {
-                String d = switch (c) {
-                    case '\n' -> "\\n";
-                    case '\r' -> "\\r";
-                    case '\t' -> "\\t";
-                    case '"'  -> "\\\"";
-                    case '\\' -> "\\\\";
-                    default   -> String.valueOf(c);
-                };
-                return "{\"t\":\"" + channel + "\",\"d\":\"" + d + "\"}";
             }
 
             // ── CompletionStream interface ────────────────────────────────────
@@ -310,7 +408,17 @@ public class GollekInferenceProvider implements InferenceProvider {
 
             @Override public void close() {
                 done = true;
-                process.destroyForcibly();
+                synchronized (PROCESS_LOCK) {
+                    if (activeProcess == process) {
+                        activeProcess = null;
+                    }
+                }
+                if (process.isAlive()) {
+                    process.destroyForcibly();
+                    try { process.waitFor(1000, TimeUnit.MILLISECONDS); } catch (Exception ignored) {}
+                }
+                // Allow macOS Metal some time to reclaim the massive memory footprint
+                try { Thread.sleep(1500); } catch (Exception ignored) {}
                 try { reader.close(); } catch (IOException ignored) {}
             }
 

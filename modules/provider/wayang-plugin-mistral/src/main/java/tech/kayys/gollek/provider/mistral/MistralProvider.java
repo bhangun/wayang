@@ -135,8 +135,8 @@ public class MistralProvider implements InferenceProvider {
 
     @Override
     public ModelInfo getModelInfo(String modelId) {
-        return new ModelInfo(modelId, "Mistral", null, Set.of("chat"), Map.of(
-                "maxContextTokens", 32768,
+        return new ModelInfo(modelId, modelId, "mistral", Set.of("chat"), Map.of(
+                "maxContextTokens", 32000,
                 "maxOutputTokens", 8192
         ));
     }

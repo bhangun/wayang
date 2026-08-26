@@ -42,16 +42,34 @@
             <groupId>tech.kayys.gollek</groupId>
             <artifactId>gollek-sdk</artifactId>
             <version>${gollek.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>tech.kayys.alkhawarizm</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>tech.kayys.gollek</groupId>
             <artifactId>gollek-sdk-local</artifactId>
             <version>${gollek.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>tech.kayys.alkhawarizm</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>tech.kayys.gollek</groupId>
             <artifactId>gollek-sdk-core</artifactId>
             <version>${gollek.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>tech.kayys.alkhawarizm</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Gollek SPI -->
@@ -59,16 +77,34 @@
             <groupId>tech.kayys.gollek</groupId>
             <artifactId>gollek-spi</artifactId>
             <version>${gollek.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>tech.kayys.alkhawarizm</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>tech.kayys.gollek</groupId>
             <artifactId>gollek-spi-inference</artifactId>
             <version>${gollek.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>tech.kayys.alkhawarizm</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>tech.kayys.gollek</groupId>
             <artifactId>gollek-spi-model</artifactId>
             <version>${gollek.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>tech.kayys.alkhawarizm</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
 

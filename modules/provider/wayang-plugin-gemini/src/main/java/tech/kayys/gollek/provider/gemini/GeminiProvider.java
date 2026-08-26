@@ -137,7 +137,7 @@ public class GeminiProvider implements InferenceProvider {
 
     @Override
     public ModelInfo getModelInfo(String modelId) {
-        return new ModelInfo(modelId, "Google", null, Set.of("chat", "multimodal"), Map.of(
+        return new ModelInfo(modelId, modelId, "gemini", Set.of("chat", "multimodal"), Map.of(
                 "maxContextTokens", 2000000,
                 "maxOutputTokens", 8192
         ));

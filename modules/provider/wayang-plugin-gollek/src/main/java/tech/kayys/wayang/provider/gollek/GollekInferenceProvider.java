@@ -135,8 +135,8 @@ public class GollekInferenceProvider implements InferenceProvider {
         try {
             return streamGrpc(request, grpcTarget);
         } catch (Exception e) {
-            System.err.println("[Gollek] gRPC failed, falling back to CLI. Error: " + e.getMessage());
-            return streamCli(request);
+            System.err.println("[Gollek] gRPC failed. CLI fallback disabled to prevent memory pressure. Error: " + e.getMessage());
+            throw new Exception("Gollek gRPC server unavailable at " + grpcTarget + ". Please ensure the Gollek backend is running. " + e.getMessage(), e);
         }
     }
 

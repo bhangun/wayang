@@ -1,6 +1,6 @@
 package tech.kayys.wayang.execution;
 
-import tech.kayys.wayang.core.AgentResponse;
+import tech.kayys.wayang.agent.AgentResponse;
 
 import java.util.Map;
 

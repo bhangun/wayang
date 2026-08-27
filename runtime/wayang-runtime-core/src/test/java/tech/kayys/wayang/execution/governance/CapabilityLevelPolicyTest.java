@@ -20,7 +20,9 @@ class CapabilityLevelPolicyTest {
         return new ToolInvocation() {
             public String name() { return name; }
             public Map<String, Object> arguments() { return Map.of(); }
-            public tech.kayys.wayang.extension.Id id() { return null; }
+            public tech.kayys.wayang.identity.ResourceId id() { return new tech.kayys.wayang.identity.ResourceId.ToolId(tech.kayys.wayang.extension.Id.random()); }
+            public tech.kayys.wayang.extension.Metadata metadata() { return tech.kayys.wayang.extension.Metadata.empty(); }
+            public tech.kayys.wayang.resource.ResourceType type() { return tech.kayys.wayang.resource.ResourceType.fromString("tool"); }
         };
     }
 

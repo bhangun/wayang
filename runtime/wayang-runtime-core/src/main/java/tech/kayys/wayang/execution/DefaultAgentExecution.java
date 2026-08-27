@@ -27,8 +27,11 @@ import tech.kayys.wayang.execution.context.DefaultRuntimeContextPlanner;
 import tech.kayys.wayang.execution.event.EventLedger;
 import tech.kayys.wayang.execution.event.ExecutionEvent;
 import tech.kayys.wayang.execution.event.ExecutionEventType;
-import tech.kayys.wayang.json.JsonValue;
 import tech.kayys.wayang.provider.Provider;
+import tech.kayys.wayang.provider.routing.InferencePlan;
+import tech.kayys.wayang.provider.routing.InferencePolicy;
+import tech.kayys.wayang.provider.routing.InferenceRequirements;
+import tech.kayys.wayang.provider.routing.ModelRoutingTelemetry;
 import tech.kayys.wayang.tool.Tool;
 import tech.kayys.wayang.tool.ToolResult;
 
@@ -223,19 +226,42 @@ public class DefaultAgentExecution implements AgentExecution {
             }
         }
 
-        // --- Phase 3: Model Router ---
+        // --- Phase 3: Model Router & Inference Planning ---
         stateStore.transition(id, ExecutionPhase.INFERENCE, java.util.Map.of());
         Provider provider = null;
+        InferencePlan inferencePlan = null;
+        final long inferenceStartTime = System.currentTimeMillis();
         try {
-            provider = modelRouter.route(request, agent, providers);
+            long contextTokens = budget != null ? budget.contextTokens() : 8192;
+            boolean requiresToolCalling = (toolExecutor instanceof AgentToolExecutor.ToolAware ta && !ta.availableTools().isEmpty());
+            boolean requiresReasoning = (agent != null && agent.reasoner() != null);
+            InferenceRequirements requirements = InferenceRequirements.of(
+                    java.util.Set.of(tech.kayys.wayang.resource.Modality.TEXT),
+                    requiresToolCalling,
+                    requiresReasoning,
+                    contextTokens
+            );
+            InferencePolicy policy = mapBudgetToPolicy(budget);
+
+            inferencePlan = modelRouter.plan(request, agent, requirements, policy, providers);
+            provider = inferencePlan.selectedProvider();
             final String providerName = provider.getClass().getSimpleName();
+            final String modelName = inferencePlan.selectedModel();
+
             stateStore.transition(id, ExecutionPhase.INFERENCE,
-                java.util.Map.of("provider", providerName));
+                java.util.Map.of(
+                    "provider", providerName,
+                    "model", modelName,
+                    "reason", inferencePlan.decisionReason() != null ? inferencePlan.decisionReason() : "",
+                    "estimatedCost", String.format("$%.4f", inferencePlan.estimatedCost()),
+                    "fallbacks", String.valueOf(inferencePlan.fallbackTargets().size())
+                ));
         } catch (Exception e) {
             stateStore.fail(id, new RuntimeException("Routing failed: " + e.getMessage(), e));
             stubComplete(future, "Routing failed: " + e.getMessage());
             return;
         }
+        final InferencePlan activePlan = inferencePlan;
 
         // --- Phase 4: Runtime Context Planner ---
         stateStore.transition(id, ExecutionPhase.CONTEXT, java.util.Map.of());
@@ -295,11 +321,13 @@ public class DefaultAgentExecution implements AgentExecution {
         // Checkpoint bridge: persists agent context before/after each model step.
         tech.kayys.wayang.agent.react.BaseReActAgent.CheckpointBridge cpBridge =
             (execId, ctx) -> {
-                if (ctx != null) {
-                    checkpointStore.save(execId, ctx);
-                } else {
-                    // Step marker — save the current agentContext snapshot.
-                    checkpointStore.save(execId, agentContext);
+                if (checkpointStore != null) {
+                    if (ctx != null) {
+                        checkpointStore.save(execId, ctx);
+                    } else {
+                        // Step marker — save the current agentContext snapshot.
+                        checkpointStore.save(execId, agentContext);
+                    }
                 }
             };
 
@@ -349,13 +377,22 @@ public class DefaultAgentExecution implements AgentExecution {
 
             @Override
             public void onUsage(int inputTokens, int outputTokens) {
-                // Could record into AgentContext metrics in a future pass.
+                if (activePlan != null) {
+                    long latency = System.currentTimeMillis() - inferenceStartTime;
+                    ModelRoutingTelemetry.getInstance().recordSuccess(
+                            activePlan.selectedModel(),
+                            latency,
+                            (long) inputTokens + outputTokens
+                    );
+                }
             }
 
             @Override
             public void onDone(String stopReason) {
                 DefaultAgentExecution.this.status = ExecutionStatus.COMPLETED;
-                checkpointStore.save(id, agentContext);
+                if (checkpointStore != null) {
+                    checkpointStore.save(id, agentContext);
+                }
 
                 // Collect cache entry IDs for this execution (traceability)
                 java.util.List<String> cacheEntryIds = java.util.List.of();
@@ -401,7 +438,9 @@ public class DefaultAgentExecution implements AgentExecution {
     /** Returns a completed stub response — used when a real execution cannot be performed. */
     private void stubComplete(CompletableFuture<AgentResponse> future, String reason) {
         this.status = ExecutionStatus.COMPLETED;
-        checkpointStore.save(id, agentContext);
+        if (checkpointStore != null) {
+            checkpointStore.save(id, agentContext);
+        }
         future.complete(AgentResponse.builder()
             .id(id)
             .success(true)
@@ -447,7 +486,9 @@ public class DefaultAgentExecution implements AgentExecution {
     @Override
     public void pause() {
         this.status = ExecutionStatus.PAUSED;
-        checkpointStore.save(id, agentContext);
+        if (checkpointStore != null) {
+            checkpointStore.save(id, agentContext);
+        }
     }
 
     @Override
@@ -458,6 +499,24 @@ public class DefaultAgentExecution implements AgentExecution {
     @Override
     public void cancel() {
         this.status = ExecutionStatus.CANCELLED;
-        checkpointStore.delete(id);
+        if (checkpointStore != null) {
+            checkpointStore.delete(id);
+        }
+    }
+
+    private InferencePolicy mapBudgetToPolicy(ExecutionBudget budget) {
+        if (budget == null) {
+            return InferencePolicy.defaults();
+        }
+        if (budget.contextTokens() >= 100_000 || (budget.maxDuration() != null && budget.maxDuration().toMinutes() >= 15)) {
+            return InferencePolicy.thorough();
+        }
+        if (budget.maxSteps() <= 15 || (budget.maxDuration() != null && budget.maxDuration().toMinutes() <= 2)) {
+            return InferencePolicy.fast();
+        }
+        if (!budget.isCachingEnabled()) {
+            return InferencePolicy.debug();
+        }
+        return InferencePolicy.balanced();
     }
 }

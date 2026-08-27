@@ -8,6 +8,9 @@ public enum Modality {
     IMAGE,
     AUDIO,
     VIDEO,
+    THREE_D,
+    PDF,
     DOCUMENT,
-    STRUCTURED_DATA
+    STRUCTURED_DATA,
+    EMBEDDING
 }

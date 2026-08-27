@@ -1,6 +1,6 @@
 package tech.kayys.wayang.execution;
 
-import tech.kayys.wayang.core.AgentResponse;
+import tech.kayys.wayang.agent.AgentResponse;
 import tech.kayys.wayang.execution.event.EventLedger;
 import tech.kayys.wayang.execution.event.ExecutionEvent;
 import tech.kayys.wayang.execution.event.ExecutionEventType;
@@ -50,8 +50,7 @@ public class DefaultExecutionStateStore implements ExecutionStateStore {
 
     @Override
     public void checkpoint(AgentExecutionState state) {
-        // Here we'd save the state. For now, since CheckpointStore takes AgentContext, we'll leave it as a marker.
-        // The actual context checkpointing happens at boundaries.
+        // Marker
     }
 
     @Override
@@ -78,7 +77,7 @@ public class DefaultExecutionStateStore implements ExecutionStateStore {
         return switch(phase) {
             case INPUT -> ExecutionEventType.EXECUTION_STARTED;
             case CONTEXT -> ExecutionEventType.CONTEXT_COMPILED;
-            case TOOL -> ExecutionEventType.TOOL_CALL_STARTED;
+            case TOOL -> ExecutionEventType.TOOL_REQUESTED;
             case INFERENCE -> ExecutionEventType.MODEL_ROUTING_RESOLVED;
             default -> null;
         };

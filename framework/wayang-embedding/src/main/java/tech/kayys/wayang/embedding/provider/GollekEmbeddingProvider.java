@@ -11,17 +11,19 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.enterprise.inject.Instance;
+
 /**
  * High-performance embedding provider using local Gollek (Llama.cpp/GGUF).
  */
 @ApplicationScoped
 public class GollekEmbeddingProvider implements EmbeddingProvider {
 
-    private final GollekSdk sdk;
+    private final Instance<GollekSdk> sdkInstance;
 
     @Inject
-    public GollekEmbeddingProvider(GollekSdk sdk) {
-        this.sdk = sdk;
+    public GollekEmbeddingProvider(Instance<GollekSdk> sdkInstance) {
+        this.sdkInstance = sdkInstance;
     }
 
     @Override
@@ -47,8 +49,12 @@ public class GollekEmbeddingProvider implements EmbeddingProvider {
                 inputs,
                 Collections.emptyMap());
 
+        if (!sdkInstance.isResolvable()) {
+            throw new tech.kayys.wayang.embedding.EmbeddingException("GollekSdk is not available in the current environment.");
+        }
+
         try {
-            tech.kayys.gollek.spi.embedding.EmbeddingResponse response = sdk.createEmbedding(request);
+            tech.kayys.gollek.spi.embedding.EmbeddingResponse response = sdkInstance.get().createEmbedding(request);
             return response.embeddings();
         } catch (tech.kayys.gollek.sdk.exception.SdkException e) {
             throw new tech.kayys.wayang.embedding.EmbeddingException("Gollek embedding failed: " + e.getMessage());

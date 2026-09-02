@@ -16,7 +16,7 @@ import java.util.Map;
 /**
  * Text renderer for skill discovery and detail responses shown by the Wayang CLI.
  */
-final class WayangSkillTextFormat {
+public final class WayangSkillTextFormat {
 
     private WayangSkillTextFormat() {
     }

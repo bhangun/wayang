@@ -32,16 +32,6 @@
             </exclusions>
         </dependency>
 
-            <dependency>
-            <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-tool-execution</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-tool-core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
 
         <!-- Active agent execution and skill contracts -->
@@ -57,7 +47,22 @@
         </dependency>
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-hermes</artifactId>
+            <artifactId>wayang-knowledge</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-knowledge-runtime</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-memory</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-memory-runtime</artifactId>
             <version>${project.version}</version>
         </dependency>
 

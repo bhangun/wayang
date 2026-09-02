@@ -50,7 +50,8 @@ import java.lang.reflect.Method;
                WayangWorkbenchCommands.WorkbenchCommand.class,
                WayangTuiCommands.TuiCommand.class,
                WayangServeCommand.class,
-               WayangMemoryCommands.MemoryCommand.class
+               WayangMemoryCommands.MemoryCommand.class,
+               WayangKnowledgeCommands.KnowledgeCommand.class
         } )
  public final class WayangGollekCli implements Runnable {
 

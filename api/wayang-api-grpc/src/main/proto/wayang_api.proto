@@ -170,3 +170,271 @@ service SdkService {
   rpc CreateSdkSession(CreateSdkSessionRequest) returns (CreateSdkSessionResponse);
   rpc SdkStream(SdkStreamRequest) returns (stream CodeChunk);
 }
+
+// Knowledge & Evidence Exchange Service
+service KnowledgeService {
+  rpc QueryEvidence(KnowledgeQueryProtoRequest) returns (KnowledgeQueryProtoReply);
+  rpc ResolveConsensus(KnowledgeResolveProtoRequest) returns (KnowledgeResolveProtoReply);
+  rpc VerifyArtifact(KnowledgeVerifyProtoRequest) returns (KnowledgeVerifyProtoReply);
+  rpc GetCertificate(KnowledgeCertificateProtoRequest) returns (KnowledgeCertificateProtoReply);
+  rpc ReconcileInventory(KnowledgeReconcileProtoRequest) returns (KnowledgeReconcileProtoReply);
+}
+
+message KnowledgeQueryProtoRequest {
+  string query_id = 1;
+  string text = 2;
+  string tenant_id = 3;
+  string workspace_id = 4;
+  string project_id = 5;
+  int32 max_results = 6;
+  double min_similarity = 7;
+}
+
+message KnowledgeQueryProtoReply {
+  string query_id = 1;
+  int32 total_hits = 2;
+  string results_json = 3;
+}
+
+message KnowledgeResolveProtoRequest {
+  string question_id = 1;
+  string question_text = 2;
+  string tenant_id = 3;
+  string workspace_id = 4;
+  string project_id = 5;
+  repeated string candidate_answers_json = 6;
+}
+
+message KnowledgeResolveProtoReply {
+  string resolution_id = 1;
+  string status = 2;
+  string winning_answer = 3;
+  double confidence = 4;
+  string resolution_json = 5;
+}
+
+message KnowledgeVerifyProtoRequest {
+  string artifact_id = 1;
+  string artifact_json = 2;
+  string tenant_id = 3;
+  string workspace_id = 4;
+}
+
+message KnowledgeVerifyProtoReply {
+  string artifact_id = 1;
+  bool valid = 2;
+  string verification_json = 3;
+}
+
+message KnowledgeCertificateProtoRequest {
+  string consensus_id = 1;
+}
+
+message KnowledgeCertificateProtoReply {
+  string consensus_id = 1;
+  bool found = 2;
+  string certificate_json = 3;
+}
+
+message KnowledgeReconcileProtoRequest {
+  string runtime_id = 1;
+  string tenant_id = 2;
+  string workspace_id = 3;
+  repeated string local_inventory_hashes = 4;
+}
+
+message KnowledgeReconcileProtoReply {
+  string runtime_id = 1;
+  int32 missing_count = 2;
+  repeated string missing_artifact_ids = 3;
+  string reconcile_json = 4;
+}
+
+// ─── Knowledge Graph Visualization Service ────────────────────────────────────
+// Exposes the knowledge graph for UI visualization (D3.js, Cytoscape, vis.js, etc.)
+
+service KnowledgeGraphService {
+  rpc GetArtifactGraph(KnowledgeGraphRequest)             returns (KnowledgeGraphResponse);
+  rpc GetProvenanceGraph(KnowledgeGraphRequest)           returns (KnowledgeGraphResponse);
+  rpc GetClaimGraph(KnowledgeGraphRequest)                returns (KnowledgeGraphResponse);
+  rpc GetFusionGraph(KnowledgeGraphRequest)               returns (KnowledgeGraphResponse);
+  rpc GetResolutionDependencyGraph(KnowledgeGraphRequest) returns (KnowledgeGraphResponse);
+  rpc GetLineageGraph(KnowledgeLineageGraphRequest)       returns (stream KnowledgeGraphEdgeProto);
+  rpc GetSnapshotDependencyGraph(KnowledgeGraphRequest)   returns (KnowledgeGraphResponse);
+  rpc GetFullGraph(KnowledgeFullGraphRequest)             returns (KnowledgeGraphResponse);
+}
+
+message KnowledgeGraphRequest {
+  string entity_id    = 1;
+  string tenant_id    = 2;
+  string workspace_id = 3;
+  string project_id   = 4;
+  string session_id   = 5;
+  int32  max_depth    = 6;
+}
+
+message KnowledgeLineageGraphRequest {
+  string node_id      = 1;
+  string tenant_id    = 2;
+  string workspace_id = 3;
+  string project_id   = 4;
+  string session_id   = 5;
+  int32  max_depth    = 6;
+}
+
+message KnowledgeFullGraphRequest {
+  string tenant_id    = 1;
+  string workspace_id = 2;
+  string project_id   = 3;
+  string session_id   = 4;
+  int32  max_depth    = 5;
+}
+
+message KnowledgeGraphNodeProto {
+  string              graph_node_id = 1;
+  string              type          = 2;
+  string              label         = 3;
+  double              weight        = 4;
+  string              tenant_id     = 5;
+  string              workspace_id  = 6;
+  string              project_id    = 7;
+  map<string, string> metadata      = 8;
+}
+
+message KnowledgeGraphEdgeProto {
+  string              edge_id    = 1;
+  string              source     = 2;
+  string              target     = 3;
+  string              relation   = 4;
+  double              confidence = 5;
+  map<string, string> metadata   = 6;
+}
+
+message KnowledgeGraphStatsProto {
+  int32 node_count = 1;
+  int32 edge_count = 2;
+}
+
+message KnowledgeGraphResponse {
+  string                           graph_id      = 1;
+  string                           graph_type    = 2;
+  repeated KnowledgeGraphNodeProto nodes         = 3;
+  repeated KnowledgeGraphEdgeProto edges         = 4;
+  KnowledgeGraphStatsProto         stats         = 5;
+  string                           tenant_id     = 6;
+  string                           workspace_id  = 7;
+  string                           project_id    = 8;
+  string                           session_id    = 9;
+  string                           generated_at  = 10;
+}
+
+// ─── Memory Visualization Service ─────────────────────────────────────────────
+// Exposes the 4-tier memory hierarchy, concept graphs, vector maps, and working memory.
+
+service MemoryVisualizationService {
+  // 4-tier overview + stats + insights
+  rpc GetMemoryOverview(MemoryVisualProtoQuery)         returns (MemoryVisualProtoResponse);
+  // Semantic knowledge concepts & facts network
+  rpc GetMemoryGraph(MemoryVisualProtoQuery)            returns (MemoryVisualProtoResponse);
+  // 2D/3D embedding scatter points
+  rpc GetVectorMap(MemoryVisualProtoQuery)              returns (MemoryVisualProtoResponse);
+  // Real-time working memory attention state
+  rpc GetWorkingMemory(MemoryVisualProtoQuery)          returns (MemoryVisualProtoResponse);
+  // Learned procedural task patterns and skill proficiencies
+  rpc GetProceduralMemory(MemoryVisualProtoQuery)       returns (MemoryVisualProtoResponse);
+  // Episodic chronological memory events
+  rpc GetMemoryTimeline(MemoryVisualProtoQuery)         returns (MemoryVisualProtoResponse);
+  // Full composed memory envelope
+  rpc GetFullMemoryView(MemoryVisualProtoQuery)         returns (MemoryVisualProtoResponse);
+  // Server-side streaming of vector scatter points for large memory sets
+  rpc StreamVectorPoints(MemoryVisualProtoQuery)        returns (stream MemoryVectorPointProto);
+}
+
+message MemoryVisualProtoQuery {
+  string agent_id     = 1;
+  string user_id      = 2;
+  string tenant_id    = 3;
+  string workspace_id = 4;
+  string session_id   = 5;
+  string category     = 6;
+  int32  limit        = 7;
+}
+
+message MemoryVisualNodeProto {
+  string              node_id  = 1;
+  string              type     = 2;
+  string              label    = 3;
+  double              weight   = 4;
+  string              cluster  = 5;
+  string              tier     = 6;
+  map<string, string> metadata = 7;
+}
+
+message MemoryVisualEdgeProto {
+  string              edge_id    = 1;
+  string              source     = 2;
+  string              target     = 3;
+  string              relation   = 4;
+  double              confidence = 5;
+  map<string, string> metadata   = 6;
+}
+
+message MemoryVectorPointProto {
+  string              point_id = 1;
+  double              x        = 2;
+  double              y        = 3;
+  double              z        = 4;
+  string              category = 5;
+  string              label    = 6;
+  double              relevance = 7;
+  map<string, string> metadata = 8;
+}
+
+message MemoryWorkingStateProto {
+  string                 session_id              = 1;
+  string                 current_task            = 2;
+  int64                  token_budget_remaining  = 3;
+  map<string, double>    attention_weights       = 4;
+  repeated string        active_facts            = 5;
+  repeated string        active_patterns         = 6;
+}
+
+message MemoryHierarchySummaryProto {
+  int32               working_active_items     = 1;
+  int32               episodic_recent_count    = 2;
+  double              episodic_coherence_score = 3;
+  int32               semantic_concept_count   = 4;
+  int32               semantic_fact_count      = 5;
+  int32               procedural_pattern_count = 6;
+  double              procedural_avg_proficiency = 7;
+  int64               long_term_total_records  = 8;
+  int64               long_term_size_bytes     = 9;
+  map<string, int64>  category_distribution   = 10;
+}
+
+message MemoryVisualInsightProto {
+  string              type        = 1;
+  string              description = 2;
+  double              confidence  = 3;
+  map<string, string> metadata    = 4;
+}
+
+message MemoryVisualProtoResponse {
+  string                           view_id         = 1;
+  string                           view_type       = 2;
+  string                           agent_id        = 3;
+  string                           user_id         = 4;
+  string                           tenant_id       = 5;
+  string                           workspace_id    = 6;
+  string                           session_id      = 7;
+  MemoryHierarchySummaryProto      hierarchy       = 8;
+  repeated MemoryVisualNodeProto   nodes           = 9;
+  repeated MemoryVisualEdgeProto   edges           = 10;
+  repeated MemoryVectorPointProto  vector_points   = 11;
+  repeated MemoryVisualInsightProto insights       = 12;
+  MemoryWorkingStateProto          working_state   = 13;
+  string                           generated_at    = 14;
+}
+
+
+

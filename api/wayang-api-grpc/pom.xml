@@ -46,6 +46,30 @@
 
 
         <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-knowledge</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-knowledge-runtime</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-memory</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-memory-runtime</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-grpc</artifactId>
         </dependency>

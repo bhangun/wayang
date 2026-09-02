@@ -26,6 +26,21 @@ public interface MemoryProvider extends Extension {
     default String name() {
         return getClass().getSimpleName();
     }
+
+    @Override
+    default tech.kayys.wayang.identity.ResourceId id() {
+        return new tech.kayys.wayang.identity.ResourceId.PluginId(tech.kayys.wayang.extension.Id.random());
+    }
+
+    @Override
+    default tech.kayys.wayang.resource.ResourceType type() {
+        return new tech.kayys.wayang.resource.ResourceType.Plugin();
+    }
+
+    @Override
+    default tech.kayys.wayang.extension.Metadata metadata() {
+        return tech.kayys.wayang.extension.Metadata.empty();
+    }
     
     /**
      * Save a memory record

@@ -27,5 +27,12 @@ public enum ContextType {
     ERP,
     EXTERNAL_API,
     FILE_SYSTEM,
-    WEB_SEARCH
+    WEB_SEARCH,
+    KNOWLEDGE,
+    POLICY,
+    EVIDENCE,
+    DOCUMENT,
+    STRUCTURED_DATA,
+    TOOL_OUTPUT,
+    USER_PROVIDED
 }

@@ -268,14 +268,22 @@ public class DefaultAgentExecution implements AgentExecution {
         if (contextPlanner != null) {
             try {
                 RuntimeContextPlan ctxPlan = contextPlanner.planContext(
-                    agentContext, budget, List.of()
+                    agentContext, budget, List.of(), prompt
                 );
                 tech.kayys.wayang.context.ContextData cd = ctxPlan.getContextData();
-                if (cd != null && !cd.isEmpty() && !cd.documents().isEmpty()) {
+                if (cd != null && !cd.isEmpty()) {
                     StringBuilder ctx = new StringBuilder();
-                    cd.documents().forEach(doc -> {
-                        if (doc != null && doc.content() != null) ctx.append(doc.content()).append("\n");
-                    });
+                    if (!cd.documents().isEmpty()) {
+                        cd.documents().forEach(doc -> {
+                            if (doc != null && doc.content() != null) ctx.append(doc.content()).append("\n");
+                        });
+                    }
+                    if (cd.knowledge() != null && !cd.knowledge().isEmpty()) {
+                        ctx.append("### Relevant Knowledge Evidence:\n");
+                        cd.knowledge().forEach(k -> {
+                            if (k != null) ctx.append("- ").append(k.toString()).append("\n");
+                        });
+                    }
                     if (!ctx.isEmpty()) prompt = ctx + "\n" + prompt;
                 }
                 stateStore.transition(id, ExecutionPhase.CONTEXT,

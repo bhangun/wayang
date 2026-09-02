@@ -34,6 +34,13 @@ public interface ContextProvider extends Extension {
     }
     
     /**
+     * Load context data asynchronously returning a CompletionStage
+     */
+    default java.util.concurrent.CompletionStage<ContextData> loadStage(AgentContext context) {
+        return loadAsync(context);
+    }
+    
+    /**
      * Load context data asynchronously
      */
     default CompletableFuture<ContextData> loadAsync(AgentContext context) {

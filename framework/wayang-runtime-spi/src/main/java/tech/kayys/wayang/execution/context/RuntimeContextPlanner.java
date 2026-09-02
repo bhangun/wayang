@@ -21,12 +21,26 @@ public interface RuntimeContextPlanner {
      * @param providers The available providers to orchestrate
      * @return A consolidated RuntimeContextPlan ready for the model request
      */
-    RuntimeContextPlan planContext(AgentContext context, ExecutionBudget budget, List<ContextProvider> providers);
+    default RuntimeContextPlan planContext(AgentContext context, ExecutionBudget budget, List<ContextProvider> providers) {
+        return planContext(context, budget, providers, null);
+    }
+
+    /**
+     * Executes the planning and compilation of context with an explicit prompt or query.
+     */
+    RuntimeContextPlan planContext(AgentContext context, ExecutionBudget budget, List<ContextProvider> providers, String query);
 
     /**
      * Asynchronously executes the planning and compilation of context.
      */
     default CompletableFuture<RuntimeContextPlan> planContextAsync(AgentContext context, ExecutionBudget budget, List<ContextProvider> providers) {
         return CompletableFuture.supplyAsync(() -> planContext(context, budget, providers));
+    }
+
+    /**
+     * Asynchronously executes the planning and compilation of context with an explicit prompt or query.
+     */
+    default CompletableFuture<RuntimeContextPlan> planContextAsync(AgentContext context, ExecutionBudget budget, List<ContextProvider> providers, String query) {
+        return CompletableFuture.supplyAsync(() -> planContext(context, budget, providers, query));
     }
 }

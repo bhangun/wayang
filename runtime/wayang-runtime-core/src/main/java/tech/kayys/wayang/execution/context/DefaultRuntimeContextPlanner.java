@@ -25,7 +25,7 @@ public class DefaultRuntimeContextPlanner implements RuntimeContextPlanner {
     private static final Logger LOGGER = Logger.getLogger(DefaultRuntimeContextPlanner.class.getName());
 
     @Override
-    public RuntimeContextPlan planContext(AgentContext context, ExecutionBudget budget, List<ContextProvider> providers) {
+    public RuntimeContextPlan planContext(AgentContext context, ExecutionBudget budget, List<ContextProvider> providers, String query) {
         long maxTokens = budget != null ? budget.contextTokens() : 4096L;
         long currentTokens = 0;
 
@@ -45,7 +45,9 @@ public class DefaultRuntimeContextPlanner implements RuntimeContextPlanner {
                 continue;
             }
             try {
-                ContextData pd = provider.load(context);
+                ContextData pd = (query == null || query.isBlank())
+                        ? provider.load(context)
+                        : provider.loadWithQuery(context, query);
                 if (pd == null || pd.isEmpty()) {
                     continue;
                 }

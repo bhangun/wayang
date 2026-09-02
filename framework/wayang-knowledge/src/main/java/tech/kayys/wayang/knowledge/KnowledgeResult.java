@@ -1,57 +1,30 @@
 package tech.kayys.wayang.knowledge;
+
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.concurrent.CompletableFuture;
-import tech.kayys.wayang.extension.Extension;
-import tech.kayys.wayang.resource.Resource;
-import tech.kayys.wayang.resource.BaseResource;
-
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import tech.kayys.wayang.context.Document;
-import tech.kayys.wayang.extension.Id;
 
 /**
- * Knowledge Result
+ * Result of a knowledge resolution or query.
  */
 public record KnowledgeResult(
-    String id,
-    String query,
-    List<Document> documents,
-    List<KnowledgeFact> facts,
-    Map<String, Object> metadata,
-    long retrievalTimeMs,
-    double overallScore
+        KnowledgeQuery query,
+        List<KnowledgeEvidence> evidence,
+        Map<String, Object> metadata,
+        Instant timestamp
 ) {
-    public static KnowledgeResult empty(String query) {
-        return new KnowledgeResult(
-            Id.random().asString(),
-            query,
-            List.of(),
-            List.of(),
-            Map.of(),
-            0,
-            0.0
-        );
+
+    public KnowledgeResult {
+        evidence = evidence == null ? List.of() : List.copyOf(evidence);
+        metadata = metadata == null ? Map.of() : Map.copyOf(metadata);
+        timestamp = timestamp == null ? Instant.now() : timestamp;
     }
-    
-    public KnowledgeResult withDocument(Document document) {
-        List<Document> newDocuments = new ArrayList<>(documents);
-        newDocuments.add(document);
-        return new KnowledgeResult(id, query, newDocuments, facts, metadata, 
-            retrievalTimeMs, overallScore);
+
+    public static KnowledgeResult empty(KnowledgeQuery query) {
+        return new KnowledgeResult(query, List.of(), Map.of(), Instant.now());
     }
-    
-    public KnowledgeResult withFact(KnowledgeFact fact) {
-        List<KnowledgeFact> newFacts = new ArrayList<>(facts);
-        newFacts.add(fact);
-        return new KnowledgeResult(id, query, documents, newFacts, metadata, 
-            retrievalTimeMs, overallScore);
+
+    public static KnowledgeResult of(KnowledgeQuery query, List<KnowledgeEvidence> evidence) {
+        return new KnowledgeResult(query, evidence, Map.of(), Instant.now());
     }
 }

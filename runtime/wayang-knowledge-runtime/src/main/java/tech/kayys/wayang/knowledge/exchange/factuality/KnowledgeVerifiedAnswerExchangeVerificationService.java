@@ -1,0 +1,121 @@
+package tech.kayys.wayang.knowledge.exchange.factuality;
+
+import tech.kayys.wayang.knowledge.*;
+import tech.kayys.wayang.knowledge.seal.*;
+import tech.kayys.wayang.knowledge.snapshot.*;
+import tech.kayys.wayang.knowledge.snapshot.pack.*;
+import tech.kayys.wayang.knowledge.snapshot.artifact.*;
+import tech.kayys.wayang.knowledge.snapshot.merkle.*;
+import tech.kayys.wayang.knowledge.exchange.*;
+import tech.kayys.wayang.knowledge.exchange.auth.*;
+import tech.kayys.wayang.knowledge.exchange.session.*;
+import tech.kayys.wayang.knowledge.exchange.binding.*;
+import tech.kayys.wayang.knowledge.exchange.envelope.*;
+import tech.kayys.wayang.knowledge.exchange.trust.*;
+import tech.kayys.wayang.knowledge.exchange.identity.*;
+import tech.kayys.wayang.knowledge.exchange.capability.*;
+import tech.kayys.wayang.knowledge.exchange.protocol.*;
+import tech.kayys.wayang.knowledge.exchange.transport.*;
+import tech.kayys.wayang.knowledge.exchange.framing.*;
+import tech.kayys.wayang.knowledge.exchange.transfer.*;
+import tech.kayys.wayang.knowledge.exchange.replication.*;
+import tech.kayys.wayang.knowledge.exchange.sync.*;
+import tech.kayys.wayang.knowledge.exchange.federation.*;
+import tech.kayys.wayang.knowledge.exchange.routing.*;
+import tech.kayys.wayang.knowledge.exchange.fusion.*;
+import tech.kayys.wayang.knowledge.exchange.coverage.*;
+import tech.kayys.wayang.knowledge.exchange.gap.*;
+import tech.kayys.wayang.knowledge.exchange.attribution.*;
+import tech.kayys.wayang.knowledge.exchange.contradiction.*;
+import tech.kayys.wayang.knowledge.exchange.factuality.*;
+import tech.kayys.wayang.knowledge.exchange.uncertainty.*;
+import tech.kayys.wayang.knowledge.exchange.compact.*;
+import tech.kayys.wayang.knowledge.exchange.resolution.*;
+import tech.kayys.wayang.knowledge.exchange.quorum.*;
+import tech.kayys.wayang.knowledge.exchange.selection.*;
+import tech.kayys.wayang.knowledge.exchange.coordination.*;
+import tech.kayys.wayang.knowledge.exchange.attestation.*;
+import tech.kayys.wayang.knowledge.exchange.proof.*;
+import tech.kayys.wayang.knowledge.exchange.validity.*;
+import tech.kayys.wayang.knowledge.exchange.lease.*;
+import tech.kayys.wayang.knowledge.exchange.recovery.*;
+
+
+public final class KnowledgeVerifiedAnswerExchangeVerificationService {
+
+    private final KnowledgeVerifiedAnswerArtifactVerifier
+            artifactVerifier;
+
+    private final KnowledgeVerifiedAnswerAuthorizer
+            authorizer;
+
+    public KnowledgeVerifiedAnswerExchangeVerificationService(
+            KnowledgeVerifiedAnswerArtifactVerifier artifactVerifier,
+            KnowledgeVerifiedAnswerAuthorizer authorizer) {
+
+        this.artifactVerifier = artifactVerifier;
+        this.authorizer = authorizer;
+    }
+
+    public KnowledgeVerifiedAnswerExchangeVerificationResult verify(
+            KnowledgeVerifiedAnswerArtifact artifact,
+            KnowledgeVerifiedAnswerExchangeRequest request) {
+
+        KnowledgeVerifiedAnswerAuthorizationContext authContext =
+                new KnowledgeVerifiedAnswerAuthorizationContext(
+                        request.requestingRuntimeId(),
+                        artifact.artifactId(),
+                        request.tenantId(),
+                        request.workspaceId(),
+                        request.projectId(),
+                        artifact.agentId(),
+                        java.util.Set.of(),
+                        java.time.Instant.now(),
+                        java.util.Map.of(
+                                "artifactTenantId",
+                                artifact.tenantId(),
+                                "artifactWorkspaceId",
+                                artifact.workspaceId(),
+                                "artifactProjectId",
+                                artifact.projectId()
+                        )
+                );
+
+        KnowledgeVerifiedAnswerAuthorizationDecision authorization =
+                authorizer.authorize(authContext);
+
+        if (authorization
+                instanceof KnowledgeVerifiedAnswerAuthorizationDecision.Deny deny) {
+
+            return new KnowledgeVerifiedAnswerExchangeVerificationResult(
+                    KnowledgeVerifiedAnswerExchangeVerificationStatus
+                            .AUTHORIZATION_FAILED,
+                    artifact.artifactId(),
+                    artifact.responseId(),
+                    artifact.snapshotId(),
+                    null,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    java.util.List.of(
+                            new KnowledgeVerifiedAnswerVerificationIssue(
+                                    "AUTHORIZATION_DENIED",
+                                    deny.reason(),
+                                    true
+                            )
+                    ),
+                    java.util.Map.of(
+                            "policyId",
+                            deny.policyId()
+                    )
+            );
+        }
+
+        return artifactVerifier.verify(
+                artifact,
+                request
+        );
+    }
+}

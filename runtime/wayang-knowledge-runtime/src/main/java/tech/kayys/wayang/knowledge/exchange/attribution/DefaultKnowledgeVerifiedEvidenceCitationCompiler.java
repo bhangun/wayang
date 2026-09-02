@@ -1,0 +1,98 @@
+package tech.kayys.wayang.knowledge.exchange.attribution;
+
+import tech.kayys.wayang.knowledge.*;
+import tech.kayys.wayang.knowledge.seal.*;
+import tech.kayys.wayang.knowledge.snapshot.*;
+import tech.kayys.wayang.knowledge.snapshot.pack.*;
+import tech.kayys.wayang.knowledge.snapshot.artifact.*;
+import tech.kayys.wayang.knowledge.snapshot.merkle.*;
+import tech.kayys.wayang.knowledge.exchange.*;
+import tech.kayys.wayang.knowledge.exchange.auth.*;
+import tech.kayys.wayang.knowledge.exchange.session.*;
+import tech.kayys.wayang.knowledge.exchange.binding.*;
+import tech.kayys.wayang.knowledge.exchange.envelope.*;
+import tech.kayys.wayang.knowledge.exchange.trust.*;
+import tech.kayys.wayang.knowledge.exchange.identity.*;
+import tech.kayys.wayang.knowledge.exchange.capability.*;
+import tech.kayys.wayang.knowledge.exchange.protocol.*;
+import tech.kayys.wayang.knowledge.exchange.transport.*;
+import tech.kayys.wayang.knowledge.exchange.framing.*;
+import tech.kayys.wayang.knowledge.exchange.transfer.*;
+import tech.kayys.wayang.knowledge.exchange.replication.*;
+import tech.kayys.wayang.knowledge.exchange.sync.*;
+import tech.kayys.wayang.knowledge.exchange.federation.*;
+import tech.kayys.wayang.knowledge.exchange.routing.*;
+import tech.kayys.wayang.knowledge.exchange.fusion.*;
+import tech.kayys.wayang.knowledge.exchange.coverage.*;
+import tech.kayys.wayang.knowledge.exchange.gap.*;
+import tech.kayys.wayang.knowledge.exchange.attribution.*;
+import tech.kayys.wayang.knowledge.exchange.contradiction.*;
+import tech.kayys.wayang.knowledge.exchange.factuality.*;
+import tech.kayys.wayang.knowledge.exchange.uncertainty.*;
+import tech.kayys.wayang.knowledge.exchange.compact.*;
+import tech.kayys.wayang.knowledge.exchange.resolution.*;
+import tech.kayys.wayang.knowledge.exchange.quorum.*;
+import tech.kayys.wayang.knowledge.exchange.selection.*;
+import tech.kayys.wayang.knowledge.exchange.coordination.*;
+import tech.kayys.wayang.knowledge.exchange.attestation.*;
+import tech.kayys.wayang.knowledge.exchange.proof.*;
+import tech.kayys.wayang.knowledge.exchange.validity.*;
+import tech.kayys.wayang.knowledge.exchange.lease.*;
+import tech.kayys.wayang.knowledge.exchange.recovery.*;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+public final class DefaultKnowledgeVerifiedEvidenceCitationCompiler
+        implements KnowledgeVerifiedEvidenceCitationCompiler {
+
+    @Override
+    public List<KnowledgeVerifiedEvidenceReference> compile(
+            KnowledgeEvidenceAnswerVerification verification,
+            KnowledgeEvidenceFusionResult fusionResult) {
+
+        List<KnowledgeVerifiedEvidenceReference> result =
+                new ArrayList<>();
+
+        if (verification != null && verification.claims() != null) {
+            for (var claimVerification : verification.claims()) {
+                for (var evidenceId : claimVerification.supportingEvidenceIds()) {
+                    if (fusionResult != null && fusionResult.selected() != null) {
+                        fusionResult.selected()
+                                .stream()
+                                .filter(candidate -> candidate.evidence().knowledgeId().equals(evidenceId))
+                                .findFirst()
+                                .ifPresent(candidate -> {
+                                    KnowledgeEvidenceReference evidence = candidate.evidence();
+                                    Object artVal = evidence.metadata().get("artifactId");
+                                    Object provVal = evidence.metadata().get("provenanceId");
+                                    String artifactId = artVal != null ? artVal.toString() : "";
+                                    String provenanceId = provVal != null ? provVal.toString() : "";
+
+                                    result.add(
+                                            new KnowledgeVerifiedEvidenceReference(
+                                                    evidenceId,
+                                                    evidence.knowledgeId(),
+                                                    evidence.versionId(),
+                                                    artifactId != null ? artifactId : "",
+                                                    evidence.fragmentId(),
+                                                    provenanceId != null ? provenanceId : "",
+                                                    candidate.finalScore(),
+                                                    candidate.authorityScore(),
+                                                    candidate.trustScore(),
+                                                    claimVerification.status() == KnowledgeEvidenceClaimStatus.SUPPORTED,
+                                                    Map.of()
+                                            )
+                                    );
+                                });
+                    }
+                }
+            }
+        }
+
+        return result.stream()
+                .distinct()
+                .toList();
+    }
+}

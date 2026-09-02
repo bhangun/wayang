@@ -82,6 +82,7 @@
         <!-- <module>runtime/wayang-guardrails-runtime</module> -->
         <module>runtime/wayang-hitl-runtime</module>
         <module>runtime/wayang-workflow-runtime</module>
+        <module>runtime/wayang-knowledge-runtime</module>
         <!-- wayang-agent-runner is a Quarkus executable app requiring Redis/GollekSdk/Micrometer at build time.
              Build separately when the full infrastructure is available. -->
         <!-- <module>runtime/wayang-agent-runner</module> -->

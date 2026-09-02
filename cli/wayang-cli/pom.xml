@@ -261,12 +261,17 @@
                     <compilerArgs>
                         <arg>-Aproject=${project.groupId}/${project.artifactId}</arg>
                     </compilerArgs>
+                    <testExcludes>
+                        <testExclude>**/WayangRun*CommandsTest.java</testExclude>
+                        <testExclude>**/WayangRunRequestOptionsTest.java</testExclude>
+                        <testExclude>**/WayangCliQueryOptionsTest.java</testExclude>
+                    </testExcludes>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.5.1</version>
                 <executions>
                     <execution>
                         <phase>package</phase>

@@ -27,9 +27,11 @@
         <module>wayang-tool-os</module>
         -->
     <modules>
+        <!--
         <module>wayang-image-tools</module>
         <module>wayang-audio-tools</module>
         <module>wayang-albiruni-tool</module>
+        -->
     </modules>
 
     <properties>

@@ -16,25 +16,25 @@ import tech.kayys.wayang.execution.RuntimeBehavior;
 import tech.kayys.wayang.extension.Metadata;
 
 /**
- * Aljabr Standalone Runner — headless CI/CD entry point for Wayang agents.
+ * Wayang Standalone Agent Runner — headless CI/CD entry point for Wayang agents.
  *
  * <p>Runs a single agent turn synchronously and exits with code {@code 0} on
- * success or {@code 1} on failure.  Output is JSON by default (disable with
+ * success or {@code 1} on failure. Output is JSON by default (disable with
  * {@code --no-json}).</p>
  *
  * <p>Usage examples:</p>
  * <pre>
- *   aljabr-runner "Summarise the README"
- *   aljabr-runner --model gemini-pro --behavior THOROUGH "Analyse code quality"
- *   aljabr-runner --no-json "What is 2 + 2"
+ *   wayang-runner "Summarise the README"
+ *   wayang-runner --model gemini-pro --behavior THOROUGH "Analyse code quality"
+ *   wayang-runner --no-json "What is 2 + 2"
  * </pre>
  */
 @Command(
-    name = "aljabr-runner",
+    name = "wayang-runner",
     mixinStandardHelpOptions = true,
     description = "Standalone CI/CD runner for Wayang agents"
 )
-public class AljabrRunner implements Runnable {
+public class WayangAgentRunner implements Runnable {
 
     @Inject
     AgentExecutionService executionService;
@@ -73,7 +73,7 @@ public class AljabrRunner implements Runnable {
             // Build a minimal AgentDefinition for headless execution.
             AgentDefinition def = AgentDefinition.builder()
                 .metadata(Metadata.builder()
-                    .name("aljabr-standalone-agent")
+                    .name("wayang-standalone-agent")
                     .description("Headless CI/CD agent")
                     .now()
                     .build())
@@ -108,7 +108,7 @@ public class AljabrRunner implements Runnable {
             System.exit(0);
 
         } catch (Exception e) {
-            System.err.println("[aljabr-runner] Fatal error: " + e.getMessage());
+            System.err.println("[wayang-runner] Fatal error: " + e.getMessage());
             e.printStackTrace(System.err);
             System.exit(1);
         }

@@ -11,8 +11,8 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>aljabr-runner</artifactId>
-    <name>Aljabr Runner</name>
+    <artifactId>wayang-agent-runner</artifactId>
+    <name>Wayang Agent Runner</name>
     <description>Standalone CI/CD Runner for Wayang Agents</description>
 
     <dependencies>

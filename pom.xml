@@ -82,9 +82,9 @@
         <!-- <module>runtime/wayang-guardrails-runtime</module> -->
         <module>runtime/wayang-hitl-runtime</module>
         <module>runtime/wayang-workflow-runtime</module>
-        <!-- aljabr-runner is a Quarkus executable app requiring Redis/GollekSdk/Micrometer at build time.
+        <!-- wayang-agent-runner is a Quarkus executable app requiring Redis/GollekSdk/Micrometer at build time.
              Build separately when the full infrastructure is available. -->
-        <!-- <module>runtime/aljabr-runner</module> -->
+        <!-- <module>runtime/wayang-agent-runner</module> -->
 
         <!-- Feature Modules -->
         <module>modules/graph</module>

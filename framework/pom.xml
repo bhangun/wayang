@@ -54,11 +54,13 @@
         <module>wayang-harness</module>
         <module>wayang-core</module>
         <module>wayang-database</module>
+        <module>wayang-plugin</module>
         <module>wayang-embedding</module>
         <module>wayang-engine</module>
         <module>wayang-error-spi</module>
         <module>wayang-event</module>
         <module>wayang-extension</module>
+        <module>wayang-hitl</module>
 
         <module>wayang-graph</module>
         <module>wayang-knowledge</module>
@@ -68,7 +70,6 @@
         <module>wayang-observability</module>
         <module>wayang-observability-otel</module>
         <module>wayang-orchestration</module>
-        <module>wayang-plugin</module>
         <module>wayang-project</module>
         <module>wayang-provider</module>
         <module>wayang-registry</module>

@@ -61,14 +61,15 @@ public class KnowledgeGraphResource {
             @QueryParam("tenantId") @DefaultValue("default") String tenantId,
             @QueryParam("workspaceId") @DefaultValue("default") String workspaceId,
             @QueryParam("projectId") String projectId,
-            @QueryParam("sessionId") String sessionId) {
+            @QueryParam("sessionId") String sessionId,
+            @QueryParam("dimensions") @DefaultValue("3") int dimensions) {
 
         if (artifactId == null || artifactId.isBlank()) {
             return badRequest("artifactId is required");
         }
         KnowledgeGraphQuery query = new KnowledgeGraphQuery(
                 artifactId, tenantId, workspaceId, projectId, sessionId,
-                KnowledgeGraphQuery.DEFAULT_MAX_DEPTH);
+                KnowledgeGraphQuery.DEFAULT_MAX_DEPTH, dimensions);
         return corsResponse(Response.ok(projectionService.artifactGraph(query))).build();
     }
 
@@ -84,14 +85,15 @@ public class KnowledgeGraphResource {
             @QueryParam("tenantId") @DefaultValue("default") String tenantId,
             @QueryParam("workspaceId") @DefaultValue("default") String workspaceId,
             @QueryParam("projectId") String projectId,
-            @QueryParam("sessionId") String sessionId) {
+            @QueryParam("sessionId") String sessionId,
+            @QueryParam("dimensions") @DefaultValue("3") int dimensions) {
 
         if (responseId == null || responseId.isBlank()) {
             return badRequest("responseId is required");
         }
         KnowledgeGraphQuery query = new KnowledgeGraphQuery(
                 responseId, tenantId, workspaceId, projectId, sessionId,
-                KnowledgeGraphQuery.DEFAULT_MAX_DEPTH);
+                KnowledgeGraphQuery.DEFAULT_MAX_DEPTH, dimensions);
         return corsResponse(Response.ok(projectionService.provenanceGraph(query))).build();
     }
 
@@ -107,14 +109,15 @@ public class KnowledgeGraphResource {
             @QueryParam("tenantId") @DefaultValue("default") String tenantId,
             @QueryParam("workspaceId") @DefaultValue("default") String workspaceId,
             @QueryParam("projectId") String projectId,
-            @QueryParam("sessionId") String sessionId) {
+            @QueryParam("sessionId") String sessionId,
+            @QueryParam("dimensions") @DefaultValue("3") int dimensions) {
 
         if (queryId == null || queryId.isBlank()) {
             return badRequest("queryId is required");
         }
         KnowledgeGraphQuery query = new KnowledgeGraphQuery(
                 queryId, tenantId, workspaceId, projectId, sessionId,
-                KnowledgeGraphQuery.DEFAULT_MAX_DEPTH);
+                KnowledgeGraphQuery.DEFAULT_MAX_DEPTH, dimensions);
         return corsResponse(Response.ok(projectionService.claimGraph(query))).build();
     }
 
@@ -129,14 +132,15 @@ public class KnowledgeGraphResource {
             @PathParam("sessionId") String sessionId,
             @QueryParam("tenantId") @DefaultValue("default") String tenantId,
             @QueryParam("workspaceId") @DefaultValue("default") String workspaceId,
-            @QueryParam("projectId") String projectId) {
+            @QueryParam("projectId") String projectId,
+            @QueryParam("dimensions") @DefaultValue("3") int dimensions) {
 
         if (sessionId == null || sessionId.isBlank()) {
             return badRequest("sessionId is required");
         }
         KnowledgeGraphQuery query = new KnowledgeGraphQuery(
                 sessionId, tenantId, workspaceId, projectId, sessionId,
-                KnowledgeGraphQuery.DEFAULT_MAX_DEPTH);
+                KnowledgeGraphQuery.DEFAULT_MAX_DEPTH, dimensions);
         return corsResponse(Response.ok(projectionService.fusionGraph(query))).build();
     }
 
@@ -152,14 +156,15 @@ public class KnowledgeGraphResource {
             @QueryParam("tenantId") @DefaultValue("default") String tenantId,
             @QueryParam("workspaceId") @DefaultValue("default") String workspaceId,
             @QueryParam("projectId") String projectId,
-            @QueryParam("sessionId") String sessionId) {
+            @QueryParam("sessionId") String sessionId,
+            @QueryParam("dimensions") @DefaultValue("3") int dimensions) {
 
         if (resolutionId == null || resolutionId.isBlank()) {
             return badRequest("resolutionId is required");
         }
         KnowledgeGraphQuery query = new KnowledgeGraphQuery(
                 resolutionId, tenantId, workspaceId, projectId, sessionId,
-                KnowledgeGraphQuery.DEFAULT_MAX_DEPTH);
+                KnowledgeGraphQuery.DEFAULT_MAX_DEPTH, dimensions);
         return corsResponse(Response.ok(projectionService.resolutionDependencyGraph(query))).build();
     }
 
@@ -177,13 +182,14 @@ public class KnowledgeGraphResource {
             @QueryParam("workspaceId") @DefaultValue("default") String workspaceId,
             @QueryParam("projectId") String projectId,
             @QueryParam("sessionId") String sessionId,
-            @QueryParam("depth") @DefaultValue("5") int depth) {
+            @QueryParam("depth") @DefaultValue("5") int depth,
+            @QueryParam("dimensions") @DefaultValue("3") int dimensions) {
 
         if (nodeId == null || nodeId.isBlank()) {
             return badRequest("nodeId is required");
         }
         KnowledgeGraphQuery query = new KnowledgeGraphQuery(
-                nodeId, tenantId, workspaceId, projectId, sessionId, depth);
+                nodeId, tenantId, workspaceId, projectId, sessionId, depth, dimensions);
         return corsResponse(Response.ok(projectionService.lineageGraph(query))).build();
     }
 
@@ -199,14 +205,15 @@ public class KnowledgeGraphResource {
             @QueryParam("tenantId") @DefaultValue("default") String tenantId,
             @QueryParam("workspaceId") @DefaultValue("default") String workspaceId,
             @QueryParam("projectId") String projectId,
-            @QueryParam("sessionId") String sessionId) {
+            @QueryParam("sessionId") String sessionId,
+            @QueryParam("dimensions") @DefaultValue("3") int dimensions) {
 
         if (snapshotId == null || snapshotId.isBlank()) {
             return badRequest("snapshotId is required");
         }
         KnowledgeGraphQuery query = new KnowledgeGraphQuery(
                 snapshotId, tenantId, workspaceId, projectId, sessionId,
-                KnowledgeGraphQuery.DEFAULT_MAX_DEPTH);
+                KnowledgeGraphQuery.DEFAULT_MAX_DEPTH, dimensions);
         return corsResponse(Response.ok(projectionService.snapshotDependencyGraph(query))).build();
     }
 
@@ -224,10 +231,11 @@ public class KnowledgeGraphResource {
             @QueryParam("workspaceId") @DefaultValue("default") String workspaceId,
             @QueryParam("projectId") String projectId,
             @QueryParam("sessionId") String sessionId,
-            @QueryParam("depth") @DefaultValue("5") int depth) {
+            @QueryParam("depth") @DefaultValue("5") int depth,
+            @QueryParam("dimensions") @DefaultValue("3") int dimensions) {
 
         KnowledgeGraphQuery query = new KnowledgeGraphQuery(
-                workspaceId, tenantId, workspaceId, projectId, sessionId, depth);
+                workspaceId, tenantId, workspaceId, projectId, sessionId, depth, dimensions);
         return corsResponse(Response.ok(projectionService.fullGraph(query))).build();
     }
 

@@ -67,7 +67,7 @@ public class DefaultKnowledgeGraphProjectionService implements KnowledgeGraphPro
         }
 
         return KnowledgeGraphView.builder(KnowledgeGraphView.KnowledgeGraphType.ARTIFACT)
-                .nodes(deduplicateNodes(nodes)).edges(edges)
+                .nodes(layout3D(nodes, query.dimensions())).edges(edges)
                 .tenantId(query.tenantId()).workspaceId(query.workspaceId())
                 .projectId(query.projectId()).sessionId(query.sessionId())
                 .build();
@@ -79,9 +79,9 @@ public class DefaultKnowledgeGraphProjectionService implements KnowledgeGraphPro
         // by a ProvenanceGraphStore (not yet wired). Return root node as anchor.
         return KnowledgeGraphView.builder(KnowledgeGraphView.KnowledgeGraphType.PROVENANCE)
                 .graphId("provenance-" + query.entityId())
-                .nodes(List.of(KnowledgeGraphNode.of(
+                .nodes(layout3D(List.of(KnowledgeGraphNode.of(
                         query.entityId(), "RESPONSE", "Response: " + query.entityId(), 1.0,
-                        query.tenantId(), query.workspaceId(), query.projectId())))
+                        query.tenantId(), query.workspaceId(), query.projectId())), query.dimensions()))
                 .edges(List.of())
                 .tenantId(query.tenantId()).workspaceId(query.workspaceId())
                 .projectId(query.projectId()).sessionId(query.sessionId())
@@ -125,7 +125,7 @@ public class DefaultKnowledgeGraphProjectionService implements KnowledgeGraphPro
         }
 
         return KnowledgeGraphView.builder(KnowledgeGraphView.KnowledgeGraphType.RESOLUTION_DEPENDENCY)
-                .nodes(deduplicateNodes(nodes)).edges(edges)
+                .nodes(layout3D(nodes, query.dimensions())).edges(edges)
                 .tenantId(query.tenantId()).workspaceId(query.workspaceId())
                 .projectId(query.projectId()).sessionId(query.sessionId())
                 .build();
@@ -155,7 +155,7 @@ public class DefaultKnowledgeGraphProjectionService implements KnowledgeGraphPro
         }
 
         return KnowledgeGraphView.builder(KnowledgeGraphView.KnowledgeGraphType.LINEAGE)
-                .nodes(deduplicateNodes(nodes)).edges(edges)
+                .nodes(layout3D(nodes, query.dimensions())).edges(edges)
                 .tenantId(query.tenantId()).workspaceId(query.workspaceId())
                 .projectId(query.projectId()).sessionId(query.sessionId())
                 .build();
@@ -180,7 +180,7 @@ public class DefaultKnowledgeGraphProjectionService implements KnowledgeGraphPro
         }
 
         return KnowledgeGraphView.builder(KnowledgeGraphView.KnowledgeGraphType.SNAPSHOT_DEPENDENCY)
-                .nodes(deduplicateNodes(nodes)).edges(edges)
+                .nodes(layout3D(nodes, query.dimensions())).edges(edges)
                 .tenantId(query.tenantId()).workspaceId(query.workspaceId())
                 .projectId(query.projectId()).sessionId(query.sessionId())
                 .build();
@@ -194,22 +194,56 @@ public class DefaultKnowledgeGraphProjectionService implements KnowledgeGraphPro
         // Lineage anchored at workspace as root
         KnowledgeGraphQuery lineageQuery = new KnowledgeGraphQuery(
                 query.workspaceId(), query.tenantId(), query.workspaceId(),
-                query.projectId(), query.sessionId(), query.maxDepth());
+                query.projectId(), query.sessionId(), query.maxDepth(), query.dimensions());
         KnowledgeGraphView lineage = lineageGraph(lineageQuery);
         allNodes.addAll(lineage.nodes());
         allEdges.addAll(lineage.edges());
 
         return KnowledgeGraphView.builder(KnowledgeGraphView.KnowledgeGraphType.FULL)
                 .graphId("full-" + query.workspaceId())
-                .nodes(deduplicateNodes(allNodes)).edges(allEdges)
+                .nodes(layout3D(allNodes, query.dimensions())).edges(allEdges)
                 .tenantId(query.tenantId()).workspaceId(query.workspaceId())
                 .projectId(query.projectId()).sessionId(query.sessionId())
                 .build();
     }
 
-    private List<KnowledgeGraphNode> deduplicateNodes(List<KnowledgeGraphNode> nodes) {
-        LinkedHashMap<String, KnowledgeGraphNode> seen = new LinkedHashMap<>();
-        for (KnowledgeGraphNode n : nodes) seen.putIfAbsent(n.id(), n);
-        return List.copyOf(seen.values());
+    private List<KnowledgeGraphNode> layout3D(List<KnowledgeGraphNode> rawNodes, int dimensions) {
+        LinkedHashMap<String, KnowledgeGraphNode> map = new LinkedHashMap<>();
+        int i = 0;
+        int total = rawNodes.size();
+        for (KnowledgeGraphNode n : rawNodes) {
+            if (!map.containsKey(n.id())) {
+                double x = n.x();
+                double y = n.y();
+                double z = n.z();
+                if (x == 0.0 && y == 0.0 && z == 0.0) {
+                    // Compute Fibonacci spherical 3D or circle 2D lattice
+                    if (dimensions == 3) {
+                        double phi = Math.acos(1.0 - 2.0 * (i + 0.5) / Math.max(1, total));
+                        double theta = Math.PI * (1.0 + Math.sqrt(5.0)) * i;
+                        double radius = 1.0 + (n.weight() * 0.5);
+                        x = radius * Math.sin(phi) * Math.cos(theta);
+                        y = radius * Math.sin(phi) * Math.sin(theta);
+                        z = radius * Math.cos(phi);
+                    } else {
+                        double theta = 2.0 * Math.PI * i / Math.max(1, total);
+                        double radius = 1.0 + (n.weight() * 0.5);
+                        x = radius * Math.cos(theta);
+                        y = radius * Math.sin(theta);
+                        z = 0.0;
+                    }
+                }
+                KnowledgeGraphNode placed = KnowledgeGraphNode.of3D(
+                        n.id(), n.type(), n.label(), n.weight(),
+                        Math.round(x * 1000.0) / 1000.0,
+                        Math.round(y * 1000.0) / 1000.0,
+                        Math.round(z * 1000.0) / 1000.0,
+                        n.tenantId(), n.workspaceId(), n.projectId()
+                );
+                map.put(n.id(), placed);
+                i++;
+            }
+        }
+        return List.copyOf(map.values());
     }
 }

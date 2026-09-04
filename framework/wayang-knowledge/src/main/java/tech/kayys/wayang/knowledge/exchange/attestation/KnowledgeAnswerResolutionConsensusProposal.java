@@ -46,47 +46,50 @@ import java.util.List;
 import java.util.Map;
 
 public record KnowledgeAnswerResolutionConsensusProposal(
-
         String consensusId,
-
         String keyFingerprint,
-
         String tenantId,
-
         String workspaceId,
-
         String projectId,
-
         String proposerRuntimeId,
-
+        String epochId,
+        long epochSequence,
+        String participantSetFingerprint,
         List<String> participantRuntimeIds,
-
         String proposedResolutionFingerprint,
-
         String proposedDependencyFingerprint,
-
-        KnowledgeAnswerResolutionVersionVector
-                versionVector,
-
+        KnowledgeAnswerResolutionVersionVector versionVector,
         Instant issuedAt,
-
         Instant expiresAt,
-
         Map<String, String> metadata
 ) {
+    public KnowledgeAnswerResolutionConsensusProposal(
+            String consensusId,
+            String keyFingerprint,
+            String tenantId,
+            String workspaceId,
+            String projectId,
+            String proposerRuntimeId,
+            List<String> participantRuntimeIds,
+            String proposedResolutionFingerprint,
+            String proposedDependencyFingerprint,
+            KnowledgeAnswerResolutionVersionVector versionVector,
+            Instant issuedAt,
+            Instant expiresAt,
+            Map<String, String> metadata) {
+        this(consensusId, keyFingerprint, tenantId, workspaceId, projectId,
+                proposerRuntimeId, null, 0L, null, participantRuntimeIds,
+                proposedResolutionFingerprint, proposedDependencyFingerprint,
+                versionVector, issuedAt, expiresAt, metadata);
+    }
 
     public KnowledgeAnswerResolutionConsensusProposal {
+        participantRuntimeIds = participantRuntimeIds == null
+                ? List.of()
+                : List.copyOf(participantRuntimeIds);
 
-        participantRuntimeIds =
-                participantRuntimeIds == null
-                        ? List.of()
-                        : List.copyOf(
-                                participantRuntimeIds
-                        );
-
-        metadata =
-                metadata == null
-                        ? Map.of()
-                        : Map.copyOf(metadata);
+        metadata = metadata == null
+                ? Map.of()
+                : Map.copyOf(metadata);
     }
 }

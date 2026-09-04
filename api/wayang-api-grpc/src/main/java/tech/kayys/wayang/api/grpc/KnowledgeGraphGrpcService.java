@@ -99,9 +99,10 @@ public class KnowledgeGraphGrpcService extends KnowledgeGraphServiceGrpc.Knowled
                                  StreamObserver<KnowledgeGraphEdgeProto> observer) {
         try {
             int maxDepth = request.getMaxDepth() > 0 ? request.getMaxDepth() : 5;
+            int dims = request.getDimensions() == 2 || request.getDimensions() == 3 ? request.getDimensions() : 3;
             KnowledgeGraphQuery query = new KnowledgeGraphQuery(
                     request.getNodeId(), request.getTenantId(), request.getWorkspaceId(),
-                    request.getProjectId(), request.getSessionId(), maxDepth);
+                    request.getProjectId(), request.getSessionId(), maxDepth, dims);
 
             KnowledgeGraphView view = projectionService.lineageGraph(query);
             for (tech.kayys.wayang.knowledge.graph.KnowledgeGraphEdge edge : view.edges()) {
@@ -136,9 +137,10 @@ public class KnowledgeGraphGrpcService extends KnowledgeGraphServiceGrpc.Knowled
                               StreamObserver<KnowledgeGraphResponse> observer) {
         try {
             int maxDepth = request.getMaxDepth() > 0 ? request.getMaxDepth() : 5;
+            int dims = request.getDimensions() == 2 || request.getDimensions() == 3 ? request.getDimensions() : 3;
             KnowledgeGraphQuery query = new KnowledgeGraphQuery(
                     request.getWorkspaceId(), request.getTenantId(), request.getWorkspaceId(),
-                    request.getProjectId(), request.getSessionId(), maxDepth);
+                    request.getProjectId(), request.getSessionId(), maxDepth, dims);
             KnowledgeGraphView view = projectionService.fullGraph(query);
             observer.onNext(toResponse(view));
             observer.onCompleted();
@@ -151,11 +153,13 @@ public class KnowledgeGraphGrpcService extends KnowledgeGraphServiceGrpc.Knowled
 
     private KnowledgeGraphQuery toQuery(KnowledgeGraphRequest req) {
         int maxDepth = req.getMaxDepth() > 0 ? req.getMaxDepth() : 5;
+        int dims = req.getDimensions() == 2 || req.getDimensions() == 3 ? req.getDimensions() : 3;
         return new KnowledgeGraphQuery(
                 req.getEntityId(), req.getTenantId(), req.getWorkspaceId(),
                 req.getProjectId().isBlank() ? null : req.getProjectId(),
                 req.getSessionId().isBlank() ? null : req.getSessionId(),
-                maxDepth);
+                maxDepth,
+                dims);
     }
 
     private KnowledgeGraphResponse toResponse(KnowledgeGraphView view) {
@@ -181,6 +185,9 @@ public class KnowledgeGraphGrpcService extends KnowledgeGraphServiceGrpc.Knowled
                     .setTenantId(safe(n.tenantId()))
                     .setWorkspaceId(safe(n.workspaceId()))
                     .setProjectId(safe(n.projectId()))
+                    .setX(n.x())
+                    .setY(n.y())
+                    .setZ(n.z())
                     .build());
         }
 

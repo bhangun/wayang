@@ -66,21 +66,30 @@ class DefaultMemoryVisualProjectionServiceTest {
     }
 
     @Test
-    void testVectorsProjection() {
+    void testVectorsProjection3D() {
         Memory mem = Memory.builder()
                 .content("High-performance distributed execution engine")
                 .type(MemoryType.SEMANTIC)
+                .embedding(new float[]{0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f})
                 .metadata(Map.of("category", "Architecture"))
+                .importance(0.92)
                 .build();
         vectorStore.store(mem).await().indefinitely();
 
-        MemoryVisualQuery query = MemoryVisualQuery.forAgent("agent-01");
-        MemoryVisualView vectors = service.vectors(query);
+        MemoryVisualQuery query3D = new MemoryVisualQuery("agent-01", null, "default", "default", null, null, 100, 3);
+        MemoryVisualView vectors3D = service.vectors(query3D);
 
-        assertThat(vectors).isNotNull();
-        assertThat(vectors.viewType()).isEqualTo(MemoryVisualView.MemoryVisualViewType.VECTORS);
-        assertThat(vectors.vectorPoints()).hasSize(1);
-        assertThat(vectors.vectorPoints().get(0).category()).isEqualTo("Architecture");
+        assertThat(vectors3D).isNotNull();
+        assertThat(vectors3D.viewType()).isEqualTo(MemoryVisualView.MemoryVisualViewType.VECTORS);
+        assertThat(vectors3D.vectorPoints()).hasSize(1);
+        MemoryVectorPoint p3D = vectors3D.vectorPoints().get(0);
+        assertThat(p3D.category()).isEqualTo("Architecture");
+        assertThat(p3D.z()).isNotZero();
+
+        MemoryVisualQuery query2D = new MemoryVisualQuery("agent-01", null, "default", "default", null, null, 100, 2);
+        MemoryVisualView vectors2D = service.vectors(query2D);
+        MemoryVectorPoint p2D = vectors2D.vectorPoints().get(0);
+        assertThat(p2D.z()).isEqualTo(0.0);
     }
 
     @Test

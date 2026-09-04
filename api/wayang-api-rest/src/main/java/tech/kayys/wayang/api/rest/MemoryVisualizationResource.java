@@ -109,13 +109,14 @@ public class MemoryVisualizationResource {
             @QueryParam("tenantId") @DefaultValue("default") String tenantId,
             @QueryParam("workspaceId") @DefaultValue("default") String workspaceId,
             @QueryParam("category") String category,
-            @QueryParam("limit") @DefaultValue("200") int limit) {
+            @QueryParam("limit") @DefaultValue("200") int limit,
+            @QueryParam("dimensions") @DefaultValue("3") int dimensions) {
 
         if (agentId == null || agentId.isBlank()) {
             return badRequest("agentId is required");
         }
         MemoryVisualQuery query = new MemoryVisualQuery(
-                agentId, userId, tenantId, workspaceId, null, category, limit);
+                agentId, userId, tenantId, workspaceId, null, category, limit, dimensions);
         MemoryVisualView view = projectionService.vectors(query);
         return corsResponse(Response.ok(view)).build();
     }
@@ -200,13 +201,14 @@ public class MemoryVisualizationResource {
             @QueryParam("tenantId") @DefaultValue("default") String tenantId,
             @QueryParam("workspaceId") @DefaultValue("default") String workspaceId,
             @QueryParam("sessionId") String sessionId,
-            @QueryParam("limit") @DefaultValue("100") int limit) {
+            @QueryParam("limit") @DefaultValue("100") int limit,
+            @QueryParam("dimensions") @DefaultValue("3") int dimensions) {
 
         if (agentId == null || agentId.isBlank()) {
             return badRequest("agentId is required");
         }
         MemoryVisualQuery query = new MemoryVisualQuery(
-                agentId, userId, tenantId, workspaceId, sessionId, null, limit);
+                agentId, userId, tenantId, workspaceId, sessionId, null, limit, dimensions);
         MemoryVisualView view = projectionService.full(query);
         return corsResponse(Response.ok(view)).build();
     }

@@ -11,11 +11,20 @@ public record KnowledgeGraphNode(
         String type,
         String label,
         double weight,
+        double x,
+        double y,
+        double z,
         String tenantId,
         String workspaceId,
         String projectId,
         Map<String, Object> metadata
 ) {
+    public KnowledgeGraphNode(String id, String type, String label, double weight,
+                              String tenantId, String workspaceId, String projectId,
+                              Map<String, Object> metadata) {
+        this(id, type, label, weight, 0.0, 0.0, 0.0, tenantId, workspaceId, projectId, metadata);
+    }
+
     public KnowledgeGraphNode {
         metadata = metadata == null ? Map.of() : Map.copyOf(metadata);
         type = type == null ? "UNKNOWN" : type;
@@ -23,11 +32,17 @@ public record KnowledgeGraphNode(
     }
 
     public static KnowledgeGraphNode of(String id, String type, String label, double weight) {
-        return new KnowledgeGraphNode(id, type, label, weight, null, null, null, Map.of());
+        return new KnowledgeGraphNode(id, type, label, weight, 0.0, 0.0, 0.0, null, null, null, Map.of());
     }
 
     public static KnowledgeGraphNode of(String id, String type, String label, double weight,
                                         String tenantId, String workspaceId, String projectId) {
-        return new KnowledgeGraphNode(id, type, label, weight, tenantId, workspaceId, projectId, Map.of());
+        return new KnowledgeGraphNode(id, type, label, weight, 0.0, 0.0, 0.0, tenantId, workspaceId, projectId, Map.of());
+    }
+
+    public static KnowledgeGraphNode of3D(String id, String type, String label, double weight,
+                                          double x, double y, double z,
+                                          String tenantId, String workspaceId, String projectId) {
+        return new KnowledgeGraphNode(id, type, label, weight, x, y, z, tenantId, workspaceId, projectId, Map.of());
     }
 }

@@ -136,6 +136,7 @@ public class MemoryVisualizationGrpcService extends MemoryVisualizationServiceGr
 
     private MemoryVisualQuery toQuery(MemoryVisualProtoQuery req) {
         int limit = req.getLimit() > 0 ? req.getLimit() : MemoryVisualQuery.DEFAULT_LIMIT;
+        int dims = req.getDimensions() == 2 || req.getDimensions() == 3 ? req.getDimensions() : MemoryVisualQuery.DEFAULT_DIMENSIONS;
         return new MemoryVisualQuery(
                 req.getAgentId().isBlank() ? "default" : req.getAgentId(),
                 req.getUserId().isBlank() ? null : req.getUserId(),
@@ -143,7 +144,8 @@ public class MemoryVisualizationGrpcService extends MemoryVisualizationServiceGr
                 req.getWorkspaceId().isBlank() ? "default" : req.getWorkspaceId(),
                 req.getSessionId().isBlank() ? null : req.getSessionId(),
                 req.getCategory().isBlank() ? null : req.getCategory(),
-                limit
+                limit,
+                dims
         );
     }
 

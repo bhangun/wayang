@@ -42,16 +42,39 @@ import tech.kayys.wayang.knowledge.exchange.recovery.*;
 
 
 import java.time.Instant;
+import java.util.Objects;
 
 public record KnowledgeAnswerResolutionConsensusEpoch(
-
         String epochId,
-
         long sequence,
-
         String participantSetFingerprint,
-
+        String previousEpochId,
         Instant createdAt,
-
+        Instant effectiveAt,
         Instant expiresAt
-) {}
+) {
+    public KnowledgeAnswerResolutionConsensusEpoch(
+            String epochId,
+            long sequence,
+            String participantSetFingerprint,
+            Instant createdAt,
+            Instant expiresAt) {
+        this(epochId, sequence, participantSetFingerprint, null, createdAt, createdAt, expiresAt);
+    }
+
+    public KnowledgeAnswerResolutionConsensusEpoch {
+        Objects.requireNonNull(epochId, "epochId");
+        Objects.requireNonNull(participantSetFingerprint, "participantSetFingerprint");
+        Objects.requireNonNull(createdAt, "createdAt");
+        effectiveAt = effectiveAt != null ? effectiveAt : createdAt;
+
+        if (sequence < 0) {
+            throw new IllegalArgumentException("sequence must be >= 0");
+        }
+    }
+
+    public boolean effectiveAt(Instant instant) {
+        return !instant.isBefore(effectiveAt)
+                && (expiresAt == null || instant.isBefore(expiresAt));
+    }
+}

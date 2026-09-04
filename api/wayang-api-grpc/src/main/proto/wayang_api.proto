@@ -271,6 +271,7 @@ message KnowledgeGraphRequest {
   string project_id   = 4;
   string session_id   = 5;
   int32  max_depth    = 6;
+  int32  dimensions   = 7;
 }
 
 message KnowledgeLineageGraphRequest {
@@ -280,6 +281,7 @@ message KnowledgeLineageGraphRequest {
   string project_id   = 4;
   string session_id   = 5;
   int32  max_depth    = 6;
+  int32  dimensions   = 7;
 }
 
 message KnowledgeFullGraphRequest {
@@ -288,6 +290,7 @@ message KnowledgeFullGraphRequest {
   string project_id   = 3;
   string session_id   = 4;
   int32  max_depth    = 5;
+  int32  dimensions   = 6;
 }
 
 message KnowledgeGraphNodeProto {
@@ -299,6 +302,9 @@ message KnowledgeGraphNodeProto {
   string              workspace_id  = 6;
   string              project_id    = 7;
   map<string, string> metadata      = 8;
+  double              x             = 9;
+  double              y             = 10;
+  double              z             = 11;
 }
 
 message KnowledgeGraphEdgeProto {
@@ -358,6 +364,7 @@ message MemoryVisualProtoQuery {
   string session_id   = 5;
   string category     = 6;
   int32  limit        = 7;
+  int32  dimensions   = 8;
 }
 
 message MemoryVisualNodeProto {

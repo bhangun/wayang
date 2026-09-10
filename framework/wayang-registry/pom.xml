@@ -6,12 +6,12 @@
     <parent>
           <groupId>tech.kayys.wayang</groupId>
           <artifactId>wayang-agentic-parent</artifactId>
-          <version>1.0.0-SNAPSHOT</version>
+          <version>0.0.1</version>
           <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>wayang-registry</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.0.1</version>
 
     <properties>
         <maven.compiler.source>25</maven.compiler.source>
@@ -30,7 +30,7 @@
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-gollek-sdk</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <version>${wayang-gollek-sdk.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>tech.kayys.alkhawarizm</groupId>

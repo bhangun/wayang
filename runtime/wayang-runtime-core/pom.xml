@@ -235,14 +235,14 @@
     <!-- Tool Integration -->
     <dependency>
       <groupId>tech.kayys.wayang</groupId>
-      <artifactId>wayang-tool-spi</artifactId>
+      <artifactId>wayang-tool</artifactId>
       <version>${project.version}</version>
     </dependency>
 
     <dependency>
       <groupId>tech.kayys.wayang</groupId>
       <artifactId>wayang-tool-core</artifactId>
-      <version>${project.version}</version>
+      <version>1.0.0-SNAPSHOT</version>
     </dependency>
 
     <!-- Git implementation for Skills Loader -->

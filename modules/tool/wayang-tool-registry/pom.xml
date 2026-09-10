@@ -19,7 +19,7 @@
         </dependency>
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
-            <artifactId>wayang-tool-spi</artifactId>
+            <artifactId>wayang-tool</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

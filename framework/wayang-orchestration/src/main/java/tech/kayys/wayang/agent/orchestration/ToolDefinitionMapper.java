@@ -1,7 +1,7 @@
 package tech.kayys.wayang.agent.orchestration;
 
 import tech.kayys.wayang.provider.ToolSpec;
-import tech.kayys.wayang.tools.spi.Tool;
+import tech.kayys.wayang.tool.Tool;
 
 import java.util.List;
 import java.util.Map;
@@ -17,10 +17,11 @@ public final class ToolDefinitionMapper {
 
     public static ToolSpec fromTool(Tool tool) {
         Objects.requireNonNull(tool, "tool");
+        var desc = tool.descriptor();
         return new ToolSpec(
-                tool.id(),
-                tool.description(),
-                safeSchema(tool.inputSchema()));
+                desc != null && desc.name() != null ? desc.name() : "",
+                desc != null && desc.description() != null ? desc.description() : "",
+                safeSchema(desc != null ? desc.inputSchema() : null));
     }
 
     public static List<ToolSpec> fromTools(List<? extends Tool> tools) {

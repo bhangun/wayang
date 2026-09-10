@@ -33,7 +33,7 @@
         <dependency>
             <groupId>tech.kayys.wayang</groupId>
             <artifactId>wayang-gollek-sdk</artifactId>
-            <version>${project.version}</version>
+            <version>${wayang-gollek-sdk.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>tech.kayys.alkhawarizm</groupId>

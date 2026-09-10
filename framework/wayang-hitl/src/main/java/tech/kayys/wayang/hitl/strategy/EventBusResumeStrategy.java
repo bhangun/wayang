@@ -1,6 +1,6 @@
 package tech.kayys.wayang.hitl.strategy;
 
-import tech.kayys.wayang.spi.agent.Agent;
+import tech.kayys.wayang.agent.Agent;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import jakarta.enterprise.context.ApplicationScoped;

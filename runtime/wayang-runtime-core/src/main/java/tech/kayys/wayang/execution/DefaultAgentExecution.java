@@ -55,6 +55,7 @@ public class DefaultAgentExecution implements AgentExecution {
     private final AgentContext agentContext;
     private final ExecutionBudget budget;
     private final CheckpointStore checkpointStore;
+    private final ExecutionCheckpointStore executionCheckpointStore;
     private final AgentToolExecutor toolExecutor;
     /** Providers resolved from CDI — may be empty when running without a provider. */
     private final List<Provider> providers;
@@ -95,12 +96,12 @@ public class DefaultAgentExecution implements AgentExecution {
         String tenantId,
         String userId
     ) {
-        this(id, agent, agentContext, budget, checkpointStore, toolExecutor,
+        this(id, agent, agentContext, budget, checkpointStore, null, toolExecutor,
              providers, modelRouter, contextPlanner, memoryManager,
              executionCache, tenantId, userId, null);
     }
 
-    /** Full constructor including the Event Ledger. */
+    /** Full constructor including Event Ledger. */
     public DefaultAgentExecution(
         String id,
         AgentDefinition agent,
@@ -117,11 +118,37 @@ public class DefaultAgentExecution implements AgentExecution {
         String userId,
         EventLedger eventLedger
     ) {
+        this(id, agent, agentContext, budget, checkpointStore, null, toolExecutor,
+             providers, modelRouter, contextPlanner, memoryManager,
+             executionCache, tenantId, userId, eventLedger);
+    }
+
+    /** Full constructor including ExecutionCheckpointStore and Event Ledger. */
+    public DefaultAgentExecution(
+        String id,
+        AgentDefinition agent,
+        AgentContext agentContext,
+        ExecutionBudget budget,
+        CheckpointStore checkpointStore,
+        ExecutionCheckpointStore executionCheckpointStore,
+        AgentToolExecutor toolExecutor,
+        List<Provider> providers,
+        tech.kayys.wayang.provider.ModelRouter modelRouter,
+        RuntimeContextPlanner contextPlanner,
+        tech.kayys.wayang.memory.manager.MemoryManager memoryManager,
+        ExecutionCache executionCache,
+        String tenantId,
+        String userId,
+        EventLedger eventLedger
+    ) {
         this.id = id;
         this.agent = agent;
         this.agentContext = agentContext;
         this.budget = budget;
         this.checkpointStore = checkpointStore;
+        this.executionCheckpointStore = executionCheckpointStore != null
+                ? executionCheckpointStore
+                : new InMemoryExecutionCheckpointStore();
         this.toolExecutor = toolExecutor;
         this.providers = providers != null ? new ArrayList<>(providers) : new ArrayList<>();
         
@@ -134,8 +161,15 @@ public class DefaultAgentExecution implements AgentExecution {
         this.userId         = userId;
         // Phase 5: Event Ledger
         this.eventLedger    = eventLedger;   // null means events are not persisted
-        this.stateStore     = new DefaultExecutionStateStore(checkpointStore, eventLedger);
-        this.status = ExecutionStatus.PENDING;
+        this.stateStore     = new DefaultExecutionStateStore(checkpointStore, eventLedger, this.executionCheckpointStore);
+        var cp = this.executionCheckpointStore.load(id);
+        if (cp.isPresent()) {
+            this.status = cp.get().status();
+            this.stateStore.changeStatus(id, this.status);
+        } else {
+            AgentExecutionState existingState = this.stateStore.get(id);
+            this.status = existingState != null ? existingState.status() : ExecutionStatus.PENDING;
+        }
     }
 
     /** Backwards-compatible constructor without providers (integration tests, resume). */
@@ -143,13 +177,12 @@ public class DefaultAgentExecution implements AgentExecution {
         String id,
         AgentDefinition agent,
         AgentContext agentContext,
-        
         ExecutionBudget budget,
         CheckpointStore checkpointStore,
         AgentToolExecutor toolExecutor
     ) {
         this(id, agent, agentContext, budget,
-             checkpointStore, toolExecutor, List.of(), null, null, null, null, null, null);
+             checkpointStore, null, toolExecutor, List.of(), null, null, null, null, null, null, null);
     }
 
     @Override
@@ -161,11 +194,9 @@ public class DefaultAgentExecution implements AgentExecution {
     @Override
     public ExecutionStatus status() { return status; }
 
-    // -------------------------------------------------------------------------
-    // Event helper
-    // -------------------------------------------------------------------------
+    public ExecutionStateStore stateStore() { return stateStore; }
 
-    // Event helper is now managed inside DefaultExecutionStateStore
+    public ExecutionCheckpointStore executionCheckpointStore() { return executionCheckpointStore; }
 
     // -------------------------------------------------------------------------
     // Core execution — drives the ReAct loop
@@ -173,6 +204,7 @@ public class DefaultAgentExecution implements AgentExecution {
 
     @Override
     public CompletionStage<AgentResponse> execute() {
+        stateStore.transitionStatus(id, ExecutionStatus.PENDING, ExecutionStatus.RUNNING);
         this.status = ExecutionStatus.RUNNING;
 
         // Phase 5: Record execution start
@@ -296,7 +328,6 @@ public class DefaultAgentExecution implements AgentExecution {
             }
         }
 
-
         // Resolve tools from the tool executor if available.
         List<Tool> tools = new ArrayList<>();
         if (toolExecutor instanceof AgentToolExecutor.ToolAware ta) {
@@ -309,7 +340,6 @@ public class DefaultAgentExecution implements AgentExecution {
             : "You are a helpful AI assistant.";
 
         // Policy bridge: routes tool calls through the executor pipeline
-        // (schema validation → circuit breaker → retry → timeout → Tool.execute).
         tech.kayys.wayang.agent.react.BaseReActAgent.ToolExecutorBridge policyBridge =
             (toolExecutor != null)
             ? (invocation, directFallback) -> {
@@ -329,13 +359,15 @@ public class DefaultAgentExecution implements AgentExecution {
         // Checkpoint bridge: persists agent context before/after each model step.
         tech.kayys.wayang.agent.react.BaseReActAgent.CheckpointBridge cpBridge =
             (execId, ctx) -> {
+                AgentContext snapshot = ctx != null ? ctx : agentContext;
+                if (snapshot == null) {
+                    return;
+                }
+                if (stateStore != null) {
+                    stateStore.checkpoint(execId, snapshot);
+                }
                 if (checkpointStore != null) {
-                    if (ctx != null) {
-                        checkpointStore.save(execId, ctx);
-                    } else {
-                        // Step marker — save the current agentContext snapshot.
-                        checkpointStore.save(execId, agentContext);
-                    }
+                    checkpointStore.save(execId, snapshot);
                 }
             };
 
@@ -348,7 +380,6 @@ public class DefaultAgentExecution implements AgentExecution {
             .withToolExecutor(policyBridge)
             .withCheckpointBridge(cpBridge, id)
             .build();
-
 
         // Buffer accumulated text for the final response content.
         StringBuilder contentBuffer = new StringBuilder();
@@ -397,10 +428,14 @@ public class DefaultAgentExecution implements AgentExecution {
 
             @Override
             public void onDone(String stopReason) {
-                DefaultAgentExecution.this.status = ExecutionStatus.COMPLETED;
+                if (stateStore != null) {
+                    stateStore.checkpoint(id, agentContext);
+                }
                 if (checkpointStore != null) {
                     checkpointStore.save(id, agentContext);
                 }
+
+                DefaultAgentExecution.this.status = ExecutionStatus.COMPLETED;
 
                 // Collect cache entry IDs for this execution (traceability)
                 java.util.List<String> cacheEntryIds = java.util.List.of();
@@ -445,15 +480,20 @@ public class DefaultAgentExecution implements AgentExecution {
 
     /** Returns a completed stub response — used when a real execution cannot be performed. */
     private void stubComplete(CompletableFuture<AgentResponse> future, String reason) {
-        this.status = ExecutionStatus.COMPLETED;
+        if (stateStore != null) {
+            stateStore.checkpoint(id, agentContext);
+        }
         if (checkpointStore != null) {
             checkpointStore.save(id, agentContext);
         }
-        future.complete(AgentResponse.builder()
+        this.status = ExecutionStatus.COMPLETED;
+        AgentResponse resp = AgentResponse.builder()
             .id(id)
             .success(true)
             .content(reason)
-            .build());
+            .build();
+        stateStore.complete(id, resp);
+        future.complete(resp);
     }
 
     // -------------------------------------------------------------------------
@@ -493,23 +533,41 @@ public class DefaultAgentExecution implements AgentExecution {
 
     @Override
     public void pause() {
-        this.status = ExecutionStatus.PAUSED;
+        if (this.status != ExecutionStatus.RUNNING) {
+            return;
+        }
+
+        if (stateStore != null) {
+            stateStore.checkpoint(id, agentContext);
+        }
+
         if (checkpointStore != null) {
             checkpointStore.save(id, agentContext);
         }
+
+        stateStore.transitionStatus(id, ExecutionStatus.RUNNING, ExecutionStatus.PAUSED);
+        this.status = ExecutionStatus.PAUSED;
     }
 
     @Override
     public void resume() {
+        if (this.status != ExecutionStatus.PAUSED) {
+            return;
+        }
+
+        stateStore.transitionStatus(id, ExecutionStatus.PAUSED, ExecutionStatus.RUNNING);
         this.status = ExecutionStatus.RUNNING;
     }
 
     @Override
     public void cancel() {
-        this.status = ExecutionStatus.CANCELLED;
-        if (checkpointStore != null) {
-            checkpointStore.delete(id);
+        ExecutionStatus current = this.status;
+        if (current == ExecutionStatus.CANCELLED || current == ExecutionStatus.COMPLETED) {
+            return;
         }
+
+        stateStore.transitionStatus(id, current, ExecutionStatus.CANCELLED);
+        this.status = ExecutionStatus.CANCELLED;
     }
 
     private InferencePolicy mapBudgetToPolicy(ExecutionBudget budget) {

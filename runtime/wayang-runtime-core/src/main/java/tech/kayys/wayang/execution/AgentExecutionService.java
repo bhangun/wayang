@@ -77,6 +77,12 @@ public class AgentExecutionService {
     @Inject
     Instance<EventLedger> eventLedgerInstances;
 
+    /**
+     * P0.2: Optional Execution Checkpoint Store — CDI-discovered.
+     */
+    @Inject
+    Instance<ExecutionCheckpointStore> executionCheckpointStoreInstances;
+
     // ------------------------------------------------------------------
     // Factory
     // ------------------------------------------------------------------
@@ -104,6 +110,7 @@ public class AgentExecutionService {
             agentContext,
             effectiveBudget,
             checkpointStore,
+            resolveExecutionCheckpointStore(),
             toolExecutor,
             providers,
             resolveModelRouter(),
@@ -137,6 +144,7 @@ public class AgentExecutionService {
             contextOpt.get(),
             ExecutionBudget.balanced(),
             checkpointStore,
+            resolveExecutionCheckpointStore(),
             toolExecutor,
             List.of(),
             resolveModelRouter(),
@@ -194,5 +202,12 @@ public class AgentExecutionService {
             return null;
         }
         return eventLedgerInstances.get();
+    }
+
+    private ExecutionCheckpointStore resolveExecutionCheckpointStore() {
+        if (executionCheckpointStoreInstances == null || executionCheckpointStoreInstances.isUnsatisfied()) {
+            return null;
+        }
+        return executionCheckpointStoreInstances.get();
     }
 }

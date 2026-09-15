@@ -7,7 +7,7 @@
     <parent>
         <groupId>tech.kayys.wayang</groupId>
         <artifactId>wayang-agentic-parent</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>0.0.1</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -36,6 +36,34 @@
             <groupId>tech.kayys.gamelan</groupId>
             <artifactId>gamelan-sdk-client-core</artifactId>
             <version>${gamelan.version}</version>
+        </dependency>
+
+        <!-- Gamelan Engine SPI -->
+        <dependency>
+            <groupId>tech.kayys.gamelan</groupId>
+            <artifactId>gamelan-engine-spi</artifactId>
+            <version>${gamelan.version}</version>
+        </dependency>
+
+        <!-- Gamelan Executor SDK Core -->
+        <dependency>
+            <groupId>tech.kayys.gamelan</groupId>
+            <artifactId>gamelan-sdk-executor-core</artifactId>
+            <version>${gamelan.version}</version>
+        </dependency>
+
+        <!-- Wayang Runtime Core -->
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-runtime-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- CDI API -->
+        <dependency>
+            <groupId>jakarta.enterprise</groupId>
+            <artifactId>jakarta.enterprise.cdi-api</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Logging -->

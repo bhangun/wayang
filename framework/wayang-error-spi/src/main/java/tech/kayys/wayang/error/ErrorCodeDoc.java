@@ -19,6 +19,8 @@ package tech.kayys.wayang.error;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Utility to generate Markdown documentation for {@link ErrorCode}.
@@ -34,12 +36,12 @@ public final class ErrorCodeDoc {
         builder.append("# Wayang Error Codes").append(nl).append(nl);
         builder.append("Generated from `ErrorCode` at build time.").append(nl).append(nl);
 
-        for (ErrorCode.ErrorCategory category : ErrorCode.ErrorCategory.values()) {
-            List<ErrorCode> codes = byCategoryInOrder(category);
+        for (Map.Entry<String, List<ErrorCode>> entry : categoriesInOrder().entrySet()) {
+            List<ErrorCode> codes = entry.getValue();
             if (codes.isEmpty()) {
                 continue;
             }
-            builder.append("## ").append(category.getPrefix()).append(nl).append(nl);
+            builder.append("## ").append(codes.get(0).getCategory().getPrefix()).append(nl).append(nl);
             builder.append("| Code | HTTP | Retryable | Message |").append(nl);
             builder.append("| --- | --- | --- | --- |").append(nl);
             for (ErrorCode code : codes) {
@@ -61,13 +63,11 @@ public final class ErrorCodeDoc {
         System.out.print(toMarkdown());
     }
 
-    private static List<ErrorCode> byCategoryInOrder(ErrorCode.ErrorCategory category) {
-        List<ErrorCode> codes = new ArrayList<>();
+    private static Map<String, List<ErrorCode>> categoriesInOrder() {
+        Map<String, List<ErrorCode>> categories = new LinkedHashMap<>();
         for (ErrorCode errorCode : ErrorCode.values()) {
-            if (errorCode.getCategory() == category) {
-                codes.add(errorCode);
-            }
+            categories.computeIfAbsent(errorCode.getCategory().name(), ignored -> new ArrayList<>()).add(errorCode);
         }
-        return codes;
+        return categories;
     }
 }

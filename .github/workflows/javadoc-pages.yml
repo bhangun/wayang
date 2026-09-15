@@ -1,0 +1,78 @@
+name: Publish Wayang Javadoc
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Generate Javadoc
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up GraalVM
+        uses: actions/setup-java@v4
+        with:
+          distribution: graalvm
+          java-version: "25"
+          cache: maven
+
+      - name: Generate aggregate Javadoc
+        run: |
+          ./mvnw -B -ntp \
+            javadoc:aggregate-no-fork \
+            -DskipTests \
+            -Dmaven.test.skip=true \
+            -DexcludePackageNames=tech.kayys.wayang.agent.backend.gamelan \
+            -Dmaven.javadoc.failOnError=false \
+            -Dmaven.javadoc.failOnWarnings=false
+
+      - name: Assemble module documentation site
+        run: |
+          set -euo pipefail
+          rm -rf target/pages
+          mkdir -p target/pages/modules
+          {
+            printf '%s\n' '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Wayang API Documentation</title></head><body><h1>Wayang API Documentation</h1><p>Generated from the Maven reactor.</p><ul>'
+            while IFS= read -r report; do
+              module_dir="${report%/target/reports/apidocs/index.html}"
+              module_name="$(basename "$module_dir")"
+              destination="target/pages/modules/${module_dir#./}"
+              mkdir -p "$destination"
+              cp -R "$module_dir/target/reports/apidocs/." "$destination/"
+              printf '<li><a href="/wayang/modules/%s/index.html">%s</a></li>\n' "${module_dir#./}" "$module_name"
+            done < <(find . -path '*/target/reports/apidocs/index.html' -not -path './target/*' | sort)
+            printf '%s\n' '</ul></body></html>'
+          } > target/pages/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/pages
+
+  deploy:
+    name: Deploy Javadoc Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

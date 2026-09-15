@@ -89,6 +89,13 @@ public record AgentRequest(
             this.metadata.put(key, value);
             return this;
         }
+
+        public AgentRequestBuilder metadata(Map<String, Object> metadata) {
+            if (metadata != null) {
+                this.metadata.putAll(metadata);
+            }
+            return this;
+        }
         
         public AgentRequestBuilder artifact(Artifact artifact) {
             this.artifacts.add(artifact);
@@ -97,6 +104,13 @@ public record AgentRequest(
         
         public AgentRequestBuilder parameter(String key, Object value) {
             this.parameters.put(key, value);
+            return this;
+        }
+
+        public AgentRequestBuilder parameters(Map<String, Object> parameters) {
+            if (parameters != null) {
+                this.parameters.putAll(parameters);
+            }
             return this;
         }
         

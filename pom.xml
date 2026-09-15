@@ -30,7 +30,7 @@
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <gollek.version>0.1.0-SNAPSHOT</gollek.version>
-        <gamelan.version>1.0.0-SNAPSHOT</gamelan.version>
+        <gamelan.version>0.1.1</gamelan.version>
         <wayang-gollek-sdk.version>1.0.0-SNAPSHOT</wayang-gollek-sdk.version>
         <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
         <jandex.maven.plugin.version>3.2.7</jandex.maven.plugin.version>
@@ -78,6 +78,8 @@
         <module>api/wayang-api-rest</module>
         <module>framework</module>
         <module>runtime/wayang-sandbox</module>
+        <module>runtime/wayang-runtime-core</module>
+        <module>runtime/wayang-backend-gamelan</module>
         <module>runtime/wayang-agent-runtime</module>
         <module>runtime/wayang-tool-runtime</module>
         <module>runtime/wayang-rag-runtime</module>

@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import tech.kayys.wayang.security.authz.AuthorizationRequest;
 import tech.kayys.wayang.security.context.SecurityContext;
 import tech.kayys.wayang.security.identity.Principal;
+import tech.kayys.wayang.security.obligation.Obligation;
+import tech.kayys.wayang.security.obligation.StandardObligations;
 import tech.kayys.wayang.security.policy.engine.DefaultPolicyEngine;
 import tech.kayys.wayang.security.tenant.TenantContext;
 
@@ -55,7 +57,7 @@ class PolicyEngineTest {
                 "finance.*",
                 "*",
                 PolicyEffect.ALLOW,
-                List.of(Obligation.audit(), Obligation.hitl()),
+                List.of(Obligation.before(StandardObligations.AUDIT), Obligation.before(StandardObligations.HITL)),
                 10
         );
         Policy policy = Policy.of("finance-policy", List.of(rule));
@@ -70,7 +72,7 @@ class PolicyEngineTest {
 
         assertTrue(decision.allowed());
         assertEquals(2, decision.obligations().size());
-        assertEquals(ObligationType.AUDIT, decision.obligations().get(0).type());
-        assertEquals(ObligationType.HITL, decision.obligations().get(1).type());
+        assertEquals(StandardObligations.AUDIT, decision.obligations().get(0).type());
+        assertEquals(StandardObligations.HITL, decision.obligations().get(1).type());
     }
 }

@@ -20,6 +20,10 @@ public record DelegationConstraints(
         return new DelegationConstraints(List.of("*"), List.of("*"), 5);
     }
 
+    public static DelegationConstraints empty() {
+        return new DelegationConstraints(List.of(), List.of(), 0);
+    }
+
     public static DelegationConstraints of(List<String> capabilities, int maxHops) {
         return new DelegationConstraints(capabilities, List.of("*"), maxHops);
     }

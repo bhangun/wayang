@@ -47,6 +47,8 @@
         <module>wayang-communication-api</module>
         <module>wayang-communication-core</module>
         <module>wayang-protocol-local</module>
+        <module>wayang-agent-network-api</module>
+        <module>wayang-agent-network-core</module>
         <module>wayang-context</module>
         <module>wayang-cache</module>
         <module>wayang-research</module>
@@ -81,6 +83,9 @@
         <module>wayang-schemas</module>
         <module>wayang-security-api</module>
         <module>wayang-security-core</module>
+        <module>wayang-execution-api</module>
+        <module>wayang-execution-core</module>
+        <module>wayang-anp</module>
         <module>wayang-shaker</module>
         <module>wayang-skill</module>
         <module>wayang-spi</module>

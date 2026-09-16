@@ -28,4 +28,12 @@ public interface PluginRegistry {
      * Get all extensions of a specific type across all plugins.
      */
     <T extends Extension> List<T> getExtensions(Class<T> type) throws Exception;
+
+    /**
+     * Unregisters a plugin by its ID.
+     */
+    default Optional<Plugin> unregister(String id) throws Exception {
+        throw new UnsupportedOperationException(
+                "Plugin registry does not support unregister");
+    }
 }

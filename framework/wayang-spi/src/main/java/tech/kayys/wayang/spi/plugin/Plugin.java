@@ -1,32 +1,48 @@
 package tech.kayys.wayang.spi.plugin;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.concurrent.CompletableFuture;
-import tech.kayys.wayang.extension.Extension;
-import tech.kayys.wayang.resource.Resource;
-import tech.kayys.wayang.resource.BaseResource;
-
 
 import java.util.List;
-
 import tech.kayys.wayang.extension.Extension;
-import tech.kayys.wayang.spi.plugin.PluginState;
 
 /**
- * Plugin
+ * Wayang plugin lifecycle contract.
+ *
+ * <p>The no-argument initialize() method is retained for
+ * backward compatibility. New plugins should prefer
+ * initialize(PluginContext).</p>
  */
 public interface Plugin {
+
     String id();
+
     Manifest manifest();
+
     PluginState state();
+
     ClassLoader classLoader();
+
     List<Extension> extensions();
-    void initialize() throws Exception;
+
+    /**
+     * Legacy initialization hook.
+     *
+     * @deprecated implement initialize(PluginContext) for new plugins.
+     */
+    @Deprecated(forRemoval = false)
+    default void initialize() throws Exception {
+    }
+
+    /**
+     * Initializes the plugin with its runtime context.
+     *
+     * <p>The default implementation delegates to the legacy
+     * no-argument initialize() method, preserving compatibility
+     * with existing plugins.</p>
+     */
+    default void initialize(PluginContext context) throws Exception {
+        initialize();
+    }
+
     void start() throws Exception;
+
     void stop() throws Exception;
 }
-
-

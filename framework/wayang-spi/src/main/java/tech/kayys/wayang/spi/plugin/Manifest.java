@@ -36,6 +36,13 @@ public interface Manifest extends Resource {
     
     Version version();
     
+    /**
+     * Wayang Plugin API compatibility version.
+     */
+    default Version apiVersion() {
+        return Version.VERSION_1_0_0;
+    }
+    
     String description();
     
     String mainClass();

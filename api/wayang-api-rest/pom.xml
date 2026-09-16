@@ -66,6 +66,32 @@
             <version>${project.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-anp</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-security-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-security-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-execution-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.kayys.wayang</groupId>
+            <artifactId>wayang-execution-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- REST runtime support -->
         <dependency>
             <groupId>io.quarkus</groupId>

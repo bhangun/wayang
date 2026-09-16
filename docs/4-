@@ -1,0 +1,2978 @@
+# Wayang Platform — Complete Documentation
+
+> **Version:** 1.0.0-SNAPSHOT
+> **Generated:** 2026-09-15
+> **Documentation Set:** Chapters 1–10+
+
+---
+
+## Table of Contents
+
+- [Chapter 4 — Wayang Architecture Deep Dive](#chapter-4--wayang-architecture-deep-dive)
+  - [4.1 Architectural Principles](#41-architectural-principles)
+  - [4.2 Layered Architecture](#42-layered-architecture)
+  - [4.3 Module Map](#43-module-map)
+  - [4.4 The Execution Kernel](#44-the-execution-kernel)
+  - [4.5 The Communication Fabric](#45-the-communication-fabric)
+  - [4.6 Memory Hierarchy](#46-memory-hierarchy)
+  - [4.7 Knowledge Subsystem](#47-knowledge-subsystem)
+  - [4.8 Agent Network Layer (ANP)](#48-agent-network-layer-anp)
+  - [4.9 Interoperability: A2A & ANP](#49-interoperability-a2a--anp)
+  - [4.10 Governance & Guardrails](#410-governance--guardrails)
+  - [4.11 Security Model](#411-security-model)
+- [Chapter 5 — Sequence Diagrams](#chapter-5--sequence-diagrams)
+  - [5.1 Agent Execution Lifecycle](#51-agent-execution-lifecycle)
+  - [5.2 ReAct Loop with Tool Execution](#52-react-loop-with-tool-execution)
+  - [5.3 Durable A2A Call](#53-durable-a2a-call)
+  - [5.4 Human-in-the-Loop Approval](#54-human-in-the-loop-approval)
+  - [5.5 Knowledge-Governed Retrieval](#55-knowledge-governed-retrieval)
+  - [5.6 Multi-Agent Orchestration](#56-multi-agent-orchestration)
+- [Chapter 6 — Feature Reference](#chapter-6--feature-reference)
+  - [6.1 Agent Types](#61-agent-types)
+  - [6.2 Tool System](#62-tool-system)
+  - [6.3 Skill System](#63-skill-system)
+  - [6.4 RAG Pipeline](#64-rag-pipeline)
+  - [6.5 MCP Integration](#65-mcp-integration)
+  - [6.6 Guardrails](#66-guardrails)
+  - [6.7 Sandboxing](#67-sandboxing)
+  - [6.8 Observability](#68-observability)
+  - [6.9 Caching](#69-caching)
+  - [6.10 Model Routing](#610-model-routing)
+- [Chapter 7 — Tutorials](#chapter-7--tutorials)
+  - [7.1 Getting Started: First Agent](#71-getting-started-first-agent)
+  - [7.2 Building a Custom Tool](#72-building-a-custom-tool)
+  - [7.3 Building a Custom Skill](#73-building-a-custom-skill)
+  - [7.4 Multi-Agent Workflow](#74-multi-agent-workflow)
+  - [7.5 Durable A2A Integration](#75-durable-a2a-integration)
+  - [7.6 Adding Guardrails](#76-adding-guardrails)
+  - [7.7 Knowledge-Governed RAG](#77-knowledge-governed-rag)
+- [Chapter 8 — Use Cases](#chapter-8--use-cases)
+  - [8.1 CI/CD Code Review Agent](#81-cicd-code-review-agent)
+  - [8.2 Multi-Agent Research Pipeline](#82-multi-agent-research-pipeline)
+  - [8.3 Enterprise Knowledge Assistant](#83-enterprise-knowledge-assistant)
+  - [8.4 Human-in-the-Loop Approval Workflow](#84-human-in-the-loop-approval-workflow)
+  - [8.5 Distributed Agent Federation](#85-distributed-agent-federation)
+- [Chapter 9 — Deployment & Operations](#chapter-9--deployment--operations)
+  - [9.1 Deployment Topologies](#91-deployment-topologies)
+  - [9.2 Configuration](#92-configuration)
+  - [9.3 Observability](#93-observability)
+  - [9.4 Troubleshooting](#94-troubleshooting)
+- [Chapter 10 — Extending Wayang](#chapter-10--extending-wayang)
+  - [10.1 SPI Overview](#101-spi-overview)
+  - [10.2 Custom Providers](#102-custom-providers)
+  - [10.3 Custom Protocols](#103-custom-protocols)
+  - [10.4 Custom Memory Tiers](#104-custom-memory-tiers)
+  - [10.5 Custom Knowledge Sources](#105-custom-knowledge-sources)
+
+---
+
+# Chapter 4 — Wayang Architecture Deep Dive
+
+## 4.1 Architectural Principles
+
+Wayang is built around a small number of load-bearing principles. Understanding them explains nearly every design decision in the codebase.
+
+| Principle | Statement | Consequence |
+|-----------|-----------|-------------|
+| **An Agent decides. The Kernel executes.** | Agents (ReAct, PlanAndSolve, Reflection, …) contain reasoning logic but no execution machinery. The Execution Kernel owns state, checkpoints, budgets, and lifecycle. | Agents are swappable; execution semantics (retry, checkpoints, HITL) are uniform across every agent type. |
+| **Everything is a Resource.** | `Resource` is the universal interface. Agents, tools, skills, workflows, artifacts, events, and documents all implement it. | A single registry, a single ID system, a single metadata model. |
+| **Protocols are projections.** | Canonical models live in `wayang-communication-api`. A2A, ANP, and local protocols are *projections* of those canonical models — never the reverse. | Zero protocol leakage into core; adding a new protocol never touches the kernel. |
+| **Security is on the invocation path, not the transport.** | `SecuredAgentCommunicator` and the `ExecutionPipeline` interceptors enforce authorization regardless of which protocol delivered the request. | A2A, ANP, CLI, and in-process calls all get identical security guarantees. |
+| **Durability is a first-class concern.** | Checkpoints, journaled executions, durable A2A tasks, and resumable workflows are built-in, not bolted on. | Long-running agents can survive JVM restarts and network partitions. |
+| **Context is compiled, never summarized.** | The context compiler reduces *scope* (which members/files are shown), never *fidelity* (how they're shown). Every surviving character is verbatim source. | No hallucinated summaries poisoning the model's view of the codebase. |
+| **Blind spots are disclosed, not hidden.** | When static analysis can't resolve a call (reflection, event annotations, name collisions), the resolver reports it as a diagnostic. | Users know exactly what the context compiler might have missed. |
+
+## 4.2 Layered Architecture
+
+```mermaid
+graph TB
+    subgraph "L7 — Interop & Protocols"
+        A2A[A2A 1.0]
+        ANP[ANP 1.1]
+        MCP[MCP]
+        LOCAL[Local / In-Process]
+        REST[REST / CLI]
+    end
+
+    subgraph "L6 — Federation & Orchestration"
+        ANL[Agent Network Layer]
+        ORCH[Agent Orchestrator]
+        WF[Workflow Graph Engine]
+        HITL[Human-in-the-Loop]
+    end
+
+    subgraph "L5 — Governance & Security"
+        AUTHN[Authentication]
+        AUTHZ[Authorization]
+        GUARD[Guardrails]
+        AUDIT[Audit]
+        DELEG[Delegation]
+        OBLIG[Obligations]
+    end
+
+    subgraph "L4 — Execution Kernel"
+        KERNEL[Execution Kernel]
+        BUDGET[Budget]
+        CKPT[Checkpoint]
+        JOURNAL[Journal]
+        LEDGER[Event Ledger]
+        CACHE[Execution Cache]
+    end
+
+    subgraph "L3 — Agent Runtime"
+        REACT[ReAct Agent]
+        PLAN[Plan & Solve]
+        REFL[Reflection]
+        RES[Research]
+        MAS[Multi-Agent Graph]
+    end
+
+    subgraph "L2 — Capabilities"
+        TOOLS[Tool Registry]
+        SKILLS[Skill Registry]
+        MEMORY[Memory Tiers]
+        RAG[RAG Pipeline]
+        KNOW[Knowledge]
+        GRAPH[Graph Store]
+        VECTOR[Vector Store]
+    end
+
+    subgraph "L1 — Providers & Backends"
+        PROV[LLM Providers]
+        EMB[Embedding Providers]
+        INFER[Inference Backend]
+        WFBACK[Workflow Backend]
+    end
+
+    subgraph "L0 — Foundation"
+        RES[Resource Model]
+        ID[Identity]
+        META[Metadata]
+        ERR[Error Model]
+        CFG[Configuration]
+    end
+
+    A2A --> ANL
+    ANP --> ANL
+    MCP --> TOOLS
+    LOCAL --> KERNEL
+    REST --> KERNEL
+
+    ANL --> ORCH
+    ORCH --> WF
+    WF --> HITL
+
+    ORCH --> AUTHZ
+    WF --> AUTHZ
+    KERNEL --> AUTHZ
+    KERNEL --> GUARD
+    KERNEL --> AUDIT
+    AUTHZ --> DELEG
+    AUTHZ --> OBLIG
+
+    KERNEL --> BUDGET
+    KERNEL --> CKPT
+    KERNEL --> JOURNAL
+    KERNEL --> LEDGER
+    KERNEL --> CACHE
+
+    KERNEL --> REACT
+    KERNEL --> PLAN
+    KERNEL --> REFL
+    KERNEL --> RES
+    KERNEL --> MAS
+
+    REACT --> TOOLS
+    PLAN --> TOOLS
+    REFL --> TOOLS
+    RES --> RAG
+    MAS --> REACT
+
+    TOOLS --> MEMORY
+    RAG --> VECTOR
+    KNOW --> GRAPH
+    KNOW --> VECTOR
+
+    REACT --> PROV
+    RAG --> EMB
+    MAS --> INFER
+    WF --> WFBACK
+
+    PROV --> RES
+    RES --> ID
+    ID --> META
+    ERR --> META
+    CFG --> META
+
+    style KERNEL fill:#4A90D9,color:#fff
+    style A2A fill:#E67E22,color:#fff
+    style ANP fill:#E67E22,color:#fff
+    style GUARD fill:#E74C3C,color:#fff
+    style RES fill:#27AE60,color:#fff
+```
+
+## 4.3 Module Map
+
+The codebase is organized into Maven modules, each with a clearly bounded responsibility.
+
+```mermaid
+graph LR
+    subgraph Foundation
+        EXT[wayang-extension]
+        COMMON[wayang-common]
+        ERRSPI[wayang-error-spi]
+        CFG[wayang-configuration]
+        PROJECT[wayang-project]
+    end
+
+    subgraph Communication
+        COMMAPI[wayang-communication-api]
+        COMMCORE[wayang-communication-core]
+        PROTO_LOCAL[wayang-protocol-local]
+    end
+
+    subgraph Execution
+        EXECAPI[wayang-execution-api]
+        EXECCORE[wayang-execution-core]
+        RUNTIMESPI[wayang-runtime-spi]
+        ENGINE[wayang-engine]
+        CORE[wayang-core]
+    end
+
+    subgraph Agents
+        AGENT[wayang-agent]
+        ORCH[wayang-orchestration]
+        NETAPI[wayang-agent-network-api]
+        NETCORE[wayang-agent-network-core]
+    end
+
+    subgraph Capabilities
+        TOOL[wayang-tool]
+        SKILL[wayang-skill]
+        MEMORY[wayang-memory]
+        RAG[wayang-rag]
+        KNOW[wayang-knowledge]
+        GRAPH[wayang-graph]
+        VECTOR[wayang-vector]
+        EMBED[wayang-embedding]
+        CTX[wayang-context]
+    end
+
+    subgraph Governance
+        GUARD[wayang-guardrails]
+        GOV[wayang-governance]
+        HITL[wayang-hitl]
+        SECAPI[wayang-security-api]
+        SECCORE[wayang-security-core]
+        AUDIT[wayang-audit]
+    end
+
+    subgraph Providers
+        PROV[wayang-provider]
+        B_GOL[wayang-backend-gollek]
+        B_GAM[wayang-backend-gamelan]
+    end
+
+    subgraph Protocols
+        A2A[wayang-a2a]
+        ANP[wayang-anp]
+        MCP[wayang-mcp]
+    end
+
+    subgraph Ops
+        OBS[wayang-observability]
+        RESIL[wayang-resilience]
+        CACHE[wayang-cache]
+        SANDBOX[wayang-spi/sandbox]
+    end
+
+    EXT --> COMMON
+    COMMON --> ERRSPI
+    COMMON --> CFG
+    COMMON --> PROJECT
+
+    COMMAPI --> COMMCORE
+    COMMCORE --> PROTO_LOCAL
+
+    EXECAPI --> EXECCORE
+    EXECCORE --> RUNTIMESPI
+    RUNTIMESPI --> ENGINE
+    ENGINE --> CORE
+
+    CORE --> AGENT
+    AGENT --> ORCH
+    NETAPI --> NETCORE
+    ORCH --> NETCORE
+
+    TOOL --> SKILL
+    SKILL --> MEMORY
+    MEMORY --> RAG
+    RAG --> KNOW
+    KNOW --> GRAPH
+    GRAPH --> VECTOR
+    VECTOR --> EMBED
+    EMBED --> CTX
+
+    AGENT --> TOOL
+    AGENT --> MEMORY
+    AGENT --> RAG
+
+    GUARD --> GOV
+    GOV --> HITL
+    HITL --> SECAPI
+    SECAPI --> SECCORE
+    SECCORE --> AUDIT
+
+    PROV --> B_GOL
+    PROV --> B_GAM
+
+    A2A --> COMMAPI
+    ANP --> COMMAPI
+    MCP --> TOOL
+
+    OBS --> EXECCORE
+    RESIL --> TOOL
+    CACHE --> EXECCORE
+
+    style CORE fill:#4A90D9,color:#fff
+    style COMMAPI fill:#27AE60,color:#fff
+    style GUARD fill:#E74C3C,color:#fff
+    style A2A fill:#E67E22,color:#fff
+```
+
+## 4.4 The Execution Kernel
+
+The Execution Kernel is the beating heart of Wayang. It is the *only* component that owns execution state.
+
+### 4.4.1 The Invocation Pipeline
+
+Every agent invocation — whether it arrived via A2A, ANP, CLI, or an in-process call — flows through the same interceptor pipeline:
+
+```mermaid
+flowchart LR
+    REQ[AgentInvocation] --> TRACE[TraceInterceptor<br/>order=0]
+    TRACE --> AUTHZ[AuthorizationInterceptor<br/>order=100]
+    AUTHZ --> OBLIG[ObligationInterceptor<br/>order=200]
+    OBLIG --> TIMEOUT[TimeoutInterceptor<br/>order=500]
+    TIMEOUT --> RETRY[RetryInterceptor<br/>order=600]
+    RETRY --> HANDLER[Terminal Handler<br/>DefaultAgentExecution]
+    HANDLER --> RES[AgentResult]
+
+    style AUTHZ fill:#E74C3C,color:#fff
+    style HANDLER fill:#4A90D9,color:#fff
+```
+
+Each interceptor implements `AgentInvocationInterceptor` and can:
+
+- **Short-circuit** (e.g. deny on authorization failure)
+- **Delegate** to the next interceptor via `chain.proceed(invocation)`
+- **Wrap** the result (e.g. add timing, transform errors)
+- **Execute obligations** (audit, rate-limit, HITL) before or after the terminal handler
+
+### 4.4.2 Execution Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> CREATED
+    CREATED --> AUTHORIZING: pipeline starts
+    AUTHORIZING --> AUTHORIZED: allow
+    AUTHORIZING --> FAILED: deny
+    AUTHORIZED --> WAITING_OBLIGATION: obligation required
+    WAITING_OBLIGATION --> RUNNING: obligation satisfied
+    AUTHORIZED --> RUNNING: no obligations
+    RUNNING --> SUSPENDED: HITL / pause
+    SUSPENDED --> RESUMING: resume signal
+    RESUMING --> RUNNING
+    RUNNING --> COMPLETED: success
+    RUNNING --> FAILED: error
+    RUNNING --> CANCELLED: cancel
+    COMPLETED --> [*]
+    FAILED --> [*]
+    CANCELLED --> [*]
+```
+
+### 4.4.3 Durable Subsystems
+
+The kernel maintains four durable, append-only structures that answer distinct questions:
+
+| Structure | Question it answers | Interface |
+|-----------|---------------------|-----------|
+| **Checkpoint** | *Where can I resume?* | `CheckpointStore` |
+| **Event Ledger** | *What happened during this execution?* | `EventLedger` |
+| **Journal** | *What steps were taken?* | `ExecutionJournal` |
+| **Cache** | *What work can I reuse?* | `ExecutionCache` |
+
+```mermaid
+graph TB
+    EXEC[Execution] --> CKPT[Checkpoint Store<br/>resume points]
+    EXEC --> LEDGER[Event Ledger<br/>what happened]
+    EXEC --> JOURNAL[Journal<br/>step ledger]
+    EXEC --> CACHE[Execution Cache<br/>reusable work]
+    EXEC --> ART[Artifacts<br/>produced outputs]
+
+    CKPT -.->|restore on restart| EXEC
+    CACHE -.->|cache hit short-circuits| EXEC
+
+    style EXEC fill:#4A90D9,color:#fff
+    style CKPT fill:#27AE60,color:#fff
+    style CACHE fill:#F39C12,color:#fff
+```
+
+### 4.4.4 Execution Budget
+
+Every execution carries an `ExecutionBudget` that bounds resource consumption. Four preset profiles map to CLI flags:
+
+| Profile | maxSteps | maxToolCalls | contextTokens | Cache TTL | Use case |
+|---------|----------|--------------|---------------|-----------|----------|
+| **FAST** | 15 | 30 | 8,192 | 5 min | Quick queries, chat |
+| **BALANCED** (default) | 25 | 50 | 32,768 | 30 min | General purpose |
+| **THOROUGH** | 50 | 100 | 128,000 | 2 hrs | Research, code review |
+| **DEBUG** | 25 | 50 | 32,768 | *disabled* | Troubleshooting |
+
+```java
+ExecutionBudget budget = ExecutionBudget.thorough();
+AgentExecution execution = executionService.create(def, request, budget);
+AgentResponse response = execution.executeSync();
+```
+
+## 4.5 The Communication Fabric
+
+Wayang's communication layer is deliberately protocol-agnostic. The canonical models live in `wayang-communication-api`, and protocols are *selected at runtime* based on endpoint type and request mode.
+
+### 4.5.1 Protocol Selection
+
+```mermaid
+flowchart TD
+    REQ[AgentRequest] --> POLICY[ProtocolSelectionPolicy]
+    POLICY --> SCORE{Score candidates}
+
+    SCORE -->|Local endpoint + in-process| INPROC[in-process<br/>score +100]
+    SCORE -->|Explicit preference| PREF[preferred protocol<br/>score +500-50×index]
+    SCORE -->|STREAM mode| STREAM[streaming-capable<br/>score +30]
+    SCORE -->|ASYNC mode| ASYNC[async-capable<br/>score +30]
+    SCORE -->|SYNC mode| SYNC[request/response<br/>score +20]
+
+    INPROC --> RANK[Rank by score]
+    PREF --> RANK
+    STREAM --> RANK
+    ASYNC --> RANK
+    SYNC --> RANK
+
+    RANK --> TRY[Try highest-scored]
+    TRY -->|fail + allowFallback| NEXT[Try next candidate]
+    NEXT --> TRY
+    TRY -->|success| RESP[AgentResponse]
+    TRY -->|fail + !allowFallback| ERR[CommunicationException]
+
+    style RANK fill:#4A90D9,color:#fff
+    style RESP fill:#27AE60,color:#fff
+```
+
+### 4.5.2 The Secured Communicator
+
+Authorization is enforced on the *invocation path*, wrapping every communicator:
+
+```mermaid
+graph LR
+    A2A[A2A Client] --> SEC[SecuredAgentCommunicator]
+    ANP[ANP Client] --> SEC
+    LOCAL[Local Client] --> SEC
+    SEC --> AUTHZ[AuthorizationService]
+    AUTHZ -->|allow| DELEGATE[Delegate Communicator]
+    AUTHZ -->|deny| FAIL[AuthorizationException]
+    DELEGATE --> TARGET[Target Agent]
+
+    style SEC fill:#E74C3C,color:#fff
+    style AUTHZ fill:#E67E22,color:#fff
+```
+
+The `SecurityContext` is extracted from the `ProtocolContext` attributes under the key `wayang.security.context`. If absent, anonymous context is used.
+
+## 4.6 Memory Hierarchy
+
+Wayang models memory as a **four-tier hierarchy** plus a long-term store, mirroring how cognitive architectures separate working, episodic, semantic, and procedural memory.
+
+```mermaid
+graph TB
+    subgraph "Tier 1 — Working Memory"
+        WM[Working Memory<br/>token-budgeted<br/>current task only]
+    end
+
+    subgraph "Tier 2 — Episodic Memory"
+        EM[Episodic Memory<br/>conversation history<br/>coherence-scored<br/>decay-aware]
+    end
+
+    subgraph "Tier 3 — Semantic Memory"
+        SM[Semantic Memory<br/>concepts + facts<br/>graph-linked<br/>cluster-aware]
+    end
+
+    subgraph "Tier 4 — Procedural Memory"
+        PM[Procedural Memory<br/>task patterns<br/>proficiency scores<br/>skill templates]
+    end
+
+    subgraph "Long-Term Store"
+        LTM[Long-Term Store<br/>persistent<br/>searchable<br/>snapshot-able]
+    end
+
+    WM -->|evict| EM
+    EM -->|consolidate| SM
+    EM -->|consolidate| PM
+    SM -->|persist| LTM
+    PM -->|persist| LTM
+
+    style WM fill:#3498DB,color:#fff
+    style EM fill:#9B59B6,color:#fff
+    style SM fill:#27AE60,color:#fff
+    style PM fill:#F39C12,color:#fff
+    style LTM fill:#34495E,color:#fff
+```
+
+The `MemoryVisualProjectionService` SPI exposes each tier as a normalized view for UI rendering (graph, vectors, timeline, working-state heatmap).
+
+## 4.7 Knowledge Subsystem
+
+The knowledge subsystem is domain-neutral by design. It represents *any* unit of knowledge — a legal article, a company policy, a document section, a research finding — with a uniform model that carries provenance, authority, validity, classification, sensitivity, and trust.
+
+### 4.7.1 The Knowledge Item Model
+
+```mermaid
+classDiagram
+    class KnowledgeItem {
+        +String id
+        +String sourceId
+        +String type
+        +String title
+        +String content
+        +Map metadata
+        +KnowledgeProvenance provenance
+        +KnowledgeAuthority authority
+        +KnowledgeValidity validity
+        +KnowledgeClassification classification
+        +KnowledgeSensitivity sensitivity
+        +KnowledgeTrustLevel trustLevel
+        +long revision
+        +isCurrentlyValid(Instant) boolean
+        +isAuthoritative() boolean
+    }
+
+    class KnowledgeProvenance {
+        +String sourceUri
+        +String documentId
+        +String locator
+        +Instant observedAt
+    }
+
+    class KnowledgeAuthority {
+        +String kind
+        +String issuer
+        +int rank
+        +boolean authoritative
+    }
+
+    class KnowledgeValidity {
+        +Instant effectiveFrom
+        +Instant effectiveUntil
+        +String status
+        +isValidAt(Instant) boolean
+    }
+
+    KnowledgeItem --> KnowledgeProvenance
+    KnowledgeItem --> KnowledgeAuthority
+    KnowledgeItem --> KnowledgeValidity
+```
+
+### 4.7.2 The Retrieval Pipeline
+
+```mermaid
+flowchart LR
+    Q[KnowledgeQuery] --> REG[KnowledgeRegistry]
+    REG -->|resolve sources| SRC[KnowledgeSource list]
+    SRC -->|parallel query| RES[KnowledgeResult list]
+    RES --> DEDUP[Deduplicate by item.id]
+    DEDUP --> RANK[Rank by score + authority]
+    RANK --> BUDGET[Apply KnowledgeBudget]
+    BUDGET --> SEL[KnowledgeSelectionResult]
+    SEL --> CTX[Context assembly]
+
+    style BUDGET fill:#F39C12,color:#fff
+    style SEL fill:#27AE60,color:#fff
+```
+
+The `KnowledgeBudget` bounds what enters the model's context window:
+
+```java
+KnowledgeBudget budget = KnowledgeBudget.slm(); // small language model
+// maxItems=4, maxTokens=768, requireProvenance=true, minimumScore=0.4
+```
+
+### 4.7.3 Governance, Integrity, and Replay
+
+The knowledge subsystem supports:
+
+- **Versioned storage** — `VersionedKnowledgeStore` supports point-in-time retrieval (`getAsOf`)
+- **Mutations** — ADD, UPDATE, SUPERSEDE, REVOKE, MERGE, ANNOTATE
+- **Decision traces** — every knowledge-driven decision is recorded with evidence IDs, policy IDs, rule IDs, and step-by-step reasoning
+- **Snapshot integrity** — SHA-256 fingerprints for knowledge, policies, rules, governance, and runtime
+- **Secure seals** — Ed25519/ECDSA/RSA signing over snapshot payloads
+- **Replay** — `KnowledgeReplayEngine` reproduces decisions in EXACT, CURRENT, or COMPARE mode
+- **Lineage** — `KnowledgeLineageService` traces provenance chains
+
+## 4.8 Agent Network Layer (ANP)
+
+The Agent Network Layer provides a unified abstraction over all agent-to-agent communication, regardless of protocol.
+
+```mermaid
+graph TB
+    CLIENT[AgentNetworkClient] --> NET[DefaultAgentNetwork]
+    NET --> RESOLVE[AgentEndpointResolver]
+    NET --> TRUST[AgentTrustService]
+    NET --> NEGO[CapabilityNegotiator]
+    NET --> REG[AgentNetworkProtocolRegistry]
+
+    RESOLVE -->|ResolvedEndpoint| NET
+    TRUST -->|TrustDecision| NET
+    NEGO -->|CapabilityMatch| NET
+    REG -->|AgentNetworkProtocol| NET
+
+    NET --> PROTO{Protocol}
+    PROTO -->|LOCAL| LOCAL[LocalAgentNetworkProtocol]
+    PROTO -->|ANP| ANP[AnpNetworkProtocol]
+    PROTO -->|A2A| A2A[A2A Protocol]
+
+    style NET fill:#4A90D9,color:#fff
+    style TRUST fill:#E74C3C,color:#fff
+```
+
+### 4.8.1 The Routing Pipeline
+
+Every network invocation passes through four gates:
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant N as DefaultAgentNetwork
+    participant R as EndpointResolver
+    participant T as TrustService
+    participant G as CapabilityNegotiator
+    participant P as Protocol
+
+    C->>N: invoke(request)
+    N->>R: resolve(targetAgent)
+    R-->>N: ResolvedEndpoint(uri, protocol)
+
+    N->>T: evaluate(TrustRequest)
+    T-->>N: TrustDecision
+    alt untrusted
+        N-->>C: TrustException
+    end
+
+    N->>G: negotiate(requirement, remoteCapabilities)
+    G-->>N: CapabilityMatch
+    alt no match
+        N-->>C: AgentNetworkException
+    end
+
+    N->>P: protocol.client().invoke(request)
+    P-->>N: AgentNetworkResponse
+    N-->>C: response
+```
+
+## 4.9 Interoperability: A2A & ANP
+
+Wayang supports two external agent protocols, both built as **projections** of the canonical `AgentDescriptor`.
+
+### 4.9.1 A2A (Agent2Agent Protocol)
+
+A2A is the primary interop protocol. Wayang projects its canonical descriptor into an A2A 1.0 `AgentCard`, served at `/.well-known/agent-card.json`.
+
+```mermaid
+graph LR
+    CANON[AgentDescriptor<br/>canonical] --> MAP[A2AAgentCardMapper]
+    MAP --> CARD[A2AAgentCard<br/>protocol-specific]
+    CARD --> SERVED[Served at<br/>/.well-known/agent-card.json]
+
+    CANON --> CAP[AgentCapability]
+    CAP --> SKILL[A2ASkill]
+    CANON --> EP[AgentEndpointDescriptor]
+    EP --> IFACE[A2AInterface]
+
+    style CANON fill:#27AE60,color:#fff
+    style CARD fill:#E67E22,color:#fff
+```
+
+Durable A2A executions tie remote tasks to the local kernel's checkpoint and ledger:
+
+```mermaid
+sequenceDiagram
+    participant AG as Local Agent
+    participant AD as DurableA2AAgentAdapter
+    participant LD as DurableA2ATaskLedger
+    participant REM as Remote Agent
+
+    AG->>AD: sendMessage(message)
+    AD->>LD: create(callerExecId, remoteEndpoint, checkpointId)
+    LD-->>AD: DurableA2ATask(PENDING)
+    AD->>LD: update(RUNNING)
+    AD->>REM: executeAsync(definition, request)
+    AD-->>AG: A2ATask(RUNNING)
+
+    Note over AG,REM: ... remote agent works ...
+
+    REM-->>AD: response
+    AD->>LD: complete(taskId)
+    LD->>LD: resolveWaitState(taskId)
+    Note over LD: parked local execution resumes
+```
+
+### 4.9.2 ANP (Agent Network Protocol)
+
+ANP 1.1 uses **DID:WBA** (Web-Based Agent) identities and HTTP signatures. It is disabled by default (`AnpProtocolConfig.disabled()`) so Wayang remains 100% local-first until explicitly activated.
+
+```mermaid
+graph TB
+    DID[DID:WBA Identity] --> DOC[DID Document]
+    DID --> DESC[Agent Description<br/>/.well-known/agent.json]
+    KEY[AnpIdentityKeyPair] --> AUTH[AnpAuthenticator]
+    AUTH --> SIG[AnpHttpSignature]
+    SIG --> HTTP[HTTP Request]
+
+    META[AnpMetaProtocolNegotiator] --> SEL{Select protocol}
+    SEL -->|prefer A2A| A2A[a2a/1.0]
+    SEL -->|fallback| ANP[anp/1.1]
+
+    style DID fill:#9B59B6,color:#fff
+    style META fill:#F39C12,color:#fff
+```
+
+Key ANP concepts:
+
+| Concept | Purpose |
+|---------|---------|
+| `DidWbaIdentity` | Parses `did:wba:host[:port][:segment...]` identifiers |
+| `DidWbaDocument` | W3C DID document with verification methods and services |
+| `AnpHttpSignature` | `keyId="...",algorithm="...",headers="...",signature="..."` |
+| `AnpMetaProtocolNegotiator` | Negotiates A2A vs ANP at the application layer |
+| `AnpCapabilityAdvertisement` | Declares supported protocols and codecs |
+
+## 4.10 Governance & Guardrails
+
+Governance operates at two levels: **detection** (guardrails) and **enforcement** (policies + obligations).
+
+### 4.10.1 The Guardrails Pipeline
+
+```mermaid
+flowchart LR
+    INPUT[Input Text] --> PRE{Pre-Execution<br/>Detectors}
+    PRE -->|PII, Toxicity| PRE_RES[DetectionResult]
+    PRE_RES -->|blocked| REJECT[Reject]
+    PRE_RES -->|safe| EXEC[Execute]
+    EXEC --> POST{Post-Execution<br/>Detectors}
+    POST -->|Bias, Hallucination| POST_RES[DetectionResult]
+    POST_RES -->|blocked| REDACT[Redact or Reject]
+    POST_RES -->|safe| RELEASE[Release]
+
+    style PRE fill:#E67E22,color:#fff
+    style POST fill:#E67E22,color:#fff
+    style REJECT fill:#E74C3C,color:#fff
+    style RELEASE fill:#27AE60,color:#fff
+```
+
+Built-in detectors:
+
+| Detector | Phase | Severity | Detects |
+|----------|-------|----------|---------|
+| `PIIDetector` | Pre + Post | BLOCK | SSN, credit cards, email, phone, IP addresses |
+| `ToxicityDetector` | Post | BLOCK | Toxic words, hate speech indicators |
+| `BiasDetector` | Post | WARN | Gender stereotypes, racial bias, age bias |
+| `HallucinationDetector` | Post | BLOCK | Unsupported claims, factual errors, contradictions |
+
+### 4.10.2 The Policy Enforcement Point (PEP)
+
+The PEP coordinates authorization, obligations, and data transformation:
+
+```mermaid
+sequenceDiagram
+    participant C as Caller
+    participant PEP as PolicyEnforcementPoint
+    participant AZ as AuthorizationService
+    participant OP as ObligationPipeline
+    participant DT as DataTransformer
+
+    C->>PEP: enforce(EnforcementRequest)
+    PEP->>AZ: authorize(AuthorizationRequest)
+    AZ-->>PEP: AuthorizationDecision
+
+    alt denied
+        PEP-->>C: EnforcementResult.deny(reason)
+    end
+
+    PEP->>OP: execute(obligations, context)
+    OP-->>PEP: ObligationPipelineResult
+
+    alt obligation stopped
+        PEP-->>C: EnforcementResult.deny(error)
+    end
+
+    PEP->>DT: transform(data, REDACT/MASK)
+    DT-->>PEP: TransformationResult
+    PEP-->>C: EnforcementResult.allow(transformedData)
+```
+
+### 4.10.3 Obligations
+
+Obligations are runtime enforcement requirements attached to authorization decisions:
+
+| Obligation | Phase | Purpose |
+|------------|-------|---------|
+| `AUDIT` | BEFORE | Record the invocation for compliance |
+| `RATE_LIMIT` | BEFORE | Enforce per-principal call quotas |
+| `HITL` | BEFORE | Park execution for human approval |
+| `SANDBOX` | DURING | Isolate execution environment |
+| `REDACT` | AFTER | Remove sensitive fields from output |
+| `MASK` | AFTER | Replace sensitive fields with `****` |
+
+The `DefaultObligationPipeline` is **fail-closed**: an unhandled obligation halts execution.
+
+## 4.11 Security Model
+
+Wayang's security model separates four concerns cleanly:
+
+```mermaid
+graph TB
+    subgraph "Authentication"
+        AUTHN[AuthenticationService]
+        PRIN[Principal]
+        IDENT[IdentityType<br/>USER, SERVICE, AGENT, SYSTEM, ANONYMOUS]
+    end
+
+    subgraph "Authorization"
+        AUTHZ[AuthorizationService]
+        POLICY[PolicyEngine]
+        DECISION[AuthorizationDecision]
+    end
+
+    subgraph "Delegation"
+        DELEG[DelegationService]
+        ATTEN[DelegationAttenuator]
+        CONST[DelegationConstraints]
+    end
+
+    subgraph "Propagation"
+        PROP[SecurityContextPropagator]
+        SNAP[SecurityContextSnapshot]
+        CARRIER[SecurityContextCarrier]
+    end
+
+    AUTHN --> PRIN
+    PRIN --> AUTHZ
+    AUTHZ --> POLICY
+    POLICY --> DECISION
+    DECISION --> DELEG
+    DELEG --> ATTEN
+    ATTEN --> CONST
+    CONST --> PROP
+    PROP --> SNAP
+    SNAP --> CARRIER
+
+    style AUTHN fill:#3498DB,color:#fff
+    style AUTHZ fill:#E74C3C,color:#fff
+    style DELEG fill:#9B59B6,color:#fff
+    style PROP fill:#27AE60,color:#fff
+```
+
+### 4.11.1 Delegation Attenuation
+
+The delegation model enforces a strict invariant: **child authority ⊆ parent authority**.
+
+```mermaid
+flowchart LR
+    PARENT[Parent Constraints<br/>caps: A,B,C<br/>actions: read,write<br/>maxHops: 5] --> ATTEN[DelegationAttenuator]
+    REQUEST[Requested Constraints<br/>caps: B,C,D<br/>actions: read<br/>maxHops: 3] --> ATTEN
+    ATTEN --> CHILD[Child Constraints<br/>caps: B,C<br/>actions: read<br/>maxHops: 2]
+
+    style PARENT fill:#3498DB,color:#fff
+    style REQUEST fill:#F39C12,color:#fff
+    style CHILD fill:#27AE60,color:#fff
+```
+
+### 4.11.2 Propagation Modes
+
+| Mode | Behavior | When to use |
+|------|----------|-------------|
+| `PROPAGATE` | Same context forwarded as-is | Fully trusted downstream target |
+| `DELEGATE` | Attenuated child delegation | Normal agent→tool, agent→skill calls |
+| `ISOLATE` | No context (anonymous) | Untrusted sandboxes, public services |
+
+---
+
+# Chapter 5 — Sequence Diagrams
+
+## 5.1 Agent Execution Lifecycle
+
+The complete lifecycle from request to response, showing every durable subsystem touched.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Caller
+    participant F as AgentInvocationFactory
+    participant P as ExecutionPipeline
+    participant T as TraceInterceptor
+    participant A as AuthorizationInterceptor
+    participant O as ObligationInterceptor
+    participant TO as TimeoutInterceptor
+    participant R as RetryInterceptor
+    participant H as Terminal Handler
+    participant K as Execution Kernel
+    participant CK as CheckpointStore
+    participant EL as EventLedger
+    participant EX as ExecutionCache
+
+    C->>F: root(request, security)
+    F-->>C: AgentInvocation(execId, traceId)
+
+    C->>P: execute(invocation)
+    P->>P: transition(RUNNING)
+
+    P->>T: intercept
+    T->>T: start span(traceId)
+    T->>A: proceed
+
+    A->>A: authorize(capability, action)
+    alt denied
+        A-->>C: AuthorizationException
+    end
+    A->>O: proceed
+
+    O->>O: execute obligations
+    Note over O: audit, rate-limit,<br/>HITL if required
+    O->>TO: proceed
+
+    TO->>TO: schedule timeout
+    TO->>R: proceed
+
+    R->>R: wrap with retry policy
+    R->>H: proceed
+
+    H->>K: executeAgent(definition, request)
+    K->>CK: save(executionId, context)
+    K->>EL: record(EXECUTION_STARTED)
+
+    loop ReAct loop
+        K->>EX: lookup(TOOL, argsHash)
+        alt cache hit
+            EX-->>K: cached result
+            K->>EL: record(TOOL_CACHE_HIT)
+        else cache miss
+            K->>K: execute tool
+            K->>EX: store(entry)
+            K->>EL: record(TOOL_EXECUTED)
+        end
+        K->>CK: save(executionId, context)
+    end
+
+    K->>EL: record(EXECUTION_COMPLETED)
+    K-->>H: AgentResult
+    H-->>R: result
+    R-->>TO: result
+    TO-->>O: result
+    O->>O: execute AFTER obligations
+    O-->>A: result
+    A-->>T: result
+    T->>T: end span
+    T-->>P: result
+
+    P->>P: transition(COMPLETED)
+    P-->>C: AgentResult
+```
+
+## 5.2 ReAct Loop with Tool Execution
+
+The core reasoning loop used by `ReActAgent`, `PlanAndSolveAgent`, `ReflectionAgent`, and `ResearchAgent`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant A as ReActAgent
+    participant M as Memory
+    participant P as Provider
+    participant TR as ToolRegistry
+    participant TE as ToolExecutorBridge
+    participant CB as CircuitBreaker
+    participant T as Tool
+
+    U->>A: send(userInput, listener)
+    A->>M: addMessage(userText)
+
+    loop Until done or budget exhausted
+        A->>A: saveCheckpoint()
+        A->>M: getHistory()
+        M-->>A: messages
+
+        A->>P: streamChat(history, systemPrompt, toolSpecs)
+        P-->>A: StreamEvent.TextDelta
+        A->>U: listener.onTextDelta
+
+        alt tool call requested
+            P-->>A: StreamEvent.ToolUseStart(id, name)
+            A->>U: listener.onToolCallStart
+
+            P-->>A: StreamEvent.ToolUseEnd(input)
+            A->>TR: findByName(name)
+            TR-->>A: Tool
+
+            A->>TE: executeViaPolicy(invocation, fallback)
+            TE->>CB: execute(callable)
+            CB->>T: execute(invocation, context)
+            T-->>CB: ToolResult
+            CB-->>TE: ToolResult
+            TE-->>A: ToolResult
+
+            A->>U: listener.onToolResult
+            A->>M: addMessage(toolResults)
+            A->>A: saveCheckpoint()
+            Note over A: recurse with tool result<br/>in history
+        else message stop
+            P-->>A: StreamEvent.MessageStop(reason)
+            A->>U: listener.onDone(reason)
+        end
+    end
+```
+
+## 5.3 Durable A2A Call
+
+A2A call that survives JVM restart via checkpoints and ledger.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant W as Workflow/Agent
+    participant B as A2AWorkflowBridge
+    participant L as DurableA2ATaskLedger
+    participant WS as RemoteAgentWaitState
+    participant AD as DurableA2AAgentAdapter
+    participant REM as Remote Agent
+
+    W->>B: executeStep(wfId, remoteEndpoint, input)
+    B->>L: create(wfId, remoteEndpoint, null)
+    L-->>B: DurableA2ATask(taskId, PENDING)
+
+    B->>B: lifecycle.pause(wfId)
+    B->>L: update(taskId, RUNNING)
+    B->>L: createWaitState(taskId, timeout)
+    L-->>B: RemoteAgentWaitState
+
+    B->>WS: await()
+    Note over WS: local execution parks
+
+    par Remote work
+        AD->>REM: sendMessage(A2AMessage)
+        REM-->>AD: A2ATask(RUNNING)
+        Note over REM: ... remote agent works ...
+        REM-->>AD: A2ATask(COMPLETED)
+    end
+
+    AD->>L: complete(taskId)
+    L->>L: resolveWaitState(taskId)
+    L->>WS: complete(task)
+
+    WS-->>B: DurableA2ATask(COMPLETED)
+    B->>B: lifecycle.resume(wfId)
+    B-->>W: DurableA2ATask
+```
+
+## 5.4 Human-in-the-Loop Approval
+
+When a tool requires approval, the execution parks and a human task is created.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as Agent
+    participant AS as ApprovalStrategy
+    participant AE as AgentExecution
+    participant HTR as HumanTaskRepository
+    participant NS as NotificationService
+    participant U as Human User
+    participant EB as EventBus
+    participant AR as AutoResumeListener
+
+    A->>AS: requestApproval(agent, invocation)
+    AS->>AS: check tool capabilities
+    alt requires approval
+        AS->>HTR: save(HumanTask)
+        HTR-->>AS: taskId
+        AS->>NS: sendTaskAssignedNotification(task)
+        NS->>U: Email / Slack / Teams
+        AS-->>A: throw ApprovalRequiredException(taskId)
+        A->>AE: propagate
+        AE->>AE: transition(SUSPENDED)
+        AE->>AE: saveCheckpoint()
+        Note over AE: execution parks
+    end
+
+    U->>HTR: approve(taskId, data, comments)
+    HTR->>HTR: task.approve(userId, data, comments)
+    HTR->>EB: publish(TaskApprovedEvent)
+    EB->>AR: handleTaskApproved(event)
+    AR->>AE: resume(threadId)
+    AE->>AE: transition(RESUMING → RUNNING)
+    Note over AE: execution continues
+```
+
+## 5.5 Knowledge-Governed Retrieval
+
+The full knowledge pipeline from query to verified response.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as Agent
+    participant KR as KnowledgeResolver
+    participant KS as KnowledgeSource(s)
+    participant SEL as KnowledgeSelector
+    participant FUS as EvidenceFusionEngine
+    participant VF as AnswerVerificationEngine
+    participant CP as VerifiedResponseCompiler
+    participant PR as ProvenanceService
+    participant AR as ArtifactService
+
+    A->>KR: resolve(query, context)
+    KR->>KS: query(KnowledgeQuery, context) [parallel]
+    KS-->>KR: KnowledgeResult(evidence)
+    KR->>KR: deduplicate + rank
+    KR-->>A: KnowledgeResult
+
+    A->>SEL: select(candidates, budget, context)
+    SEL->>SEL: filter validity, provenance, score
+    SEL->>SEL: apply source/authority quotas
+    SEL-->>A: KnowledgeSelectionResult(selected)
+
+    A->>FUS: fuse(federationResults, query)
+    FUS->>FUS: score + deduplicate
+    FUS->>FUS: detect conflicts
+    FUS->>FUS: rerank + coherence select
+    FUS-->>A: KnowledgeEvidenceFusionResult
+
+    A->>VF: verify(answer, query, fusionResult)
+    VF->>VF: extract claims
+    VF->>VF: match claims to evidence
+    VF->>VF: detect contradictions
+    VF-->>A: KnowledgeEvidenceAnswerVerification
+
+    A->>CP: compile(candidateAnswer, query, verification)
+    CP->>CP: determine disposition
+    CP->>CP: determine status
+    CP->>CP: compile claims + warnings
+    CP-->>A: KnowledgeVerifiedResponse
+
+    A->>PR: build(response, query, verification)
+    PR-->>A: KnowledgeAnswerProvenanceGraph
+
+    A->>AR: createAndStore(response, query, verification, snapshotId)
+    AR->>AR: fingerprint artifact
+    AR-->>A: KnowledgeVerifiedAnswerArtifact
+```
+
+## 5.6 Multi-Agent Orchestration
+
+The `AgentOrchestrator` supports sequential, parallel, and routed dispatch. Here is the parallel fan-out pattern:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Caller
+    participant O as AgentOrchestrator
+    participant A1 as Agent 1
+    participant A2 as Agent 2
+    participant A3 as Agent 3
+    participant M as Merger
+
+    C->>O: parallel(userInput, listener)
+    O->>O: create CompletableFuture per agent
+
+    par Agent 1
+        O->>A1: send(input, delegatingListener)
+        A1-->>O: output1
+    and Agent 2
+        O->>A2: send(input, delegatingListener)
+        A2-->>O: output2
+    and Agent 3
+        O->>A3: send(input, delegatingListener)
+        A3-->>O: output3
+    end
+
+    O->>O: collect results into Map
+    O->>M: merger.apply(results)
+    M-->>O: merged output
+    O->>C: listener.onTextDelta(merged)
+    O->>C: listener.onDone("stop")
+```
+
+---
+
+# Chapter 6 — Feature Reference
+
+## 6.1 Agent Types
+
+Wayang ships five agent implementations, all extending `BaseReActAgent`:
+
+| Agent | Class | Strategy | Use case |
+|-------|-------|----------|----------|
+| **ReAct** | `ReActAgent` | Reason → Act → Observe loop | General purpose tool use |
+| **Plan & Solve** | `PlanAndSolveAgent` | Plan → Solve → Reflect | Complex multi-step tasks |
+| **Reflection** | `ReflectionAgent` | Generate → Critique → Refine | Quality-sensitive outputs |
+| **Research** | `ResearchAgent` | Decompose → Retrieve → Synthesize | Research and evidence gathering |
+| **Multi-Agent Graph** | `MultiAgent` + `WorkflowGraph` | State-machine graph | Coordinated multi-agent workflows |
+
+### ReAct Agent
+
+```java
+ReActAgent agent = new ReActAgent();
+agent.setProvider(provider);
+agent.setModelId("gpt-4o");
+agent.setSystemPrompt("You are a helpful assistant.");
+agent.setTools(List.of(searchTool, calculatorTool));
+agent.setMemory(new InMemoryMemory());
+
+agent.send("What is the population of Tokyo?", listener);
+```
+
+### Plan & Solve Agent
+
+Three-phase loop: **Plan → Solve → Reflect**. Up to 2 reflection rounds, 10 steps per sub-plan.
+
+### Reflection Agent
+
+Generate → Critique → Refine loop. Configurable `maxRounds` (default 2).
+
+### Research Agent
+
+Decomposes question into ≤5 sub-queries, retrieves evidence for each, then synthesizes a structured report with Executive Summary, Key Findings, Gaps, and Conclusion.
+
+## 6.2 Tool System
+
+Tools implement the `Tool` interface:
+
+```java
+public interface Tool extends Extension {
+    ToolDescriptor descriptor();
+    CompletableFuture<ToolResult> execute(ToolInvocation invocation, ToolContext context);
+    default Collection<Capability> toolCapabilities() { return Collections.emptyList(); }
+}
+```
+
+### Tool Descriptor
+
+```java
+public interface ToolDescriptor extends Descriptor {
+    String name();
+    String description();
+    String version();
+    Map<String, Object> inputSchema();  // JSON Schema
+}
+```
+
+### Capability-Aware Tools
+
+Tools can declare capabilities that the registry uses for filtering:
+
+```java
+public interface Capability {
+    String id();
+    boolean satisfies(Capability requested);
+    default boolean requiresApproval() { return false; }
+}
+```
+
+Example: `DomainScope("git")`, `RequiresNetwork`, `RequiresFilesystem`.
+
+### A2A Client Tool
+
+The `A2AClientTool` wraps a remote A2A agent as a local tool:
+
+```java
+A2AClientTool tool = new A2AClientTool(a2aClient, "remote-research-agent");
+// Now the local agent can invoke the remote agent as a tool
+```
+
+### Abstract EIP Tool
+
+For enterprise integration patterns, `AbstractEipTool` provides dual-persona support:
+
+```java
+public class HttpGetTool extends AbstractEipTool {
+    public HttpGetTool() {
+        super("http-get", "Performs an HTTP GET", Map.of(
+            "type", "object",
+            "properties", Map.of("url", Map.of("type", "string")),
+            "required", List.of("url")
+        ));
+    }
+
+    @Override
+    public CompletableFuture<ToolResult> executeEip(
+            Map<String, Object> args, ToolContext context) {
+        // implement
+    }
+}
+```
+
+## 6.3 Skill System
+
+Skills are higher-level capabilities than tools. They bundle instructions, triggers, and related tools.
+
+```java
+public interface Skill extends Extension {
+    String getId();
+    String getInstructions();       // Markdown instructions
+    default String getTriggerDescription() { return ""; }
+}
+```
+
+Skills are discovered via `SkillRepository` and can be:
+
+- **File-based** — stored under `~/.wayang/skills/`
+- **Database-backed** — PostgreSQL, etc.
+- **Hybrid** — file + DB
+
+### Skill Repository Operations
+
+```java
+Uni<SkillMetadata> save(SkillContent content);
+Uni<Optional<SkillContent>> get(String skillId);
+Uni<List<SkillMetadata>> search(String query, int offset, int limit);
+Uni<List<SkillMetadata>> getByCategory(String category);
+Uni<List<SkillMetadata>> getByTags(List<String> tags, boolean matchAll);
+```
+
+## 6.4 RAG Pipeline
+
+The RAG pipeline is SPI-based, with runtime implementations in `wayang-rag-runtime`.
+
+```mermaid
+flowchart LR
+    DOC[RagDocument] --> CHUNK[RagChunker]
+    CHUNK --> CHUNKS[RagChunk list]
+    CHUNKS --> EMB[RagEmbedder]
+    EMB --> VEC[VectorStore]
+    VEC --> RET[RetrievalStrategy]
+    RET --> SCORED[RagScoredChunk list]
+    SCORED --> GEN[Generation]
+    GEN --> RES[RagResult]
+
+    style VEC fill:#27AE60,color:#fff
+    style RES fill:#4A90D9,color:#fff
+```
+
+### SPI Interfaces
+
+| Interface | Purpose |
+|-----------|---------|
+| `RagChunker` | Splits documents into chunks |
+| `RagEmbedder` | Converts text to float vectors |
+| `RetrievalStrategy` | Retrieves relevant chunks |
+| `VectorStore` | Pluggable vector DB (PgVector, Faiss, Qdrant) |
+| `RagPipeline` | Top-level pipeline contract |
+
+### Multimodal Retrieval
+
+```java
+MultimodalRetrievalQuery query = new MultimodalRetrievalQuery(
+    List.of(
+        new QueryPart.TextPart("What does this diagram show?"),
+        new QueryPart.ImagePart(imageArtifact)
+    ),
+    "hybrid", 5, 0.7, Map.of()
+);
+```
+
+Provenance tracks the exact artifact, representation, page, time range, and region.
+
+## 6.5 MCP Integration
+
+The Model Context Protocol integration supports both HTTP and STDIO transports.
+
+```mermaid
+graph TB
+    BRIDGE[McpSkillBridge] --> COMPOSITE[CompositeMcpToolClient]
+    COMPOSITE --> HTTP[HttpMcpToolClient]
+    COMPOSITE --> STDIO[StdioMcpToolClient]
+
+    HTTP --> HTTP_SRV[HTTP MCP Server<br/>JSON-RPC/SSE]
+    STDIO --> STDIO_SRV[STDIO MCP Server<br/>process-based]
+
+    BRIDGE --> REG[SkillRegistry]
+    REG --> ADAPTER[McpSkillAdapter]
+
+    style BRIDGE fill:#4A90D9,color:#fff
+    style ADAPTER fill:#27AE60,color:#fff
+```
+
+### Configuration Tiers
+
+MCP configs are merged from four tiers (highest priority last):
+
+1. **Classpath built-in** — `resources/mcp/mcp.json`
+2. **User home** — `~/.wayang/mcp/mcp.json`
+3. **SPI providers** — registered `McpConfigPathProvider` extensions
+4. **Workspace** — `.mcp.json` in workspace root
+
+### Hot Reload
+
+```java
+McpConfigLoader loader = new McpConfigLoader(skillBridge, providers);
+Uni<List<McpToolDescriptor>> tools = loader.reload(workspaceRoot);
+// Connects new servers, disconnects removed servers, updates changed ones
+```
+
+### Standard MCP JSON
+
+```json
+{
+  "mcpServers": {
+    "flutter": {
+      "command": "flutter",
+      "args": ["mcp-server"]
+    },
+    "filesystem": {
+      "url": "http://localhost:3000/mcp",
+      "headers": { "Authorization": "Bearer ..." }
+    }
+  }
+}
+```
+
+## 6.6 Guardrails
+
+Four built-in detectors, pluggable via `GuardrailDetectorPlugin`:
+
+### PII Detector
+
+Regex-based detection of:
+
+| PII Type | Pattern | Severity |
+|----------|---------|----------|
+| SSN | `\d{3}-\d{2}-\d{4}` | BLOCK |
+| Credit card | `\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}` | BLOCK |
+| Email | `[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}` | WARN |
+| Phone | `\d{3}[-.]?\d{3}[-.]?\d{4}` | WARN |
+| IP address | `\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}` | WARN |
+
+### Toxicity Detector
+
+Detects toxic words + hate speech indicators (race, gender, religion, ethnicity, sexual orientation).
+
+### Bias Detector
+
+Detects gender stereotypes (`nurturing`, `emotional`, `weak`, `kitchen`, `motherly`, `strong`, `leader`, `assertive`, `provider`, `dominant`), racial bias indicators (`all`, `always`, `never`, `typical`, `those people`, `they always`), and age bias.
+
+### Hallucination Detector
+
+Extracts claims from text (looking for `according to`, `research shows`, `studies prove`, etc.), checks numerical consistency against source metadata, and detects sentiment contradictions.
+
+### Custom Detector Plugin
+
+```java
+@ApplicationScoped
+public class CustomDetector implements GuardrailDetectorPlugin {
+    @Override public String id() { return "custom-detector"; }
+    @Override public String name() { return "Custom Detector"; }
+    @Override public String version() { return "1.0.0"; }
+    @Override public String description() { return "Detects X"; }
+    @Override public CheckPhase[] applicablePhases() {
+        return new CheckPhase[]{ CheckPhase.POST_EXECUTION };
+    }
+    @Override public String getCategory() { return "custom"; }
+    @Override public DetectionSeverity getSeverity() { return DetectionSeverity.WARN; }
+
+    @Override
+    public Uni<DetectionResult> detect(String text, Map<String, Object> metadata) {
+        // return DetectionResult.safe(...) or .warning(...) or .blocked(...)
+    }
+}
+```
+
+## 6.7 Sandboxing
+
+The `Sandbox` SPI provides isolated execution environments:
+
+```java
+public interface Sandbox extends AutoCloseable {
+    void start() throws Exception;
+    void stop() throws Exception;
+    SandboxExecutionResult executeCommand(String command, long timeoutMillis) throws Exception;
+    void writeFile(String path, String content) throws Exception;
+    String readFile(String path) throws Exception;
+}
+```
+
+Implementations:
+
+- **Docker** — full container isolation
+- **Nono** — lightweight process isolation
+- **Local** — direct execution (testing only)
+
+```java
+SandboxProvider provider = ...;
+SandboxConfiguration config = new SandboxConfiguration();
+config.setImage("ubuntu:22.04");
+config.setWorkingDirectory("/workspace");
+Sandbox sandbox = provider.createSandbox(config);
+sandbox.start();
+SandboxExecutionResult result = sandbox.executeCommand("mvn test", 60_000);
+```
+
+## 6.8 Observability
+
+Three observability layers:
+
+### Health Checks
+
+| Check | Purpose |
+|-------|---------|
+| `DiskSpaceHealthCheck` | Free space threshold |
+| `MemoryHealthCheck` | Heap usage percentage |
+| `ConnectionHealthCheck` | URL reachability |
+| `ExtensionHealthCheck` | Extension liveness |
+
+Statuses: `HEALTHY`, `DEGRADED`, `UNHEALTHY`, `UNKNOWN`.
+
+### Tracing
+
+`OpenTelemetryTracingService` wraps the OpenTelemetry API:
+
+```java
+tracing.withSpan("agent.execute", () -> {
+    tracing.addAttribute("agent.id", agentId);
+    tracing.addEvent("tool.call", Map.of("tool", "search"));
+    return agent.process(request);
+});
+```
+
+### Metrics
+
+`ToolMetrics` tracks per-tool call counts, error rates, min/max/avg latency, recent call history, slow-call detection (>5s), and exports JSON.
+
+### Event Ledger
+
+Durable, append-only event log with `ExecutionMetrics` accumulator:
+
+```java
+ledger.record(ExecutionEvent.of(execId, seq, TOOL_EXECUTED, "search", payload));
+Optional<ExecutionMetrics> metrics = ledger.metrics(execId);
+// metrics.get().latency(), .toolCalls(), .cacheHits(), ...
+```
+
+## 6.9 Caching
+
+Two cache layers:
+
+### Execution Cache (runtime-scoped)
+
+Keyed on `(namespace, tenantId, userId, inputHash)`:
+
+| Namespace | Caches |
+|-----------|--------|
+| `TOOL` | Tool invocation results |
+| `RETRIEVAL` | RAG / vector / keyword search results |
+| `CONTEXT` | Compiled prompt-context blocks |
+| `RESEARCH` | Full research task ledger entries |
+| `MODEL` | Model response for identical prompt+params |
+
+```java
+String hash = ExecutionCache.hashTool("search", Map.of("query", "tokyo"));
+Optional<ExecutionCacheEntry> cached = cache.lookup(CacheNamespace.TOOL, hash);
+```
+
+### Project Cache (project-scoped)
+
+`CacheStore` keyed on `CacheKey(project, artifactId, version, operation, modelVersion, promptVersion)`.
+
+## 6.10 Model Routing
+
+Two routing strategies, selectable via `wayang.router.strategy`:
+
+### DIRECT (default)
+
+Strictly honors explicitly requested models. No budget or adaptive scoring.
+
+### ADAPTIVE
+
+Multi-dimensional scoring across four components:
+
+| Component | Weight (BALANCED) | Description |
+|-----------|-------------------|-------------|
+| Quality | 0.40 | Model quality score + reasoning bonus |
+| Cost | 0.35 | Inverted cost (lower cost = higher score) |
+| Latency | 0.25 | Inverted latency |
+| Health | ×multiplier | From `ModelRoutingTelemetry` |
+
+### Routing Objectives
+
+| Objective | Quality | Cost | Latency | Notes |
+|-----------|---------|------|---------|-------|
+| `QUALITY_FIRST` | 0.85 | 0.05 | 0.10 | Best model wins |
+| `COST_MINIMIZING` | 0.15 | 0.65 | 0.20 | Cheapest wins |
+| `LATENCY_FIRST` | 0.20 | 0.15 | 0.65 | Fastest wins |
+| `LOCAL_FIRST` | 0.25 | 0.40 | 0.35 | +0.30 local bonus |
+| `BALANCED` | 0.40 | 0.35 | 0.25 | Default |
+
+### Fallback Strategies
+
+| Strategy | Behavior |
+|----------|----------|
+| `ORDERED_FALLBACK` | Next top-3 candidates |
+| `LOCAL_TO_CLOUD` | Local → best cloud |
+| `CHEAP_TO_SMART` | Cheap → highest quality |
+| `STRICT_NO_FALLBACK` | No fallback |
+
+### The Model Catalog
+
+The `DefaultModelCatalog` seeds 25+ models across seven categories:
+
+1. **Frontier LLM & Multimodal** — GPT-4o, Claude 3.5 Sonnet, Gemini 2.0 Flash
+2. **Reasoning** — o1, o3-mini, DeepSeek-R1
+3. **Vision & OCR** — Nougat, Florence-2
+4. **Speech & Audio** — Whisper, ElevenLabs
+5. **Image & Video** — Flux, DALL-E 3, Stable Video Diffusion
+6. **3D Spatial & Mesh** — Trellis, Shap-E, Tripo3D
+7. **Embeddings & Local** — text-embedding-3-small, BGE-M3, Gollek
+
+---
+
+# Chapter 7 — Tutorials
+
+## 7.1 Getting Started: First Agent
+
+This tutorial builds a minimal ReAct agent that uses a calculator tool.
+
+### Step 1: Add dependencies
+
+```xml
+<dependency>
+    <groupId>tech.kayys.wayang</groupId>
+    <artifactId>wayang-agent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+</dependency>
+<dependency>
+    <groupId>tech.kayys.wayang</groupId>
+    <artifactId>wayang-provider</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+</dependency>
+```
+
+### Step 2: Implement a tool
+
+```java
+public class CalculatorTool implements Tool {
+    @Override
+    public ToolDescriptor descriptor() {
+        return SimpleToolDescriptor.of(
+            "calculator",
+            "Evaluates arithmetic expressions",
+            Map.of(
+                "type", "object",
+                "properties", Map.of(
+                    "expression", Map.of("type", "string")
+                ),
+                "required", List.of("expression")
+            )
+        );
+    }
+
+    @Override
+    public CompletableFuture<ToolResult> execute(ToolInvocation inv, ToolContext ctx) {
+        String expr = (String) inv.arguments().get("expression");
+        // ... evaluate ...
+        return CompletableFuture.completedFuture(
+            SimpleToolResult.success(Map.of("result", 42))
+        );
+    }
+
+    @Override public ResourceId id() { return descriptor().id(); }
+    @Override public ResourceType type() { return new ResourceType.Tool(); }
+    @Override public Metadata metadata() { return descriptor().metadata(); }
+}
+```
+
+### Step 3: Configure the agent
+
+```java
+Provider provider = new OpenAiProvider(apiKey);
+Memory<ChatMessage> memory = new InMemoryMemory();
+
+ReActAgent agent = new ReActAgent();
+agent.setProvider(provider);
+agent.setModelId("gpt-4o");
+agent.setSystemPrompt("You are a helpful assistant. Use tools when needed.");
+agent.setMemory(memory);
+agent.setTools(List.of(new CalculatorTool()));
+```
+
+### Step 4: Run
+
+```java
+agent.send("What is 17 * 23?", new WayangAgentListener() {
+    @Override public void onTextDelta(String text) { System.out.print(text); }
+    @Override public void onToolCallStart(String id, String name) {
+        System.out.println("\n[Tool] " + name);
+    }
+    @Override public void onToolCallReady(String id, String name, Map<String, Object> input) {}
+    @Override public void onToolPermissionNeeded(String id, String name,
+            Map<String, Object> input, Consumer<PermissionDecision> responder) {
+        responder.accept(PermissionDecision.APPROVE_ONCE);
+    }
+    @Override public void onToolResult(String id, String name, ToolResult result) {
+        System.out.println("[Tool Result] " + result.getOutputs());
+    }
+    @Override public void onUsage(int in, int out) {}
+    @Override public void onDone(String reason) { System.out.println("\nDone: " + reason); }
+    @Override public void onError(String msg) { System.err.println(msg); }
+});
+```
+
+## 7.2 Building a Custom Tool
+
+### Tool with Capabilities
+
+```java
+public class GitCommitTool implements Tool {
+    @Override
+    public Collection<Capability> toolCapabilities() {
+        return List.of(
+            new DomainScope("git"),
+            Capability.requiresApproval("destructive")
+        );
+    }
+
+    @Override
+    public ToolDescriptor descriptor() {
+        return SimpleToolDescriptor.of(
+            "git-commit",
+            "Creates a git commit",
+            Map.of(
+                "type", "object",
+                "properties", Map.of(
+                    "message", Map.of("type", "string")
+                ),
+                "required", List.of("message")
+            )
+        );
+    }
+
+    @Override
+    public CompletableFuture<ToolResult> execute(ToolInvocation inv, ToolContext ctx) {
+        String message = (String) inv.arguments().get("message");
+        try {
+            Process p = new ProcessBuilder("git", "commit", "-m", message).start();
+            int exit = p.waitFor();
+            return CompletableFuture.completedFuture(
+                exit == 0
+                    ? SimpleToolResult.success(Map.of("committed", true))
+                    : SimpleToolResult.failure("git commit failed")
+            );
+        } catch (Exception e) {
+            return CompletableFuture.completedFuture(SimpleToolResult.failure(e.getMessage()));
+        }
+    }
+
+    // id(), type(), metadata() as before
+}
+```
+
+### Registering via ToolProvider
+
+```java
+public class GitToolProvider implements ToolProvider {
+    @Override
+    public List<Tool> getTools() {
+        return List.of(new GitCommitTool(), new GitStatusTool());
+    }
+}
+```
+
+Register in `META-INF/services/tech.kayys.wayang.tool.ToolProvider`:
+
+```
+com.example.GitToolProvider
+```
+
+## 7.3 Building a Custom Skill
+
+```java
+public class DataScienceSkill implements Skill {
+    @Override
+    public String getId() { return "data-science"; }
+
+    @Override
+    public String getInstructions() {
+        return """
+            # Data Science Skill
+
+            You are a data science expert. When analyzing data:
+
+            1. Always start by understanding the schema
+            2. Check for missing values before analysis
+            3. Visualize distributions before modeling
+            4. Use cross-validation for model evaluation
+            5. Document all assumptions
+            """;
+    }
+
+    @Override
+    public String getTriggerDescription() {
+        return "Activate when the user asks about data analysis, statistics, or ML";
+    }
+
+    // Extension methods: id(), type(), metadata()
+}
+```
+
+## 7.4 Multi-Agent Workflow
+
+Build a research pipeline with three agents: researcher, analyst, writer.
+
+```java
+// Create agents
+Agent researcher = createResearchAgent();
+Agent analyst = createAnalysisAgent();
+Agent writer = createWriterAgent();
+
+// Orchestrate sequentially
+AgentOrchestrator orchestrator = new AgentOrchestrator()
+    .register("researcher", researcher)
+    .register("analyst", analyst)
+    .register("writer", writer);
+
+orchestrator.sequential("Analyze the AI chip market in 2026", listener);
+```
+
+### Parallel Fan-Out
+
+```java
+AgentOrchestrator parallel = new AgentOrchestrator()
+    .register("bull", bullAgent)
+    .register("bear", bearAgent)
+    .register("neutral", neutralAgent)
+    .withMerger(results -> {
+        String bulls = results.get("bull");
+        String bears = results.get("bear");
+        String neutral = results.get("neutral");
+        return "## Bull Case\n" + bulls + "\n\n## Bear Case\n" + bears
+            + "\n\n## Neutral View\n" + neutral;
+    });
+
+parallel.parallel("Should we invest in NVDA?", listener);
+```
+
+### Routed Dispatch
+
+```java
+AgentOrchestrator routed = new AgentOrchestrator()
+    .register("code", codeAgent)
+    .register("docs", docAgent)
+    .withRouter(input ->
+        input.contains("code") || input.contains("bug") ? "code" : "docs"
+    );
+
+routed.routed("Fix the null pointer in UserService", listener);
+```
+
+### State-Machine Graph
+
+For complex coordination, use `WorkflowGraph`:
+
+```java
+WorkflowGraph graph = new WorkflowGraph()
+    .addNode("research", new AgentNode(researcher, "input", "research_output"))
+    .addNode("analyze", new AgentNode(analyst, "research_output", "analysis"))
+    .addNode("write", new AgentNode(writer, "analysis", "output"))
+    .addEdge("research", "analyze")
+    .addEdge("analyze", "write")
+    .setEntryPoint("research")
+    .withCheckpointStrategy(new InMemoryCheckpointStrategy());
+
+CompiledWorkflow workflow = graph.compile();
+GraphState finalState = workflow.invoke(new GraphState(), threadId);
+```
+
+## 7.5 Durable A2A Integration
+
+### Expose a local agent via A2A
+
+```java
+A2AServer server = new A2AAgentAdapter(runtime, agentDefinition);
+AgentCard card = server.getAgentCard();
+// Serve card at /.well-known/agent-card.json
+```
+
+### Call a remote A2A agent durably
+
+```java
+DurableA2ATaskLedger ledger = new DurableA2ATaskLedger();
+DurableA2AAgentAdapter adapter = new DurableA2AAgentAdapter(
+    runtime, localAgentDef, ledger, "https://my-agent.example.com"
+);
+
+// Send message — returns immediately with RUNNING task
+A2ATask task = adapter.sendMessage(message).toCompletableFuture().join();
+
+// Optionally park until completion
+DurableA2ATask result = adapter.awaitCompletion(task.taskId(), Duration.ofMinutes(5));
+```
+
+### Workflow Bridge
+
+```java
+A2AWorkflowBridge bridge = new A2AWorkflowBridge(ledger, new WorkflowLifecycle() {
+    @Override public void pause(String wfId) { workflowEngine.pause(wfId); }
+    @Override public void resume(String wfId) { workflowEngine.resume(wfId); }
+    @Override public void cancel(String wfId) { workflowEngine.cancel(wfId); }
+});
+
+DurableA2ATask result = bridge.executeStep(
+    "wf-123",
+    "https://remote-agent.example.com",
+    "Analyze this dataset"
+);
+```
+
+## 7.6 Adding Guardrails
+
+### Using the built-in guardrails service
+
+```java
+@Inject GuardrailsService guardrails;
+
+GuardrailResult pre = guardrails.preCheck(userInput, Map.of())
+    .await().atMost(Duration.ofSeconds(5));
+
+if (!pre.allowed()) {
+    throw new SecurityException("Input blocked: " + pre.reason());
+}
+
+// ... execute agent ...
+
+GuardrailResult post = guardrails.postCheck(agentOutput, Map.of())
+    .await().atMost(Duration.ofSeconds(5));
+
+if (!post.allowed()) {
+    // redact or reject
+}
+```
+
+### Custom detector
+
+```java
+@ApplicationScoped
+public class ProfanityDetector implements GuardrailDetectorPlugin {
+    private static final Set<String> BAD_WORDS = Set.of(/* ... */);
+
+    @Override public String id() { return "profanity-detector"; }
+    @Override public String name() { return "Profanity Detector"; }
+    @Override public String version() { return "1.0.0"; }
+    @Override public String description() { return "Detects profanity"; }
+    @Override public String getCategory() { return "profanity"; }
+    @Override public DetectionSeverity getSeverity() { return DetectionSeverity.WARN; }
+
+    @Override
+    public CheckPhase[] applicablePhases() {
+        return new CheckPhase[]{ CheckPhase.PRE_EXECUTION, CheckPhase.POST_EXECUTION };
+    }
+
+    @Override
+    public Uni<DetectionResult> detect(String text, Map<String, Object> metadata) {
+        String lower = text.toLowerCase();
+        List<Finding> findings = BAD_WORDS.stream()
+            .filter(lower::contains)
+            .map(w -> new Finding("PROFANITY", w,
+                lower.indexOf(w), lower.indexOf(w) + w.length(), 1.0))
+            .toList();
+
+        return Uni.createFrom().item(
+            findings.isEmpty()
+                ? DetectionResult.safe(id(), getCategory())
+                : DetectionResult.warning(id(), getCategory(), "Profanity detected", findings)
+        );
+    }
+}
+```
+
+### Wire guardrails into tool execution
+
+The `DefaultToolGuardrailCheck` bean (provided by `wayang-guardrails-runtime`) is automatically discovered by CDI and plugged into `DefaultAgentToolExecutor`.
+
+## 7.7 Knowledge-Governed RAG
+
+### Define a knowledge source
+
+```java
+public class PolicyKnowledgeSource implements KnowledgeSource {
+    @Override public String id() { return "company-policies"; }
+
+    @Override
+    public CompletionStage<KnowledgeResult> query(
+            KnowledgeQuery query, KnowledgeContext context) {
+        // search internal policy store
+        List<KnowledgeEvidence> evidence = searchPolicies(query.text());
+        return CompletableFuture.completedFuture(
+            new KnowledgeResult(query, evidence, Map.of(), Instant.now())
+        );
+    }
+}
+```
+
+### Register and resolve
+
+```java
+DefaultKnowledgeRegistry registry = new DefaultKnowledgeRegistry();
+registry.register(new PolicyKnowledgeSource());
+
+DefaultKnowledgeResolver resolver = new DefaultKnowledgeResolver(registry);
+
+KnowledgeContext ctx = KnowledgeContext.empty()
+    .withSource("company-policies")
+    .withDomain("hr");
+
+KnowledgeQuery query = KnowledgeQuery.of("What is the vacation policy?")
+    .withTopK(5)
+    .withMinScore(0.4);
+
+KnowledgeResult result = resolver.resolve(query, ctx)
+    .toCompletableFuture().join();
+```
+
+### Apply budget
+
+```java
+DefaultKnowledgeSelector selector = new DefaultKnowledgeSelector();
+KnowledgeBudget budget = KnowledgeBudget.strict(); // provenance required, score ≥0.5
+
+KnowledgeSelectionResult selection = selector.select(
+    result.evidence(), budget, ctx
+);
+
+// selection.selected() contains only budget-compliant evidence
+```
+
+### Versioned storage
+
+```java
+InMemoryVersionedKnowledgeStore store = new InMemoryVersionedKnowledgeStore();
+
+KnowledgeItem item = new KnowledgeItem(
+    "vacation-policy", "hr-source", "policy", "Vacation Policy",
+    "Employees receive 20 days of PTO per year.",
+    Map.of(), KnowledgeProvenance.of("https://hr.example.com/policies"),
+    KnowledgeAuthority.authoritative("official", "HR", 10),
+    KnowledgeValidity.active()
+);
+
+store.save(item);
+
+// Point-in-time retrieval
+Optional<KnowledgeItem> asOf = store.getAsOf("vacation-policy", Instant.now())
+    .toCompletableFuture().join();
+```
+
+---
+
+# Chapter 8 — Use Cases
+
+## 8.1 CI/CD Code Review Agent
+
+**Goal:** Automatically review pull requests for code quality, security, and style.
+
+**Architecture:**
+
+```mermaid
+flowchart LR
+    PR[GitHub PR] --> WEBHOOK[Webhook]
+    WEBHOOK --> A2A[A2A Endpoint]
+    A2A --> AGENT[Code Review Agent]
+    AGENT --> SCAN[Code Scanner Tool]
+    AGENT --> GREP[Code Grep Tool]
+    AGENT --> GUARD[Guardrails]
+    GUARD --> REPORT[Review Report]
+    REPORT --> PR
+
+    style AGENT fill:#4A90D9,color:#fff
+    style GUARD fill:#E74C3C,color:#fff
+```
+
+**Implementation sketch:**
+
+```java
+AgentDefinition reviewer = AgentDefinition.builder()
+    .metadata(Metadata.builder()
+        .name("code-reviewer")
+        .description("Reviews pull requests for quality and security")
+        .build())
+    .goal("""
+        Review the provided code diff. Check for:
+        1. Null pointer risks
+        2. Resource leaks
+        3. SQL injection
+        4. Inconsistent naming
+        5. Missing tests
+        Output a structured review with severity levels.
+        """)
+    .tools(List.of(
+        Reference.of("code-scanner"),
+        Reference.of("code-grep"),
+        Reference.of("test-runner")
+    ))
+    .build();
+
+// Budget: THOROUGH for deep review
+ExecutionBudget budget = ExecutionBudget.thorough();
+```
+
+**Run via CLI:**
+
+```bash
+wayang-runner \
+  --behavior THOROUGH \
+  --model claude-3-5-sonnet \
+  "Review the diff in /workspace/pr-1234.diff"
+```
+
+## 8.2 Multi-Agent Research Pipeline
+
+**Goal:** Produce a comprehensive research report from a broad question.
+
+**Architecture:**
+
+```mermaid
+flowchart TB
+    Q[Research Question] --> DECOMP[Query Decomposer]
+    DECOMP --> SQ1[Sub-query 1]
+    DECOMP --> SQ2[Sub-query 2]
+    DECOMP --> SQ3[Sub-query 3]
+
+    SQ1 --> RA1[Research Agent 1]
+    SQ2 --> RA2[Research Agent 2]
+    SQ3 --> RA3[Research Agent 3]
+
+    RA1 --> SYNTH[Synthesizer]
+    RA2 --> SYNTH
+    RA3 --> SYNTH
+
+    SYNTH --> REPORT[Structured Report]
+    REPORT --> CRIT[Critic Agent]
+    CRIT -->|needs improvement| SYNTH
+    CRIT -->|satisfied| FINAL[Final Report]
+
+    style SYNTH fill:#4A90D9,color:#fff
+    style CRIT fill:#F39C12,color:#fff
+```
+
+**Implementation:**
+
+```java
+AgentOrchestrator orchestrator = new AgentOrchestrator()
+    .register("market", marketResearchAgent)
+    .register("tech", techResearchAgent)
+    .register("regulatory", regulatoryAgent)
+    .withMerger(results -> {
+        StringBuilder sb = new StringBuilder("# Research Report\n\n");
+        results.forEach((k, v) -> sb.append("## ").append(k).append("\n").append(v).append("\n\n"));
+        return sb.toString();
+    });
+
+orchestrator.parallel("What is the state of AI regulation in the EU?", listener);
+```
+
+## 8.3 Enterprise Knowledge Assistant
+
+**Goal:** Answer employee questions using governed internal knowledge with full provenance.
+
+**Architecture:**
+
+```mermaid
+flowchart TB
+    USER[Employee] --> ASSIST[Knowledge Assistant]
+    ASSIST --> RESOLVE[KnowledgeResolver]
+    RESOLVE --> SRC1[Policy Source]
+    RESOLVE --> SRC2[HR Source]
+    RESOLVE --> SRC3[Technical Docs]
+
+    SRC1 --> SEL[KnowledgeSelector]
+    SRC2 --> SEL
+    SRC3 --> SEL
+
+    SEL --> BUDGET[Budget Filter]
+    BUDGET --> FUSION[Evidence Fusion]
+    FUSION --> VERIFY[Answer Verification]
+    VERIFY --> RESP[Verified Response]
+    RESP --> USER
+
+    VERIFY --> AUDIT[Audit Trail]
+    VERIFY --> PROV[Provenance Graph]
+
+    style VERIFY fill:#E74C3C,color:#fff
+    style AUDIT fill:#9B59B6,color:#fff
+```
+
+**Key features used:**
+
+- `KnowledgeBudget.strict()` — requires provenance, minimum score 0.5
+- `KnowledgeAuthority` — ranks official policies above informal docs
+- `KnowledgeValidity` — filters expired policies
+- `DefaultKnowledgeAuditService` — records every decision
+- `KnowledgeAnswerProvenanceService` — builds auditable provenance graph
+
+## 8.4 Human-in-the-Loop Approval Workflow
+
+**Goal:** Require manager approval before executing sensitive operations (e.g., production deployment).
+
+**Architecture:**
+
+```mermaid
+sequenceDiagram
+    participant A as Deploy Agent
+    participant G as GuardrailApprovalStrategy
+    participant H as HITL System
+    participant M as Manager
+    participant W as Workflow Engine
+
+    A->>G: requestApproval(deployTool)
+    G->>G: check capabilities<br/>(requiresApproval=true)
+    G->>H: create HumanTask
+    H->>M: notify (email/Slack)
+    G-->>A: ApprovalRequiredException(taskId)
+    A->>W: pause workflow
+
+    M->>H: approve(taskId)
+    H->>W: publish TaskApprovedEvent
+    W->>A: resume
+    A->>A: execute deploy
+```
+
+**Configuration:**
+
+```java
+public class DeployTool implements Tool {
+    @Override
+    public Collection<Capability> toolCapabilities() {
+        return List.of(
+            new DomainScope("production"),
+            Capability.requiresApproval("production-deploy")
+        );
+    }
+    // ...
+}
+```
+
+**HITL task config:**
+
+```java
+HumanTaskConfig config = new HumanTaskConfig();
+config.setAssignTo("manager@company.com");
+config.setAssigneeType("USER");
+config.setTaskType("approval");
+config.setTitle("Approve production deployment");
+config.setPriority(5);
+config.setDueInHours(2);
+config.setEscalationConfig(escalationConfig);
+```
+
+## 8.5 Distributed Agent Federation
+
+**Goal:** Connect multiple Wayang instances across regions, each with local knowledge, into a federated network.
+
+**Architecture:**
+
+```mermaid
+flowchart TB
+    subgraph "Region US"
+        US_AGENT[US Agent]
+        US_KNOW[US Knowledge Store]
+    end
+
+    subgraph "Region EU"
+        EU_AGENT[EU Agent]
+        EU_KNOW[EU Knowledge Store]
+    end
+
+    subgraph "Region APAC"
+        AP_AGENT[APAC Agent]
+        AP_KNOW[APAC Knowledge Store]
+    end
+
+    US_AGENT <-->|ANP/A2A| EU_AGENT
+    EU_AGENT <-->|ANP/A2A| AP_AGENT
+    AP_AGENT <-->|ANP/A2A| US_AGENT
+
+    US_AGENT --> US_KNOW
+    EU_AGENT --> EU_KNOW
+    AP_AGENT --> AP_KNOW
+
+    FED[Federation Query Service] --> US_AGENT
+    FED --> EU_AGENT
+    FED --> AP_AGENT
+
+    style FED fill:#4A90D9,color:#fff
+```
+
+**Federation query:**
+
+```java
+DefaultKnowledgeEvidenceFederationQueryService federation =
+    new DefaultKnowledgeEvidenceFederationQueryService(router, endpoints);
+
+KnowledgeEvidenceFederatedQuery query = new KnowledgeEvidenceFederatedQuery(
+    "q-123", "tenant-1", "workspace-1", "project-1", "agent-1",
+    "What are the GDPR requirements for AI?",
+    10, 0.5, Instant.now(),
+    true, true, true,
+    Map.of("region", "EU"),
+    Map.of()
+);
+
+KnowledgeEvidenceFederationAggregateResult result =
+    federation.query(query).join();
+```
+
+**Cross-region routing:**
+
+```java
+DefaultKnowledgeEvidenceFederationRouter router =
+    new DefaultKnowledgeEvidenceFederationRouter(discovery);
+
+// Router filters: online, trusted, same-tenant
+// Scores: local +100, trusted +50, verified +30, governed +25, latency penalty
+```
+
+---
+
+# Chapter 9 — Deployment & Operations
+
+## 9.1 Deployment Topologies
+
+### Standalone (Single JVM)
+
+```mermaid
+graph TB
+    CLI[CLI / REST] --> RUNTIME[Wayang Runtime]
+    RUNTIME --> INMEM[In-Memory Stores]
+    RUNTIME --> LOCAL[Local Provider]
+
+    style RUNTIME fill:#4A90D9,color:#fff
+```
+
+**Use case:** Development, testing, single-user desktop.
+
+**Config:**
+
+```properties
+wayang.router.strategy=DIRECT
+wayang.graph.store.type=inmemory
+wayang.embedding.default-provider=hash
+```
+
+### Quarkus (Cloud-Native)
+
+```mermaid
+graph TB
+    LB[Load Balancer] --> POD1[Wayang Pod 1]
+    LB --> POD2[Wayang Pod 2]
+    LB --> POD3[Wayang Pod 3]
+
+    POD1 --> PG[(PostgreSQL)]
+    POD2 --> PG
+    POD3 --> PG
+
+    POD1 --> REDIS[(Redis)]
+    POD2 --> REDIS
+    POD3 --> REDIS
+
+    POD1 --> KAFKA[(Kafka)]
+    POD2 --> KAFKA
+    POD3 --> KAFKA
+
+    style POD1 fill:#4A90D9,color:#fff
+    style POD2 fill:#4A90D9,color:#fff
+    style POD3 fill:#4A90D9,color:#fff
+```
+
+**Use case:** Multi-tenant SaaS, enterprise deployment.
+
+**Config:**
+
+```properties
+wayang.router.strategy=ADAPTIVE
+wayang.graph.store.type=neo4j
+wayang.graph.store.neo4j.uri=bolt://neo4j:7687
+wayang.embedding.default-provider=gollek
+quarkus.datasource.db-kind=postgresql
+quarkus.hibernate-orm.database.generation=update
+```
+
+### Federated (Multi-Region)
+
+```mermaid
+graph TB
+    subgraph "US-East"
+        US[Wayang Cluster]
+        US_DB[(US Database)]
+    end
+
+    subgraph "EU-West"
+        EU[Wayang Cluster]
+        EU_DB[(EU Database)]
+    end
+
+    subgraph "AP-South"
+        AP[Wayang Cluster]
+        AP_DB[(AP Database)]
+    end
+
+    US <-->|ANP| EU
+    EU <-->|ANP| AP
+    AP <-->|ANP| US
+
+    US --> US_DB
+    EU --> EU_DB
+    AP --> AP_DB
+
+    style US fill:#4A90D9,color:#fff
+    style EU fill:#4A90D9,color:#fff
+    style AP fill:#4A90D9,color:#fff
+```
+
+**Use case:** Global enterprise, data residency requirements.
+
+## 9.2 Configuration
+
+### Core Properties
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `wayang.router.strategy` | `DIRECT` | `DIRECT` or `ADAPTIVE` |
+| `wayang.execution.budget` | `balanced` | `fast`, `balanced`, `thorough`, `debug` |
+| `wayang.agent.max-steps` | `25` | Max ReAct iterations |
+| `wayang.agent.timeout` | `PT60S` | Agent execution timeout |
+| `wayang.graph.store.type` | `inmemory` | `inmemory`, `neo4j` |
+| `wayang.embedding.default-provider` | `gollek` | Embedding provider |
+| `wayang.embedding.default-model` | `Qwen/Qwen2.5-0.5B-Instruct` | Embedding model |
+| `wayang.embedding.cache.enabled` | `true` | Enable embedding cache |
+| `wayang.embedding.batch.size` | `32` | Batch size |
+| `wayang.embedding.batch.worker-threads` | `2` | Batch workers |
+
+### A2A Properties
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `wayang.a2a.enabled` | `true` | Enable A2A server |
+| `wayang.a2a.public-url` | — | Public URL for agent card |
+| `wayang.a2a.expose-metadata` | `false` | Expose metadata in agent card |
+
+### ANP Properties
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `wayang.anp.enabled` | `false` | Enable ANP protocol |
+| `wayang.anp.domain` | `localhost` | DID:WBA domain |
+| `wayang.anp.port` | `8080` | ANP server port |
+| `wayang.anp.require-signature` | `false` | Require HTTP signatures |
+
+### Guardrails Properties
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `wayang.guardrails.pii.enabled` | `true` | Enable PII detector |
+| `wayang.guardrails.toxicity.enabled` | `true` | Enable toxicity detector |
+| `wayang.guardrails.bias.enabled` | `false` | Enable bias detector |
+| `wayang.guardrails.hallucination.enabled` | `false` | Enable hallucination detector |
+| `wayang.guardrails.fail-open` | `true` | Fail open on detector error |
+
+### HITL Properties
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `wayang.hitl.enabled` | `true` | Enable HITL |
+| `wayang.hitl.escalation.critical-hours` | `4` | Escalate priority-5 tasks after 4h |
+| `wayang.hitl.escalation.high-hours` | `12` | Escalate priority-4 tasks after 12h |
+| `wayang.hitl.escalation.medium-hours` | `24` | Escalate priority-3 tasks after 24h |
+| `gamelan.notifications.email.enabled` | `true` | Email notifications |
+| `gamelan.notifications.slack.enabled` | `false` | Slack notifications |
+
+## 9.3 Observability
+
+### Health Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/q/health` | Overall health |
+| `/q/health/live` | Liveness probe |
+| `/q/health/ready` | Readiness probe |
+| `/q/health/started` | Startup probe |
+
+### Metrics (Micrometer)
+
+Key metrics:
+
+- `inference.routing.adapter.filtered` — providers filtered during routing
+- `wayang.agent.executions.total` — total agent executions
+- `wayang.agent.executions.duration` — execution duration histogram
+- `wayang.tool.calls.total` — tool call count
+- `wayang.tool.calls.duration` — tool call duration
+- `wayang.knowledge.evidence.selected` — evidence selected per query
+- `wayang.knowledge.audit.events` — audit events recorded
+
+### Tracing (OpenTelemetry)
+
+Automatic spans:
+
+- `agent.run` — top-level agent execution
+- `tool.execution` — tool invocation
+- `model.request` — LLM call
+- `knowledge.resolve` — knowledge retrieval
+- `a2a.call` — A2A remote call
+
+### Structured Logging
+
+Audit events are emitted as JSON to the `wayang.audit` logger:
+
+```json
+{
+  "event": "ToolExecution",
+  "sessionId": "sess-123",
+  "toolName": "git-commit",
+  "status": "SUCCESS",
+  "userContext": "user@company.com",
+  "arguments": { "message": "***MASKED***" }
+}
+```
+
+Sensitive keys (`password`, `secret`, `token`, `key`, `authorization`, `credential`) are automatically masked.
+
+## 9.4 Troubleshooting
+
+### Agent loops forever
+
+**Symptom:** Agent never reaches `onDone`.
+
+**Causes:**
+1. Tool always returns an error → agent keeps retrying
+2. Tool result not being added to memory
+3. Budget not enforced
+
+**Fix:**
+
+```java
+ExecutionBudget budget = ExecutionBudget.fast(); // lower maxSteps
+agent.setBudget(budget);
+```
+
+Check the `ToolMetrics` for repeated failures:
+
+```java
+ToolMetrics metrics = new ToolMetrics();
+// ...
+System.out.println(metrics.summary());
+```
+
+### Guardrail blocks legitimate input
+
+**Symptom:** Valid requests rejected by PII detector (e.g., a phone number in a test fixture).
+
+**Fix:** Configure a detector bypass or lower severity:
+
+```properties
+wayang.guardrails.pii.severity=WARN
+wayang.guardrails.pii.block-on=SSN,CREDIT_CARD
+```
+
+### A2A task never completes
+
+**Symptom:** `getTask()` always returns RUNNING.
+
+**Causes:**
+1. Remote agent crashed
+2. Network partition
+3. Timeout not configured
+
+**Fix:**
+
+```java
+DurableA2ATask result = adapter.awaitCompletion(taskId, Duration.ofMinutes(5));
+// Throws TimeoutException after 5 min
+```
+
+Check the durable ledger:
+
+```java
+ledger.find(taskId).ifPresent(t -> {
+    System.out.println("Status: " + t.status());
+    System.out.println("Retries: " + t.retryCount());
+    System.out.println("Checkpoint: " + t.checkpointId());
+});
+```
+
+### Model routing picks wrong model
+
+**Symptom:** Expensive model selected for simple queries.
+
+**Fix:** Switch to `COST_MINIMIZING` objective:
+
+```java
+InferencePolicy policy = new InferencePolicy(
+    InferencePolicy.RoutingObjective.COST_MINIMIZING,
+    0.05, // max cost per turn
+    Set.of(), Set.of(), Set.of(), Set.of(),
+    InferencePolicy.FallbackStrategy.CHEAP_TO_SMART
+);
+```
+
+Or restrict to specific models:
+
+```java
+InferencePolicy policy = new InferencePolicy(
+    InferencePolicy.RoutingObjective.BALANCED,
+    null,
+    Set.of("openai", "anthropic"), // allowed providers
+    Set.of("gollek"),              // denied providers
+    Set.of(), Set.of(),
+    InferencePolicy.FallbackStrategy.ORDERED_FALLBACK
+);
+```
+
+### Knowledge retrieval returns nothing
+
+**Symptom:** `KnowledgeResult.evidence()` is empty.
+
+**Causes:**
+1. No sources registered
+2. Sources unhealthy
+3. Budget too strict
+4. Query text empty
+
+**Fix:**
+
+```java
+// Check registry
+System.out.println(registry.sources());
+
+// Check health
+registry.sources().forEach(s -> System.out.println(s.id() + ": " + s.isHealthy()));
+
+// Relax budget
+KnowledgeBudget budget = new KnowledgeBudget(
+    8, 2048, 8192, 4, 4,
+    false, true, 0.0  // minimumScore=0.0
+);
+```
+
+### MCP server not connecting
+
+**Symptom:** `listTools` returns empty.
+
+**Debug:**
+
+```java
+McpServerConfig config = McpServerConfig.stdio("my-server", "my-command", List.of("--arg"));
+McpToolClient client = new CompositeMcpToolClient();
+
+client.listTools(config).subscribe().with(
+    tools -> System.out.println("Tools: " + tools),
+    error -> System.err.println("Error: " + error)
+);
+```
+
+Check:
+
+1. Command is on `PATH`
+2. STDIO process starts (check for stderr output)
+3. HTTP endpoint responds to `tools/list` JSON-RPC
+4. `MCP-Protocol-Version` header is set
+
+---
+
+# Chapter 10 — Extending Wayang
+
+## 10.1 SPI Overview
+
+Wayang exposes SPIs at every layer. This table lists the most important ones:
+
+| SPI | Module | Purpose |
+|-----|--------|---------|
+| `Provider` | `wayang-provider` | LLM backend |
+| `Tool` | `wayang-tool` | Agent tool |
+| `ToolProvider` | `wayang-tool` | Tool discovery |
+| `Skill` | `wayang-skill` | Skill definition |
+| `SkillRepository` | `wayang-skill` | Skill storage |
+| `MemoryProvider` | `wayang-memory` | Memory tier |
+| `RagEmbedder` | `wayang-rag` | Embedding service |
+| `VectorStore` | `wayang-rag` | Vector DB backend |
+| `RagChunker` | `wayang-rag` | Document chunking |
+| `KnowledgeSource` | `wayang-knowledge` | Knowledge provider |
+| `KnowledgeResolver` | `wayang-knowledge` | Knowledge resolution |
+| `KnowledgeSelector` | `wayang-knowledge` | Budget-bounded selection |
+| `KnowledgeAuditSink` | `wayang-knowledge` | Audit destination |
+| `GuardrailDetectorPlugin` | `wayang-guardrails` | Content detector |
+| `GuardrailPolicyPlugin` | `wayang-guardrails` | Policy enforcement |
+| `ToolPolicy` | `wayang-runtime-spi` | Tool governance policy |
+| `ToolGuardrailCheck` | `wayang-runtime-spi` | Guardrail bridge |
+| `AgentProtocol` | `wayang-communication-api` | Communication protocol |
+| `AgentNetworkProtocol` | `wayang-agent-network-api` | Network protocol |
+| `AgentDiscovery` | `wayang-agent-network-api` | Agent discovery |
+| `AgentTrustService` | `wayang-agent-network-api` | Trust evaluation |
+| `AgentEndpointResolver` | `wayang-agent-network-api` | Endpoint resolution |
+| `CapabilityNegotiator` | `wayang-agent-network-api` | Capability negotiation |
+| `SandboxProvider` | `wayang-spi` | Sandbox backend |
+| `PluginLoader` | `wayang-spi` | Plugin loading |
+| `CheckpointStrategy` | `wayang-orchestration` | Workflow checkpointing |
+| `StateReducer` | `wayang-orchestration` | State update reducer |
+| `ConditionalEdge` | `wayang-orchestration` | Graph routing |
+| `GraphNode` | `wayang-orchestration` | Workflow node |
+| `McpConfigPathProvider` | `wayang-mcp` | MCP config location |
+| `BackendProvider` | `wayang-spi` | Backend discovery |
+| `ExecutionCache` | `wayang-runtime-spi` | Execution cache |
+| `EventLedger` | `wayang-runtime-spi` | Event persistence |
+| `ToolExecutionLedger` | `wayang-runtime-spi` | Tool execution audit |
+| `TracingService` | `wayang-observability` | Tracing |
+| `AuditLogger` | `wayang-observability` | Security audit |
+| `ProvenanceStore` | `wayang-observability` | Audit persistence |
+
+## 10.2 Custom Providers
+
+### Custom LLM Provider
+
+```java
+public class MyLlmProvider implements Provider {
+    @Override public String id() { return "my-llm"; }
+
+    @Override
+    public void streamChat(
+            List<ChatMessage> messages,
+            String systemPrompt,
+            List<ToolSpec> tools,
+            double temperature,
+            int maxTokens,
+            Consumer<StreamEvent> onEvent
+    ) throws IOException, InterruptedException {
+        // Call your LLM API
+        // Emit StreamEvent.TextDelta, ToolUseStart, ToolUseEnd, MessageStop
+    }
+
+    @Override
+    public Set<Modality> supportedModalities() {
+        return Set.of(Modality.TEXT, Modality.IMAGE);
+    }
+}
+```
+
+Register via ServiceLoader: `META-INF/services/tech.kayys.wayang.provider.Provider`
+
+### Custom Embedding Provider
+
+```java
+public class MyEmbeddingProvider implements EmbeddingProvider {
+    @Override public String name() { return "my-embed"; }
+    @Override public boolean supports(String model) { return model.startsWith("my-"); }
+
+    @Override
+    public List<float[]> embedAll(List<String> inputs, String model) {
+        return inputs.stream().map(this::embedOne).toList();
+    }
+
+    private float[] embedOne(String text) {
+        // Return embedding vector
+    }
+}
+```
+
+## 10.3 Custom Protocols
+
+### Custom Communication Protocol
+
+```java
+public class MyProtocol implements AgentProtocol {
+    @Override public ProtocolId id() { return ProtocolId.of("my-proto"); }
+    @Override public ProtocolVersion version() { return ProtocolVersion.of(1, 0); }
+
+    @Override
+    public Set<ProtocolCapability> capabilities() {
+        return Set.of(
+            ProtocolCapability.REQUEST_RESPONSE,
+            ProtocolCapability.ASYNC_TASK
+        );
+    }
+
+    @Override
+    public boolean supports(AgentEndpoint endpoint, AgentRequest request) {
+        return endpoint instanceof RemoteAgentEndpoint
+            && ((RemoteAgentEndpoint) endpoint).uri().getScheme().equals("myproto");
+    }
+
+    @Override
+    public ProtocolClient client(ProtocolContext context) {
+        return new MyProtocolClient();
+    }
+}
+```
+
+Register with `DefaultProtocolRegistry`:
+
+```java
+registry.register(new MyProtocol());
+```
+
+### Custom Network Protocol
+
+```java
+public class MyNetworkProtocol implements AgentNetworkProtocol {
+    @Override public String id() { return "my-net"; }
+    @Override public String version() { return "1.0"; }
+
+    @Override
+    public AgentNetworkClient client() {
+        return new MyNetworkClient();
+    }
+
+    @Override
+    public AgentNetworkServer server() {
+        return new MyNetworkServer();
+    }
+}
+```
+
+Register with `DefaultAgentNetworkProtocolRegistry`:
+
+```java
+registry.register(new MyNetworkProtocol());
+```
+
+## 10.4 Custom Memory Tiers
+
+```java
+public class RedisMemoryTier implements MemoryProvider {
+    private final RedisClient redis;
+
+    @Override public String name() { return "redis-episodic"; }
+
+    @Override
+    public void save(MemoryRecord record) throws Exception {
+        redis.set(record.key(), record.value());
+    }
+
+    @Override
+    public List<MemoryRecord> search(MemoryQuery query) throws Exception {
+        // Implement semantic search over Redis
+    }
+
+    @Override
+    public Optional<MemoryRecord> get(String key) throws Exception {
+        String value = redis.get(key);
+        return value != null
+            ? Optional.of(MemoryRecord.of(key, value))
+            : Optional.empty();
+    }
+
+    @Override public void delete(String key) throws Exception { redis.del(key); }
+    @Override public void clear() throws Exception { redis.flushAll(); }
+}
+```
+
+Register with `MemoryProviderRegistry` or via CDI.
+
+## 10.5 Custom Knowledge Sources
+
+```java
+public class ConfluenceKnowledgeSource implements KnowledgeSource {
+    private final ConfluenceClient confluence;
+
+    @Override public String id() { return "confluence"; }
+
+    @Override
+    public KnowledgeSourceDescriptor descriptor() {
+        return new KnowledgeSourceDescriptor(
+            "confluence", "Confluence Wiki", "wiki", true,
+            Map.of("baseUrl", confluence.baseUrl())
+        );
+    }
+
+    @Override
+    public CompletionStage<KnowledgeResult> query(
+            KnowledgeQuery query, KnowledgeContext context) {
+        return confluence.search(query.text(), query.topK())
+            .thenApply(pages -> {
+                List<KnowledgeEvidence> evidence = pages.stream()
+                    .map(page -> new KnowledgeEvidence(
+                        new KnowledgeItem(
+                            page.id(), "confluence", "wiki-page",
+                            page.title(), page.body(),
+                            Map.of(),
+                            KnowledgeProvenance.of(page.url()),
+                            KnowledgeAuthority.informational(),
+                            KnowledgeValidity.active()
+                        ),
+                        page.score(),
+                        "confluence-search",
+                        Map.of()
+                    ))
+                    .toList();
+                return new KnowledgeResult(query, evidence, Map.of(), Instant.now());
+            });
+    }
+
+    @Override
+    public boolean isHealthy() {
+        return confluence.ping();
+    }
+}
+```
+
+Register:
+
+```java
+DefaultKnowledgeRegistry registry = new DefaultKnowledgeRegistry();
+registry.register(new ConfluenceKnowledgeSource(confluenceClient));
+```
+
+---
+
+## Appendix A — Glossary
+
+| Term | Definition |
+|------|------------|
+| **A2A** | Agent2Agent Protocol — Google's protocol for agent interoperability |
+| **ANP** | Agent Network Protocol — DID:WBA-based protocol |
+| **DID:WBA** | Decentralized Identifier, Web-Based Agent |
+| **HITL** | Human-in-the-Loop |
+| **MCP** | Model Context Protocol |
+| **ReAct** | Reasoning + Acting loop |
+| **RAG** | Retrieval-Augmented Generation |
+| **SPI** | Service Provider Interface |
+| **PEP** | Policy Enforcement Point |
+| **PDP** | Policy Decision Point |
+| **WBA** | Web-Based Agent |
+
+## Appendix B — Version History
+
+| Version | Date | Highlights |
+|---------|------|------------|
+| 1.0.0-SNAPSHOT | 2026-09-15 | Initial public documentation |
+| | 2026-08-13 | Durable A2A tasks, workflow bridge |
+| | 2026-08-12 | Execution cache, event ledger |
+| | 2026-08-10 | Multi-agent orchestration |
+| | 2026-07-26 | Core runtime, providers, tools |
+| | 2026-07-18 | JSON schema, project store |
+| | 2026-07-14 | Initial commit |
+
+## Appendix C — Further Reading
+
+- [A2A Protocol Specification](https://a2a-protocol.org/latest/specification/)
+- [ANP Specification](https://www.agenticcommerce.dev)
+- [Model Context Protocol](https://modelcontextprotocol.io)
+- [DID:WBA Specification](https://identity.foundation/did-wba)
+- [OpenTelemetry Java](https://opentelemetry.io/docs/languages/java/)
+- [Micrometer](https://micrometer.io)
+
+---
+
+*End of Documentation — Chapters 1–10 + Appendices*

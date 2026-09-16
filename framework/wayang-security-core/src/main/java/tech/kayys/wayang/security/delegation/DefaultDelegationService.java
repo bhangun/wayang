@@ -41,7 +41,7 @@ public final class DefaultDelegationService implements DelegationService {
 
         DelegationConstraints parentConstraints = parent.delegation()
                 .map(DelegationContext::constraints)
-                .orElseGet(DelegationConstraints::empty);
+                .orElseGet(DelegationConstraints::unrestricted);
 
         DelegationConstraints childConstraints = attenuator.attenuate(
                 parentConstraints, request.constraints()

@@ -33,16 +33,8 @@
             <artifactId>wayang-spi</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>tech.kayys.gollek</groupId>
-            <artifactId>gollek-spi</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>tech.kayys.gollek</groupId>
-            <artifactId>gollek-spi-provider</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
-        </dependency>
+        <!-- gollek-spi and gollek-spi-provider removed: no source imports use these;
+             all "gollek" references are string literals (provider IDs), not API calls. -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>

@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout wayang
         uses: actions/checkout@v4
 
       - name: Setup GraalVM (Java 25)
@@ -24,6 +24,49 @@ jobs:
           distribution: graalvm
           java-version: "25"
           cache: maven
+
+      # ── Gollek SPI/SDK Bootstrap ────────────────────────────────────────────
+      # gollek-spi* and gollek-sdk* are SNAPSHOT artifacts not on Maven Central.
+      # We check out gollek and publish its pure-Java framework modules to Maven
+      # Local (no native build: no llama.cpp / libtorch needed here).
+      - name: Checkout gollek (SPI/SDK bootstrap)
+        uses: actions/checkout@v4
+        with:
+          repository: bhangun/gollek
+          path: _gollek
+          ref: main
+
+      - name: Cache Gradle packages (gollek)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gollek-gradle-${{ hashFiles('_gollek/gradle/wrapper/gradle-wrapper.properties', '_gollek/build.gradle.kts') }}
+          restore-keys: |
+            gollek-gradle-
+
+      - name: Publish gollek SPI & SDK to Maven Local
+        working-directory: _gollek
+        env:
+          GRADLE_OPTS: "-Xmx2G -Dorg.gradle.daemon=false"
+        run: |
+          # Publish only the modules that exist and that wayang depends on.
+          # gollek-spi-model is optional and may not be present in all checkouts.
+          TASKS=(
+            :spi:gollek-spi:publishToMavenLocal
+            :spi:gollek-spi-audio:publishToMavenLocal
+            :spi:gollek-spi-image:publishToMavenLocal
+            :spi:gollek-spi-inference:publishToMavenLocal
+            :spi:gollek-spi-multimodal:publishToMavenLocal
+            :spi:gollek-spi-plugin:publishToMavenLocal
+            :spi:gollek-spi-runtime:publishToMavenLocal
+            :sdk:gollek-sdk-core:publishToMavenLocal
+            :sdk:gollek-sdk:publishToMavenLocal
+            :sdk:gollek-sdk-local:publishToMavenLocal
+          )
+          ./gradlew "${TASKS[@]}" --no-daemon -x test --parallel
+      # ────────────────────────────────────────────────────────────────────────
 
       - name: Build and Test (all modules)
         run: ./mvnw clean verify -DskipTests=false -Pci -q

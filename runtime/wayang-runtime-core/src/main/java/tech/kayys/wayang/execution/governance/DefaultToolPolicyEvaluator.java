@@ -29,32 +29,45 @@ public class DefaultToolPolicyEvaluator implements ToolPolicyEvaluator {
 
     @Override
     public PolicyDecision evaluate(ToolInvocation invocation, ToolPermissionContext context) {
-        List<ToolPolicy> sorted = policies();
+        return evaluateDetailed(invocation, context).decision();
+    }
 
-        PolicyDecision.RequireApproval approvalPending = null;
+    @Override
+    public PolicyDecision evaluate(PolicyEvaluationContext context) {
+        return evaluateDetailed(context).decision();
+    }
+
+    @Override
+    public PolicyEvaluationResult evaluateDetailed(ToolInvocation invocation, ToolPermissionContext context) {
+        return evaluateDetailed(PolicyEvaluationContexts.create(context, invocation));
+    }
+
+    public PolicyEvaluationResult evaluateDetailed(PolicyEvaluationContext context) {
+        List<ToolPolicy> sorted = policies();
+        PolicyDecision aggregate = PolicyDecision.allow();
+        List<PolicyEvaluation> evaluations = new ArrayList<>(sorted.size());
 
         for (ToolPolicy policy : sorted) {
             PolicyDecision decision;
             try {
-                decision = policy.evaluate(invocation, context);
+                decision = policy.evaluate(context);
             } catch (Exception e) {
                 LOG.warning(() -> "Policy [" + policy.id() + "] threw exception, treating as DENY: " + e.getMessage());
-                return PolicyDecision.deny("Policy evaluation error in " + policy.id(), policy.id());
+                decision = PolicyDecision.deny("Policy evaluation error in " + policy.id(), policy.id());
             }
 
-            switch (decision) {
-                case PolicyDecision.Deny d -> {
-                    LOG.fine(() -> "DENY from policy [" + policy.id() + "]: " + d.reason());
-                    return d;
-                }
-                case PolicyDecision.RequireApproval ra -> {
-                    if (approvalPending == null) approvalPending = ra; // latch first
-                }
-                default -> {} // Allow — continue
+            evaluations.add(new PolicyEvaluation(policy.id(), policy.priority(), decision));
+
+            final PolicyDecision finalDecision = decision;
+            if (decision instanceof PolicyDecision.Deny || decision.isDenied()) {
+                LOG.fine(() -> "DENY from policy [" + policy.id() + "]: " + finalDecision.message());
+                return new PolicyEvaluationResult(decision, evaluations);
             }
+
+            aggregate = PolicyDecisionCombiner.combine(aggregate, decision);
         }
 
-        return approvalPending != null ? approvalPending : PolicyDecision.allow();
+        return new PolicyEvaluationResult(aggregate, evaluations);
     }
 
     @Override

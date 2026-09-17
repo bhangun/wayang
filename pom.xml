@@ -76,7 +76,8 @@
     <modules>
         <module>api/wayang-api-grpc</module>
         <module>api/wayang-api-rest</module>
-        <module>framework</module>
+        <!-- framework is now a standalone repo: wayang-framework -->
+        <!-- Run `mvn install` in wayang-framework first, then build this repo -->
         <module>runtime/wayang-sandbox</module>
         <module>runtime/wayang-runtime-core</module>
         <module>runtime/wayang-backend-gamelan</module>

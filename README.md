@@ -1,21 +1,270 @@
-# Wayang Gollek
+# Wayang Runtime
 
-Wayang is a robust, modular, and extensible foundation framework and runtime for building and orchestrating autonomous AI agents. It
-keeps agent contracts, orchestration, skills, tools, memory, RAG, MCP bridges,
-guardrails, HITL, vector stores, and runtime adapters in one Maven reactor while
-keeping concrete inference and workflow engines behind SDK/SPI boundaries.
+> **The executable, opinionated runtime for Wayang agents and workflows.**
 
-## Table of Contents
-- [Installation](#installation)
-- [Architecture & Extensibility](#architecture--extensibility)
-- [Documentation](#documentation)
-- [Dependency Policy](#dependency-policy)
-- [Current Build Baseline](#current-build-baseline)
-- [Build Editions](#build-editions)
-- [HTTP Diagnostics](#http-diagnostics)
-- [CLI Command Discovery](#cli-command-discovery)
-- [SDK Skill Registry](#sdk-skill-registry)
-- [Active vs Legacy Trees](#active-vs-legacy-trees)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+**Author:** Bhangun  
+**Organization:** [kayys.tech](https://kayys.tech)
+
+---
+
+## 🧭 Overview
+
+**Wayang Runtime** is the production-ready execution environment for autonomous AI agents. It builds on the **Wayang Framework** to provide:
+
+- **Agent execution** — ReAct, Plan-and-Solve, Reflection, Research
+- **Orchestration** — Multi-agent coordination, graph workflows
+- **Deployment** — CLI, REST API, standalone JAR, native image
+- **Integration** — LLM providers, MCP servers, A2A/ANP protocols
+- **Observability** — Tracing, metrics, audit, health checks
+- **Governance** — Guardrails, HITL, policy enforcement
+
+---
+
+## 🏗️ Architecture: Framework + Runtime
+
+The Wayang ecosystem is split into two repositories:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                           Wayang Runtime                            │
+│                    github.com/bhangun/wayang                        │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    Application Layer                         │    │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐   │    │
+│  │  │    CLI      │  │  REST API   │  │  Standalone Runner  │   │    │
+│  │  │  (Picocli)  │  │ (JAX-RS)    │  │  (wayang-runner)    │   │    │
+│  │  └─────────────┘  └─────────────┘  └─────────────────────┘   │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                    │                                │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    Orchestration Layer                       │    │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐   │    │
+│  │  │   Agent     │  │ Multi-Agent │  │   Coordination      │   │    │
+│  │  │ Orchestrator│  │    Graph    │  │     Engine          │   │    │
+│  │  └─────────────┘  └─────────────┘  └─────────────────────┘   │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                    │                                │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    Execution Layer                           │    │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐   │    │
+│  │  │   Agent     │  │  Execution  │  │   Backend           │   │    │
+│  │  │  Runtime    │  │   Pipeline  │  │   Adapters          │   │    │
+│  │  │             │  │             │  │   (Gollek/Gamelan)  │   │    │
+│  │  └─────────────┘  └─────────────┘  └─────────────────────┘   │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                    │                                │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    Runtime Modules                           │    │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐   │    │
+│  │  │  Guardrails │  │    HITL     │  │   Observability     │   │    │
+│  │  │   Runtime   │  │   Runtime   │  │      Runtime        │   │    │
+│  │  └─────────────┘  └─────────────┘  └─────────────────────┘   │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                       Wayang Framework                              │
+│                github.com/bhangun/wayang-framework                  │
+│                                                                     │
+│  Core Contracts • Protocols • Tools • Knowledge • Security         │
+│  Resilience • Memory • Context • Providers • Plugins               │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📦 Runtime Modules
+
+### Application Layer
+
+| Module | Description |
+|--------|-------------|
+| `wayang-cli` | Command-line interface for interactive agent sessions |
+| `wayang-runner` | Standalone CI/CD runner — single-shot, headless execution |
+| `wayang-rest` | REST API for agent invocation and management |
+| `wayang-server` | Full server with REST, WebSocket, and management endpoints |
+
+### Orchestration Layer
+
+| Module | Description |
+|--------|-------------|
+| `wayang-orchestration` | Multi-agent orchestration: sequential, parallel, routed, graph-based |
+| `wayang-coordination` | Coordination strategies: centralized, decentralized, hierarchical |
+
+### Execution Layer
+
+| Module | Description |
+|--------|-------------|
+| `wayang-agent-runtime` | Core agent execution: memory service, tool executor, context planner |
+| `wayang-runtime-core` | Pipeline construction, interceptor wiring, terminal handlers |
+| `wayang-runtime-spi` | Runtime SPIs: `AgentExecution`, `AgentStrategy`, `ExecutionBudget` |
+| `wayang-backend-gollek` | Gollek inference backend adapter |
+| `wayang-backend-gamelan` | Gamelan workflow backend adapter |
+
+### Runtime Modules
+
+| Module | Description |
+|--------|-------------|
+| `wayang-guardrails-runtime` | Guardrails execution, node providers, detector orchestration |
+| `wayang-hitl-runtime` | Human task execution, notifications, escalation, repository |
+| `wayang-observability` | OpenTelemetry integration, health checks, metrics |
+| `wayang-graph-runtime` | Graph store runtime: InMemory + Neo4j, query/upsert executors |
+| `wayang-knowledge-runtime` | Knowledge resolution, mutation, audit, decision traces |
+| `wayang-vector-runtime` | Vector store runtime implementations |
+
+### Support Modules
+
+| Module | Description |
+|--------|-------------|
+| `wayang-agent-runner` | Standalone agent runner for CI/CD pipelines |
+| `wayang-builtin-tools` | Runtime-enabled built-in tools |
+| `wayang-sandbox-runtime` | Sandbox provider implementations (Docker, local) |
+| `wayang-hitl-runtime` | HITL domain entities, repositories, REST resources |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Java 25+**
+- **Maven 3.9+**
+
+### Build the Runtime
+
+```bash
+git clone https://github.com/bhangun/wayang.git
+cd wayang
+mvn clean install
+```
+
+### Run an Agent
+
+```bash
+# Interactive CLI
+./bin/wayang chat
+
+# Standalone runner
+./bin/wayang-runner "Summarise the README"
+
+# With options
+./bin/wayang-runner --model gemini-pro --behavior THOROUGH "Analyse code quality"
+```
+
+### Programmatic Execution
+
+```java
+// Create runtime
+DefaultWayangRuntime runtime = DefaultWayangRuntime.builder()
+    .withProvider(myProvider)
+    .withTools(myTools)
+    .withMemory(myMemory)
+    .build();
+
+// Define agent
+AgentDefinition agent = AgentDefinition.builder()
+    .metadata(Metadata.builder()
+        .name("code-reviewer")
+        .description("Reviews code changes")
+        .build())
+    .goal("Review the given code for quality and security issues")
+    .build();
+
+// Execute
+AgentRequest request = AgentRequest.of("Review this PR: ...");
+AgentResponse response = runtime.executeAsync(agent, request).join();
+```
+
+### REST API
+
+```bash
+# Start server
+./bin/wayang-server
+
+# Invoke agent
+curl -X POST http://localhost:8080/api/v1/agents/run \
+  -H "Content-Type: application/json" \
+  -d '{"agentId": "code-reviewer", "input": "Review this code"}'
+```
+
+---
+
+## 🔧 Configuration
+
+### Application Properties
+
+```properties
+# Inference backend
+wayang.inference.backend=gollek
+wayang.inference.model=gemini-flash
+
+# Workflow backend
+wayang.workflow.backend=gamelan
+wayang.workflow.endpoint=http://localhost:8080
+
+# Agent defaults
+wayang.agent.max-steps=25
+wayang.agent.timeout=PT5M
+wayang.agent.behavior=BALANCED
+
+# Guardrails
+wayang.guardrails.enabled=true
+wayang.guardrails.pii.blocking=true
+
+# HITL
+wayang.hitl.enabled=true
+wayang.hitl.notifications.email.enabled=true
+
+# Observability
+wayang.observability.otel.enabled=true
+wayang.observability.otel.endpoint=http://localhost:4317
+```
+
+### Runtime Behaviors
+
+| Behavior | Max Steps | Timeout | Caching | Use Case |
+|----------|-----------|---------|---------|----------|
+| `FAST` | 15 | 2 min | Tool (5 min) | Quick queries |
+| `BALANCED` | 25 | 5 min | Tool + Retrieval (30 min) | General purpose |
+| `THOROUGH` | 50 | 20 min | All (2-4 hours) | Deep analysis |
+| `DEBUG` | 25 | 5 min | None | Troubleshooting |
+
+---
+
+## 📊 Execution Pipeline
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   Request   │───▶│   Trace     │───▶│ Authorization│───▶│ Obligations │
+│             │    │ Interceptor │    │  Interceptor │    │ Interceptor │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                                                                │
+                                                                ▼
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   Result    │◀───│   Retry     │◀───│   Timeout   │◀───│  Terminal   │
+│             │    │ Interceptor │    │ Interceptor │    │   Handler   │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+---
+
+## 🔗 Relationship to Framework
+
+| Aspect | Framework | Runtime |
+|--------|-----------|---------|
+| **Repository** | [wayang-framework](https://github.com/bhangun/wayang-framework) | [wayang](https://github.com/bhangun/wayang) (this repo) |
+| **Purpose** | Contracts, SPIs, adapters | Execution, orchestration, deployment |
+| **Artifact** | Libraries (JARs) | Application / Service |
+| **Dependencies** | Minimal | Depends on framework modules |
+| **Audience** | Framework developers, integrators | End users, operators |
+
+**Design principle:** The framework defines *what* an agentic system is. The runtime defines *how* it runs.
+
+
 
 ## Installation
 
@@ -380,9 +629,18 @@ routing style of event follow results. Cancel JSON uses the same outcome
 vocabulary for `cancelled`, `not-cancellable`, and `not-found`; forget JSON
 uses `forgotten` and `not-found`.
 
-## Active vs Legacy Trees
 
-The active Maven reactor is declared in `pom.xml`. The older top-level
-`skills/`, `agent-gollek/`, `gollek-runtime-*`, and `enhancement/` trees are
-kept as legacy or experimental code unless they are explicitly reintroduced into
-the reactor.
+
+---
+
+## 🔗 Links
+
+- **Framework Repository:** [github.com/bhangun/wayang-framework](https://github.com/bhangun/wayang-framework)
+- **Organization:** [kayys.tech](https://kayys.tech)
+- **Issues:** [github.com/bhangun/wayang/issues](https://github.com/bhangun/wayang/issues)
+
+---
+
+## 🙏 Acknowledgments
+
+Built with ❤️ by [Bhangun](https://github.com/bhangun) at [kayys.tech](https://kayys.tech).
